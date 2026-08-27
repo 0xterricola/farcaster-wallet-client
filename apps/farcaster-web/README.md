@@ -1,5 +1,18 @@
 # Getting Started with Create React App
 
+## WalletConnect setup
+
+External-wallet support requires a WalletConnect project ID. Create a project
+in the Reown dashboard, then copy the example environment file:
+
+```sh
+cp apps/farcaster-web/.env.example apps/farcaster-web/.env.local
+```
+
+Replace `your_reown_project_id` in `.env.local` with the project ID. The local
+file is ignored by Git. For production deployments, configure the same
+`VITE_WALLETCONNECT_PROJECT_ID` variable in the hosting environment.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
