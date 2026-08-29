@@ -1,46 +1,94 @@
-# Getting Started with Create React App
+# Farcaster Web
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The Farcaster web client with external wallet support through WalletConnect and
+detected EIP-6963 browser wallets.
 
-## Available Scripts
+## Setup
 
-In the project directory, you can run:
+Install and build the workspace from the repository root:
 
-### `npm start`
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build:packages
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Copy the example environment file:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```sh
+cp apps/farcaster-web/.env.example apps/farcaster-web/.env.local
+```
 
-### `npm test`
+Add the public project identifier from the
+[Reown dashboard](https://dashboard.reown.com/):
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```env
+VITE_WALLETCONNECT_PROJECT_ID=your_reown_project_id
+```
 
-### `npm run build`
+The local file is ignored by Git. Configure the same variable in the production
+hosting environment and allow the relevant local and production origins in the
+Reown project settings.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+WalletConnect requires this project ID. Modern browser extensions can also be
+discovered automatically through EIP-6963.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+From the repository root:
 
-### `npm run eject`
+```sh
+pnpm --filter farcaster-web dev
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Open the URL printed by Vite. If you are editing shared workspace packages, run
+`pnpm watch` in another terminal.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Commands
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```sh
+# Development server
+pnpm --filter farcaster-web dev
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+# Development server with HTTPS enabled explicitly
+pnpm --filter farcaster-web start
 
-## Learn More
+# Tests and static checks
+pnpm --filter farcaster-web test
+pnpm --filter farcaster-web typecheck
+pnpm --filter farcaster-web lint
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Production build
+pnpm --filter farcaster-web build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Wallet behavior
+
+- The active external wallet is persisted as the preferred wallet.
+- The same provider and address are used by the wallet dashboard and miniapps.
+- Installed EIP-6963 wallets appear as direct choices.
+- WalletConnect remains available for QR, mobile, browser, and hardware-wallet
+  workflows.
+- Disconnecting returns the dashboard to the connection choices.
+- Private keys and seed phrases never enter the Farcaster client.
+
+## Built-in wallet actions
+
+- View the connected address and native balance
+- Receive with an address QR code
+- Send the connected chain's native token
+- Swap ETH and arbitrary ERC-20 tokens on Base
+
+Base swap quotes and transaction requests use LI.FI's public quote API. Token
+approval and swap signing always occur in the connected wallet.
+
+## Troubleshooting
+
+- If WalletConnect is unavailable, verify
+  `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
+- If a browser wallet does not appear, confirm it supports EIP-6963 and is
+  enabled for the local site.
+- If a stale local Farcaster login produces repeated `401` responses, clear
+  website data only for the local Vite origin, reload, and sign in again.
+- When testing arbitrary tokens, confirm the contract is on Base and has a
+  viable route and sufficient liquidity.

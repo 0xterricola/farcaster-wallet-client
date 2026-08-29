@@ -72,7 +72,10 @@ export function PreferredWalletSelector({ modal }: { modal?: boolean }) {
   const { closeConnectModal, connectors, setPreferredWallet, preferredWallet } =
     useWallet();
   const [localPreferredWallet, setLocalPreferredWallet] = useState<string>();
-  const { connector: existingConnector } = useAccount();
+  const {
+    connector: existingConnector,
+    isConnected: isExternalWalletConnected,
+  } = useAccount();
   const [showAllWallets, setShowAllWallets] = useState(!modal);
   const geoRestricted = useWalletGeoRestricted();
   const { trackEvent } = useAnalytics();
@@ -103,12 +106,21 @@ export function PreferredWalletSelector({ modal }: { modal?: boolean }) {
   const handleConnect = useCallback(
     async (connector: Connector) => {
       // Default to base chain
-      if (!existingConnector || connector.id !== existingConnector.id) {
+      if (
+        !isExternalWalletConnected ||
+        !existingConnector ||
+        connector.id !== existingConnector.id
+      ) {
         await connectAsync({ connector: connector, chainId: base.id });
       }
       handleSelectPreferredWallet(connector.id);
     },
-    [connectAsync, existingConnector, handleSelectPreferredWallet],
+    [
+      connectAsync,
+      existingConnector,
+      handleSelectPreferredWallet,
+      isExternalWalletConnected,
+    ],
   );
 
   const handleDone = useCallback(() => {
@@ -196,7 +208,9 @@ export function PreferredWalletSelector({ modal }: { modal?: boolean }) {
                 onClick={() => handleConnect(connector)}
                 isSelected={localPreferredWallet === connector.id}
                 isConnected={
-                  existingConnector && connector.id === existingConnector.id
+                  isExternalWalletConnected &&
+                  existingConnector &&
+                  connector.id === existingConnector.id
                 }
                 isInstalled={connector.id !== 'walletConnect'}
               />
@@ -206,7 +220,7 @@ export function PreferredWalletSelector({ modal }: { modal?: boolean }) {
             </Fragment>
           );
         })}
-        {!showAllWallets && (
+        {!showAllWallets && localPreferredWallet !== 'walletConnect' && (
           <WalletOption
             name="External Wallet"
             icon={
@@ -236,6 +250,14 @@ export function PreferredWalletSelector({ modal }: { modal?: boolean }) {
               </svg>
             }
             onClick={() => {
+              const walletConnectConnector = connectors.find(
+                (connector) => connector.id === 'walletConnect',
+              );
+              if (walletConnectConnector) {
+                void handleConnect(walletConnectConnector);
+                return;
+              }
+
               setShowAllWallets(true);
             }}
           />

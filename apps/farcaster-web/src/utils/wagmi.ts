@@ -1,3 +1,4 @@
+import { walletConnect } from '@wagmi/connectors';
 import { robinhood } from 'farcaster-client-data';
 import { bsc, degen, monadTestnet, unichain } from 'viem/chains';
 import { Config, createConfig, http, Transport } from 'wagmi';
@@ -44,10 +45,31 @@ const transports = chains.reduce(
   {} as Record<number, Transport>,
 );
 
+const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+const appOrigin =
+  typeof window === 'undefined'
+    ? ['https:', '//farcaster.xyz'].join('')
+    : window.location.origin;
+
+const connectors = walletConnectProjectId
+  ? [
+      walletConnect({
+        projectId: walletConnectProjectId,
+        metadata: {
+          name: 'Farcaster Wallet Client',
+          description: 'Farcaster client with external wallet support',
+          url: appOrigin,
+          icons: [`${appOrigin}/favicon-v3.png`],
+        },
+        showQrModal: true,
+      }),
+    ]
+  : [];
+
 const wagmiConfig: Config = createConfig({
   chains,
   transports,
-  connectors: [],
+  connectors,
 });
 
 export { wagmiConfig };

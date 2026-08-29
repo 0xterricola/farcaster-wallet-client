@@ -18,8 +18,10 @@ import {
 } from '~/components/EmbeddedWallet';
 import { WalletIcon } from '~/components/icons/WalletIcon';
 import { MinimizableWindowHostVariant } from '~/components/MinimizableWindowHost';
+import { ExternalWalletPanel } from '~/components/rightSidebar/ExternalWalletPanel';
 import { useOpenableWarpcastWallet } from '~/contexts/OpenableWarpcastWalletContext';
 import { useWalletLocked } from '~/contexts/WalletLockedProvider';
+import { useWallet } from '~/contexts/WalletProvider';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { cn } from '~/lib/utils';
 import { truncateAddress } from '~/utils/ethereumUtils';
@@ -32,6 +34,8 @@ function FloatingWallet({
   const { fid } = useCurrentUser();
   const { data: verifications } = useVerificationsQuery({ fid });
   const { trackEvent } = useTrackEvent();
+  const { address, preferredWallet } = useWallet();
+  const usesExternalWallet = preferredWallet !== 'warpcast';
 
   // Due to limitations in Skia, we need to first render the wallet full width
   // then transition to the correct width.
@@ -104,7 +108,7 @@ function FloatingWallet({
 
   const [dropdownIsOpen, setDropdownIsOpen] = React.useState(false);
 
-  if (!warpletAddress) {
+  if (!warpletAddress && !usesExternalWallet && !address) {
     return null;
   }
 
@@ -177,12 +181,15 @@ function FloatingWallet({
             },
           )}
         >
-          {hasBeenOpened && (
-            <EmbeddedWalletIframe
-              surface="full_warplet"
-              disableClicks={dropdownIsOpen}
-            />
-          )}
+          {hasBeenOpened &&
+            (usesExternalWallet ? (
+              <ExternalWalletPanel />
+            ) : (
+              <EmbeddedWalletIframe
+                surface="full_warplet"
+                disableClicks={dropdownIsOpen}
+              />
+            ))}
         </div>
       </div>
     </>

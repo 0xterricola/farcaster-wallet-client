@@ -1,41 +1,120 @@
-# Farcaster Client Snapshot
+# Farcaster Wallet Client
 
-A snapshot of the Farcaster client monorepo codebase without the Farcaster Wallet implementation.
+A fork of the [Farcaster client snapshot](https://github.com/farcasterxyz/client)
+that adds a non-custodial wallet experience to the web client.
 
-This is designed to be a reference for building a social client on top of the Farcaster protocol. Both mobile and web clients run locally, pointing to the current production API by Farcaster.
+The original snapshot intentionally excludes the Farcaster Wallet
+implementation. This fork fills that gap with external wallets: users keep
+control of their keys and approve every connection, signature, and transaction
+in their own wallet.
 
-## Getting Started
+## Wallet features
 
-In the project root, install dependencies and start watching shared packages:
+- WalletConnect support for QR, mobile, browser, and wallet-directory flows
+- Automatic discovery of modern EIP-6963 browser wallets
+- One persistent wallet across the dashboard and Farcaster miniapps
+- EIP-1193 provider support for miniapp signatures and transactions
+- Connected address and native-token balance
+- Receive address with QR code and copy action
+- Native-token sending
+- Base swaps between ETH and arbitrary Base ERC-20 contract addresses
+- Quote, route, minimum received, allowance, approval, and transaction handling
+- Explicit disconnect and reconnect flow
 
+## How it works
+
+The web client uses Wagmi for connection state and exposes the selected wallet
+through the client's existing wallet context. Miniapps, the wallet dashboard,
+sends, and swaps all consume that same provider and address.
+
+WalletConnect is the universal fallback. Compatible browser extensions are
+discovered through EIP-6963 and displayed as direct connection options. No seed
+phrase or private key is created, requested, or stored by this client.
+
+Base swap quotes and transaction requests come from the public LI.FI quote API.
+The connected wallet remains responsible for approvals and transaction signing.
+
+## Requirements
+
+- Node.js 20.19.5 (see `.node-version`)
+- pnpm 10.8.1 (declared in `package.json`)
+- A Reown project ID for WalletConnect
+
+## Web quick start
+
+Clone your fork and install the workspace:
+
+```sh
+git clone git@github.com:YOUR_ACCOUNT/farcaster-wallet-client.git
+cd farcaster-wallet-client
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build:packages
 ```
-pnpm install && pnpm watch
+
+Configure WalletConnect:
+
+```sh
+cp apps/farcaster-web/.env.example apps/farcaster-web/.env.local
 ```
 
-Then in a new terminal, run your preferred client:
+Set the public Reown project identifier in `.env.local`:
 
-### Mobile
-
-```
-cd apps/farcaster-mobile
-pnpm install
-pnpm ios
+```env
+VITE_WALLETCONNECT_PROJECT_ID=your_reown_project_id
 ```
 
-### Web
+Then start the web client:
 
-```
-cd apps/farcaster-web
-pnpm install
-pnpm start
+```sh
+pnpm --filter farcaster-web dev
 ```
 
-## Contributing
+Open the local URL printed by Vite. When actively changing shared packages, run
+`pnpm watch` in another terminal.
 
-This repository is a one-way, automatically generated snapshot of the Farcaster client monorepo. Each update replaces `main` with a single fresh commit, so pull requests and issues opened here can't be merged or tracked, and any change pushed directly is overwritten by the next snapshot.
+See [`apps/farcaster-web/README.md`](./apps/farcaster-web/README.md) for web-only
+commands and configuration details.
 
-Fork it and build on it — that's what it's here for.
+## Validation
+
+```sh
+pnpm --filter farcaster-web typecheck
+pnpm --filter farcaster-web lint
+pnpm --filter farcaster-web test
+pnpm --filter farcaster-web build
+```
+
+The wallet flows have also been exercised manually with WalletConnect, a
+browser with no injected wallet, detected browser wallets, page refreshes,
+miniapp transactions, sends, swaps, and rejected approvals.
+
+## Security notes
+
+- Never enter a seed phrase or private key into this client.
+- Verify token contract addresses before requesting swap quotes.
+- Review the destination, value, chain, allowance, and calldata in the connected
+  wallet before approving.
+- Arbitrary tokens and external routing APIs may be unavailable, illiquid, or
+  malicious.
+- Use a low-value wallet while developing or testing.
+
+## Current scope
+
+- Wallet additions currently target the web client; the mobile client remains
+  the upstream snapshot implementation.
+- Built-in swaps currently target Base.
+- The send screen currently sends the connected chain's native token.
+- Swap execution depends on LI.FI route availability and downstream liquidity.
+- Local Farcaster sessions use the current production Farcaster API.
+
+## Upstream snapshot
+
+This repository began as a snapshot of the Farcaster client monorepo. The
+original snapshot is a one-way generated reference whose `main` branch may be
+replaced by future snapshots. This fork maintains its wallet changes separately;
+review upstream snapshot updates before merging them.
 
 ## License
 
-See [LICENSE](./LICENSE).
+MIT. See [`LICENSE`](./LICENSE).

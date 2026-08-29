@@ -98,7 +98,11 @@ interface PendingConnectRequest {
 const WalletProvider = ({ children }: WalletProviderProps) => {
   // External hooks
   const connectors = useConnectors();
-  const { connector, address } = useAccount();
+  const {
+    connector,
+    address,
+    isConnected: isExternalWalletConnected,
+  } = useAccount();
   const { ethProvider, isConnected } = useEmbeddedWalletBridge();
 
   // State management
@@ -118,7 +122,7 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     { domain: string; iconUrl?: string } | undefined
   >(undefined);
   const pendingConnectRequestsRef = useRef<PendingConnectRequest[]>([]);
-  const isRunningRefresh = useRef(false);
+  const refreshQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   // Helper to update preferred wallet and trigger re-load if needed
   const setPreferredWalletInner = useCallback(
@@ -160,6 +164,27 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     setPreferredWalletInner(undefined);
     localStorage.removeItem(PREFERRED_WALLET_KEY);
   }, [setPreferredWalletInner]);
+
+  // Keep the active external connector and the wallet used by miniapps in
+  // sync. Wagmi can expose the connected address before connectAsync settles,
+  // so adopting the connector here avoids a temporary second selection step.
+  useEffect(() => {
+    if (
+      !isExternalWalletConnected ||
+      !connector ||
+      preferredWallet === 'warpcast' ||
+      preferredWallet === connector.id
+    ) {
+      return;
+    }
+
+    handleSetPreferredWallet(connector.id);
+  }, [
+    connector,
+    handleSetPreferredWallet,
+    isExternalWalletConnected,
+    preferredWallet,
+  ]);
 
   // Disconnected provider that queues requests while loading
   const disconnectedProvider = useMemo(
@@ -267,7 +292,11 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
         const accounts = await ethProvider.request({ method: 'eth_accounts' });
         setWarpcastWalletAddress(accounts[0]);
         nextProvider = ethProvider as Provider.Provider;
-      } else if (connector) {
+      } else if (
+        preferredWallet !== 'warpcast' &&
+        connector &&
+        isExternalWalletConnected
+      ) {
         // Get external wallet provider (MetaMask, etc.)
         nextProvider = (await connector.getProvider()) as Provider.Provider;
       }
@@ -295,18 +324,21 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     if (!nextProvider && pendingConnectRequestsRef.current.length > 0) {
       openConnectModal();
     }
-  }, [preferredWallet, connector, ethProvider, openConnectModal]);
+  }, [
+    preferredWallet,
+    connector,
+    ethProvider,
+    openConnectModal,
+    isExternalWalletConnected,
+  ]);
 
-  // Refresh provider when dependencies change (prevents concurrent refreshes)
+  // Queue refreshes so connector updates are not dropped during restoration.
   useEffect(() => {
-    if (isRunningRefresh.current) {
-      return;
-    }
-
-    isRunningRefresh.current = true;
-    refreshConnectedProvider().finally(() => {
-      isRunningRefresh.current = false;
-    });
+    refreshQueueRef.current = refreshQueueRef.current
+      .then(refreshConnectedProvider)
+      .catch((error) => {
+        logError('[WalletProvider] Failed to refresh provider:', error);
+      });
   }, [refreshConnectedProvider, isConnected]);
 
   // Build context value
