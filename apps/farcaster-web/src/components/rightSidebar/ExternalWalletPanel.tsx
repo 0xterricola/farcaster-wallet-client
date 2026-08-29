@@ -9,7 +9,8 @@ import {
 import { FormEvent, ReactNode, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import { formatUnits, isAddress, parseEther, toHex } from 'viem';
-import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { base } from 'viem/chains';
+import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
@@ -19,9 +20,16 @@ import { truncateAddress } from '~/utils/ethereumUtils';
 type WalletView = 'overview' | 'receive' | 'send' | 'trade';
 
 function ExternalWalletPanel() {
-  const { address, provider, clearPreferredWallet, openConnectModal } =
-    useWallet();
+  const {
+    address,
+    provider,
+    clearPreferredWallet,
+    connectors,
+    openConnectModal,
+    setPreferredWallet,
+  } = useWallet();
   const { chain } = useAccount();
+  const { connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: balance, isLoading: isBalanceLoading } = useBalance({
     address,
@@ -33,6 +41,8 @@ function ExternalWalletPanel() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string>();
   const [transactionHash, setTransactionHash] = useState<string>();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string>();
 
   const formattedBalance = useMemo(() => {
     if (!balance) {
@@ -48,7 +58,64 @@ function ExternalWalletPanel() {
   }, [balance, isBalanceLoading]);
 
   if (!address) {
-    return null;
+    const connectWallet = async () => {
+      const walletConnectConnector = connectors.find(
+        (connector) => connector.id === 'walletConnect',
+      );
+
+      if (!walletConnectConnector) {
+        setConnectError(
+          'WalletConnect is not configured. Add a Reown project ID and reload.',
+        );
+        return;
+      }
+
+      setConnectError(undefined);
+      setIsConnecting(true);
+      try {
+        await connectAsync({
+          connector: walletConnectConnector,
+          chainId: base.id,
+        });
+        setPreferredWallet(walletConnectConnector.id);
+      } catch (error) {
+        setConnectError(
+          error instanceof Error ? error.message : 'Wallet connection failed.',
+        );
+      } finally {
+        setIsConnecting(false);
+      }
+    };
+
+    return (
+      <div
+        className="flex h-full flex-col items-center justify-center border-t p-6 text-center bg-app border-default"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-elevated-nohover">
+          <ArrowDownToLineIcon className="size-7 text-default" />
+        </div>
+        <div className="mt-4 text-xl font-semibold text-default">
+          Connect a wallet
+        </div>
+        <div className="mt-2 max-w-72 text-sm text-muted">
+          Connect once with WalletConnect to use the same wallet here and in
+          miniapps.
+        </div>
+        {connectError && (
+          <div className="mt-4 w-full rounded-xl bg-red-50 p-3 text-sm text-red-600">
+            {connectError}
+          </div>
+        )}
+        <DefaultButton
+          className="mt-6 w-full"
+          isLoading={isConnecting}
+          onClick={() => void connectWallet()}
+        >
+          Connect with WalletConnect
+        </DefaultButton>
+      </div>
+    );
   }
 
   const copyAddress = async () => {

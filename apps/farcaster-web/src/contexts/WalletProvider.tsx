@@ -165,6 +165,27 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     localStorage.removeItem(PREFERRED_WALLET_KEY);
   }, [setPreferredWalletInner]);
 
+  // Keep the active external connector and the wallet used by miniapps in
+  // sync. Wagmi can expose the connected address before connectAsync settles,
+  // so adopting the connector here avoids a temporary second selection step.
+  useEffect(() => {
+    if (
+      !isExternalWalletConnected ||
+      !connector ||
+      preferredWallet === 'warpcast' ||
+      preferredWallet === connector.id
+    ) {
+      return;
+    }
+
+    handleSetPreferredWallet(connector.id);
+  }, [
+    connector,
+    handleSetPreferredWallet,
+    isExternalWalletConnected,
+    preferredWallet,
+  ]);
+
   // Disconnected provider that queues requests while loading
   const disconnectedProvider = useMemo(
     () =>

@@ -35,9 +35,7 @@ function FloatingWallet({
   const { data: verifications } = useVerificationsQuery({ fid });
   const { trackEvent } = useTrackEvent();
   const { address, preferredWallet } = useWallet();
-  const hasExternalWallet = Boolean(
-    address && preferredWallet && preferredWallet !== 'warpcast',
-  );
+  const usesExternalWallet = preferredWallet !== 'warpcast';
 
   // Due to limitations in Skia, we need to first render the wallet full width
   // then transition to the correct width.
@@ -110,7 +108,7 @@ function FloatingWallet({
 
   const [dropdownIsOpen, setDropdownIsOpen] = React.useState(false);
 
-  if (!warpletAddress && !hasExternalWallet) {
+  if (!warpletAddress && !usesExternalWallet && !address) {
     return null;
   }
 
@@ -184,7 +182,7 @@ function FloatingWallet({
           )}
         >
           {hasBeenOpened &&
-            (hasExternalWallet ? (
+            (usesExternalWallet ? (
               <ExternalWalletPanel />
             ) : (
               <EmbeddedWalletIframe
