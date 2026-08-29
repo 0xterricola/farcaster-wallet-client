@@ -13,6 +13,7 @@ import { base } from 'viem/chains';
 import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
+import { Image } from '~/components/images/Image';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { useWallet } from '~/contexts/WalletProvider';
 import { truncateAddress } from '~/utils/ethereumUtils';
@@ -25,7 +26,6 @@ function ExternalWalletPanel() {
     provider,
     clearPreferredWallet,
     connectors,
-    openConnectModal,
     setPreferredWallet,
   } = useWallet();
   const { chain } = useAccount();
@@ -57,15 +57,21 @@ function ExternalWalletPanel() {
     return `${value} ${balance.symbol}`;
   }, [balance, isBalanceLoading]);
 
+  const browserWallets = connectors.filter(
+    (connector) => connector.type === 'injected',
+  );
+
   if (!address) {
-    const connectWallet = async () => {
-      const walletConnectConnector = connectors.find(
-        (connector) => connector.id === 'walletConnect',
+    const connectWallet = async (connectorId: string) => {
+      const selectedConnector = connectors.find(
+        (connector) => connector.id === connectorId,
       );
 
-      if (!walletConnectConnector) {
+      if (!selectedConnector) {
         setConnectError(
-          'WalletConnect is not configured. Add a Reown project ID and reload.',
+          connectorId === 'walletConnect'
+            ? 'WalletConnect is not configured. Add a Reown project ID and reload.'
+            : 'That browser wallet is no longer available. Reload and try again.',
         );
         return;
       }
@@ -74,10 +80,10 @@ function ExternalWalletPanel() {
       setIsConnecting(true);
       try {
         await connectAsync({
-          connector: walletConnectConnector,
+          connector: selectedConnector,
           chainId: base.id,
         });
-        setPreferredWallet(walletConnectConnector.id);
+        setPreferredWallet(selectedConnector.id);
       } catch (error) {
         setConnectError(
           error instanceof Error ? error.message : 'Wallet connection failed.',
@@ -99,21 +105,42 @@ function ExternalWalletPanel() {
           Connect a wallet
         </div>
         <div className="mt-2 max-w-72 text-sm text-muted">
-          Connect once with WalletConnect to use the same wallet here and in
-          miniapps.
+          Connect once to use the same wallet here and in miniapps.
         </div>
         {connectError && (
           <div className="mt-4 w-full rounded-xl bg-red-50 p-3 text-sm text-red-600">
             {connectError}
           </div>
         )}
-        <DefaultButton
-          className="mt-6 w-full"
-          isLoading={isConnecting}
-          onClick={() => void connectWallet()}
-        >
-          Connect with WalletConnect
-        </DefaultButton>
+        <div className="mt-6 flex w-full flex-col gap-2">
+          {browserWallets.map((connector) => (
+            <DefaultButton
+              key={connector.uid}
+              className="w-full"
+              variant="secondary"
+              isLoading={isConnecting}
+              onClick={() => void connectWallet(connector.id)}
+            >
+              <span className="flex items-center justify-center gap-2">
+                {connector.icon && (
+                  <Image
+                    src={connector.icon}
+                    alt=""
+                    className="size-5 rounded"
+                  />
+                )}
+                {connector.name}
+              </span>
+            </DefaultButton>
+          ))}
+          <DefaultButton
+            className="w-full"
+            isLoading={isConnecting}
+            onClick={() => void connectWallet('walletConnect')}
+          >
+            Connect with WalletConnect
+          </DefaultButton>
+        </div>
       </div>
     );
   }
@@ -224,16 +251,9 @@ function ExternalWalletPanel() {
             />
           </div>
 
-          <div className="mt-auto flex gap-2 pt-6">
+          <div className="mt-auto pt-6">
             <DefaultButton
-              className="flex-1"
-              variant="secondary"
-              onClick={openConnectModal}
-            >
-              Switch wallet
-            </DefaultButton>
-            <DefaultButton
-              className="flex-1"
+              className="w-full"
               variant="danger"
               onClick={handleDisconnect}
             >
