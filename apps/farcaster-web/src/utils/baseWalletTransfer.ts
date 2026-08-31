@@ -55,8 +55,31 @@ export type PreparedBaseTransfer = {
 export function createBaseTransferReader(
   client: PublicClient,
 ): BaseTransferReader {
-  if (client.chain?.id !== base.id) {
-    throw new Error('Base RPC is required.');
+  return createTransferReader(client, base, (call) =>
+    estimateTotalFee(client, { ...call, chain: base }),
+  );
+}
+
+export function createStandardEvmTransferReader(
+  client: PublicClient,
+  chain: Chain,
+): BaseTransferReader {
+  return createTransferReader(client, chain, async (call) => {
+    const [gas, gasPrice] = await Promise.all([
+      client.estimateGas(call),
+      client.getGasPrice(),
+    ]);
+    return gas * gasPrice;
+  });
+}
+
+function createTransferReader(
+  client: PublicClient,
+  chain: Chain,
+  estimateFee: (call: TransferCall) => Promise<bigint>,
+): BaseTransferReader {
+  if (client.chain?.id !== chain.id) {
+    throw new Error(`${chain.name} RPC is required.`);
   }
   return {
     nativeBalance: (address) => client.getBalance({ address }),
@@ -96,9 +119,7 @@ export function createBaseTransferReader(
         }
       }
     },
-    // This installed viem version estimates L1 data + L2 execution fees.
-    // It is an estimate, not a guaranteed final fee or support for sponsored gas.
-    estimateFee: (call) => estimateTotalFee(client, { ...call, chain: base }),
+    estimateFee,
   };
 }
 

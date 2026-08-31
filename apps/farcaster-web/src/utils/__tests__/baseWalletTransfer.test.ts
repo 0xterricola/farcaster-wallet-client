@@ -13,6 +13,7 @@ import {
   BaseTransferInput,
   BaseTransferReader,
   createBaseTransferReader,
+  createStandardEvmTransferReader,
   parseTransferAmount,
   prepareBaseTransfer,
   prepareEvmTransfer,
@@ -362,5 +363,47 @@ describe('live RPC simulation adapter', () => {
     await expect(
       reader.simulateToken({ account: address, to: tokenAddress, value: 0n }),
     ).rejects.toThrow('returned false');
+  });
+});
+
+describe('standard EVM fee adapter', () => {
+  it('multiplies the exact gas estimate by the current gas price', async () => {
+    const estimateGas = vi.fn().mockResolvedValue(21_000n);
+    const getGasPrice = vi.fn().mockResolvedValue(3_000_000_000n);
+    const reader = createStandardEvmTransferReader(
+      {
+        chain: bsc,
+        estimateGas,
+        getGasPrice,
+      } as unknown as PublicClient,
+      bsc,
+    );
+    const call = { account: address, to: recipient, value: 1n } as const;
+    await expect(reader.estimateFee(call)).resolves.toBe(63_000_000_000_000n);
+    expect(estimateGas).toHaveBeenCalledWith(call);
+    expect(getGasPrice).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an RPC client for a different chain', () => {
+    expect(() =>
+      createStandardEvmTransferReader(
+        { chain: { id: 1 } } as PublicClient,
+        bsc,
+      ),
+    ).toThrow('BNB Smart Chain RPC');
+  });
+
+  it('does not fabricate a fee when estimation fails', async () => {
+    const reader = createStandardEvmTransferReader(
+      {
+        chain: bsc,
+        estimateGas: vi.fn().mockRejectedValue(new Error('RPC unavailable')),
+        getGasPrice: vi.fn().mockResolvedValue(1n),
+      } as unknown as PublicClient,
+      bsc,
+    );
+    await expect(
+      reader.estimateFee({ account: address, to: recipient, value: 1n }),
+    ).rejects.toThrow('RPC unavailable');
   });
 });
