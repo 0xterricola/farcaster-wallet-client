@@ -1,22 +1,24 @@
 // @vitest-environment jsdom
-
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { ApiEthFungibleTokenPosition } from 'farcaster-client-data';
 import React from 'react';
+import { zeroAddress } from 'viem';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
 
 const mocks = vi.hoisted(() => ({
-  query: vi.fn(),
-  signedIn: vi.fn(),
-  refetch: vi.fn(),
+  tokens: vi.fn(),
+  assets: vi.fn(),
+  refresh: vi.fn(),
+  client: {},
 }));
-vi.mock('farcaster-client-hooks', () => ({
-  useWalletPositionsQuery: mocks.query,
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mocks.client,
 }));
-vi.mock('~/hooks/data/useIsSignedIn', () => ({
-  useIsSignedIn: mocks.signedIn,
+vi.mock('~/hooks/useLifiWallet', () => ({
+  useLifiWalletTokens: mocks.tokens,
+  useLifiAssets: mocks.assets,
+  refreshLifiWallet: mocks.refresh,
 }));
 vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   DefaultButton: ({
@@ -29,204 +31,202 @@ vi.mock('~/components/forms/buttons/DefaultButton', () => ({
     </button>
   ),
 }));
-
-const address = '0x1111111111111111111111111111111111111111';
-const otherAddress = '0x2222222222222222222222222222222222222222';
-const position = (overrides: Partial<ApiEthFungibleTokenPosition> = {}) =>
-  ({
-    id: 'token',
-    chain: 'base',
-    symbol: 'TEST',
-    address,
-    decimals: 6,
-    quantity: { int: '1000000', float: 1 },
-    value: 2,
-    ...overrides,
-  }) as ApiEthFungibleTokenPosition;
-const result = (positions: ApiEthFungibleTokenPosition[]) => ({
-  data: { positions },
+const wallet = '0x1111111111111111111111111111111111111111';
+const token = {
+  chainId: 8453,
+  address: '0x2222222222222222222222222222222222222222',
+  symbol: 'TOKEN',
+  name: 'Token',
+  decimals: 6,
+  priceUSD: 2,
+  verificationStatus: 'verified',
+};
+const result = (tokens = [token]) => ({
+  data: { tokens },
   isPending: false,
   isError: false,
   isFetching: false,
-  refetch: mocks.refetch,
 });
-
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.signedIn.mockReturnValue(true);
-  mocks.query.mockReturnValue(result([position()]));
+  mocks.tokens.mockReturnValue(result());
+  mocks.assets.mockImplementation((_wallet, addresses: string[]) =>
+    addresses.map((address) => ({
+      data: { ...token, address, balance: 1000000n },
+      isError: false,
+      isFetching: false,
+    })),
+  );
 });
 afterEach(cleanup);
-
-describe('ExternalWalletPortfolio', () => {
-  it('excludes native ETH from rows and hidden-token counts, but keeps WETH', () => {
-    mocks.query.mockReturnValue(
-      result([
-        position({
-          id: 'native',
-          symbol: 'ETH',
-          address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-          hidden: true,
-        }),
-        position({
-          id: 'wrapped',
-          symbol: 'WETH',
-          address: '0x4200000000000000000000000000000000000006',
-          hidden: true,
-        }),
-      ]),
-    );
-    render(<ExternalWalletPortfolio address={address} />);
-    fireEvent.click(
-      screen.getByRole('checkbox', { name: 'Show hidden tokens (1)' }),
-    );
-    expect(screen.queryByText('ETH', { exact: true })).toBeNull();
-    expect(screen.getByText('WETH')).toBeTruthy();
-    expect(screen.getAllByRole('listitem')).toHaveLength(1);
-  });
-
-  it('shows a clear empty-token state for an ETH-only wallet', () => {
-    mocks.query.mockReturnValue(
-      result([
-        position({
-          symbol: 'ETH',
-          address: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-        }),
-      ]),
-    );
-    render(<ExternalWalletPortfolio address={address} />);
+describe('LI.FI portfolio', () => {
+  it('shows an accessible spinner before discovery without a misleading empty state', () => {
+    mocks.tokens.mockReturnValue({ isPending: true, isFetching: true });
+    render(<ExternalWalletPortfolio address={wallet} />);
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain('Loading Base tokens');
     expect(
-      screen.getByText(
-        'No Base token holdings to show. Native ETH is shown above.',
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByRole('listitem')).toBeNull();
-    expect(screen.queryByRole('checkbox')).toBeNull();
-  });
-
-  it('requests holdings by connected address without previous-account placeholders', () => {
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(mocks.query).toHaveBeenCalledWith(
-      expect.objectContaining({
-        params: { address },
-        enabled: true,
-        keepPreviousData: false,
-      }),
+      status.querySelector('svg')?.classList.contains('animate-spin'),
+    ).toBe(true);
+    expect(status.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+      'true',
     );
-    expect(screen.getByText('TEST')).toBeTruthy();
+    expect(
+      status
+        .querySelector('svg')
+        ?.classList.contains('motion-reduce:animate-none'),
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole('region', { name: 'Base token portfolio' })
+        .getAttribute('aria-busy'),
+    ).toBe('true');
+    expect(
+      (screen.getByRole('button', { name: 'Refreshing…' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.queryByText(/No non-zero/)).toBeNull();
+  });
+  it('keeps a loading indicator until discovered token balances are available', () => {
+    mocks.assets.mockReturnValue([{ isFetching: true }]);
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByRole('status').textContent).toContain(
+      'Checking token balances',
+    );
+    expect(screen.getByText('Checking balance…')).toBeTruthy();
+    expect(screen.queryByText('$2.00')).toBeNull();
+    expect(screen.queryByText(/No non-zero/)).toBeNull();
+  });
+  it('replaces the loading state with token rows when balances arrive', () => {
+    mocks.tokens.mockReturnValue({ isPending: true, isFetching: true });
+    const view = render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByRole('status')).toBeTruthy();
+    mocks.tokens.mockReturnValue(result());
+    view.rerender(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(
+      screen
+        .getByRole('region', { name: 'Base token portfolio' })
+        .getAttribute('aria-busy'),
+    ).toBe('false');
     expect(screen.getByText('$2.00')).toBeTruthy();
   });
-
-  it('excludes other networks and reveals hidden tokens only when selected', () => {
-    mocks.query.mockReturnValue(
-      result([
-        position(),
-        position({ id: 'hidden', symbol: 'HIDDEN', hidden: true }),
-        position({ id: 'other', symbol: 'OTHER-CHAIN', chain: 'ethereum' }),
-      ]),
+  it('keeps existing balances visible while refreshing and prevents duplicate refresh clicks', () => {
+    mocks.tokens.mockReturnValue({ ...result(), isFetching: true });
+    render(<ExternalWalletPortfolio address={wallet} />);
+    const button = screen.getByRole('button', { name: 'Refreshing…' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      button.querySelector('svg')?.classList.contains('animate-spin'),
+    ).toBe(true);
+    expect(screen.getByText('$2.00')).toBeTruthy();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByRole('status').textContent).toContain(
+      'Updating token balances',
     );
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(screen.queryByText('HIDDEN')).toBeNull();
-    fireEvent.click(screen.getByRole('checkbox'));
-    expect(screen.getByText('HIDDEN')).toBeTruthy();
-    expect(screen.queryByText('OTHER-CHAIN')).toBeNull();
+    fireEvent.click(button);
+    expect(mocks.refresh).not.toHaveBeenCalled();
   });
-
-  it('shows a loading state when there is no data yet', () => {
-    mocks.query.mockReturnValue({
-      ...result([]),
-      data: undefined,
-      isPending: true,
-      isFetching: true,
-    });
-    render(<ExternalWalletPortfolio address={address} />);
+  it('shows an error rather than spinning indefinitely after discovery fails', () => {
+    mocks.tokens.mockReturnValue({ isPending: true, isError: true });
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Refresh tokens',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+  it('keeps the data-source explanation in a collapsed disclosure', () => {
+    render(<ExternalWalletPortfolio address={wallet} />);
+    const details = screen.getByText('About these balances').closest('details');
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toContain(
+      'Token discovery and estimated prices by LI.FI',
+    );
+    expect(details?.textContent).toContain('Native ETH is shown above');
+  });
+  it('uses the connected wallet without requiring Farcaster authentication', () => {
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address]);
+    expect(screen.getByText('$2.00')).toBeTruthy();
+    expect(screen.getByText('1')).toBeTruthy();
+  });
+  it('does not duplicate native ETH in token rows', () => {
+    mocks.tokens.mockReturnValue(
+      result([{ ...token, address: zeroAddress, symbol: 'ETH' }, token]),
+    );
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.queryByText('ETH', { exact: true })).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+  it('hides verified zero balances even if the indexed API listed the token', () => {
+    mocks.assets.mockReturnValue([
+      { data: { ...token, balance: 0n }, isError: false },
+    ]);
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.queryByRole('listitem')).toBeNull();
+    expect(screen.getByText(/No non-zero Base/)).toBeTruthy();
+  });
+  it('does not turn a failed balance read into zero or show an old valuation', () => {
+    mocks.assets.mockReturnValue([
+      { data: { ...token, balance: 1000000n }, isError: true },
+    ]);
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByText('Balance unavailable')).toBeTruthy();
+    expect(screen.queryByText('$2.00')).toBeNull();
+    expect(screen.getByText('—')).toBeTruthy();
+  });
+  it('separates unverified tokens and warns when revealed', () => {
+    mocks.tokens.mockReturnValue(
+      result([{ ...token, verificationStatus: 'unknown' }]),
+    );
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.queryByRole('listitem')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getByText('TOKEN')).toBeTruthy();
+    expect(screen.getByText(/may include spam/)).toBeTruthy();
+  });
+  it('shows discovery failures separately from an empty portfolio', () => {
+    mocks.tokens.mockReturnValue({ isError: true });
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByRole('alert').textContent).toContain('LI.FI');
+    expect(screen.queryByText(/No non-zero/)).toBeNull();
+  });
+  it('shows discovery loading', () => {
+    mocks.tokens.mockReturnValue({ isPending: true });
+    render(<ExternalWalletPortfolio address={wallet} />);
     expect(screen.getByRole('status').textContent).toContain('Loading');
   });
-
-  it('shows an empty state and refreshes on request', () => {
-    mocks.query.mockReturnValue(result([]));
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(
-      screen.getByText(
-        'No Base token holdings to show. Native ETH is shown above.',
-      ),
-    ).toBeTruthy();
+  it('refreshes the shared wallet cache', () => {
+    render(<ExternalWalletPortfolio address={wallet} />);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
-    expect(mocks.refetch).toHaveBeenCalledTimes(1);
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet);
   });
-
-  it('distinguishes a failed lookup from an empty portfolio', () => {
-    mocks.query.mockReturnValue({
-      ...result([]),
-      data: undefined,
-      isError: true,
+  it('warns when discovery is partial', () => {
+    mocks.tokens.mockReturnValue({
+      ...result(),
+      data: { tokens: [token], skipped: 1 },
     });
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(screen.getByRole('alert').textContent).toContain('Could not load');
-    expect(
-      screen.queryByText(
-        'No Base token holdings to show. Native ETH is shown above.',
-      ),
-    ).toBeNull();
+    render(<ExternalWalletPortfolio address={wallet} />);
+    expect(screen.getByText(/partial token list/)).toBeTruthy();
   });
-
-  it('warns when cached balances could not be refreshed', () => {
-    mocks.query.mockReturnValue({ ...result([position()]), isError: true });
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(screen.getByRole('alert').textContent).toContain('out of date');
-    expect(screen.getByText('TEST')).toBeTruthy();
-  });
-
-  it('does not fetch or display cached holdings when signed out', () => {
-    mocks.signedIn.mockReturnValue(false);
-    render(<ExternalWalletPortfolio address={address} />);
-    expect(mocks.query).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false }),
-    );
-    expect(screen.queryByText('TEST')).toBeNull();
-  });
-
-  it('changes the query address and clears the old view when switching wallets', () => {
-    const { rerender } = render(
-      <ExternalWalletPortfolio key={address} address={address} />,
-    );
-    mocks.query.mockReturnValue({
-      ...result([]),
-      data: undefined,
-      isPending: true,
-    });
-    rerender(
-      <ExternalWalletPortfolio key={otherAddress} address={otherAddress} />,
-    );
-    expect(mocks.query).toHaveBeenLastCalledWith(
-      expect.objectContaining({ params: { address: otherAddress } }),
-    );
-    expect(screen.queryByText('TEST')).toBeNull();
-  });
-
-  it('treats token claim links as plain untrusted text', () => {
-    mocks.query.mockReturnValue(
-      result([position({ symbol: 'Claim https://example.invalid' })]),
-    );
-    render(<ExternalWalletPortfolio address={address} />);
-    const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(1);
-    expect(links[0].getAttribute('href')).toBe(
-      `https://basescan.org/token/${address}`,
-    );
-  });
-
-  it('limits long lists until the user requests more tokens', () => {
-    mocks.query.mockReturnValue(
+  it('loads at most 20 rows before show more', () => {
+    mocks.tokens.mockReturnValue(
       result(
-        Array.from({ length: 25 }, (_, i) =>
-          position({ id: String(i), symbol: `TOKEN-${i}` }),
-        ),
+        Array.from({ length: 21 }, (_, i) => ({
+          ...token,
+          address: `0x${(i + 1).toString(16).padStart(40, '0')}`,
+        })),
       ),
     );
-    render(<ExternalWalletPortfolio address={address} />);
+    render(<ExternalWalletPortfolio address={wallet} />);
     expect(screen.getAllByRole('listitem')).toHaveLength(20);
-    fireEvent.click(screen.getByRole('button', { name: /Show more tokens/ }));
-    expect(screen.getAllByRole('listitem')).toHaveLength(25);
+    fireEvent.click(screen.getByRole('button', { name: /Show more/ }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(21);
   });
 });

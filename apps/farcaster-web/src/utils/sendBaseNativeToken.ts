@@ -15,9 +15,28 @@ export async function sendBaseNativeToken({
   recipient: Address;
   value: bigint;
 }) {
+  await ensureBaseWalletAccount(provider, address);
+  return provider.request({
+    method: 'eth_sendTransaction',
+    params: [
+      {
+        from: address,
+        to: recipient,
+        value: toHex(value),
+        chainId: toHex(base.id),
+      },
+    ],
+  });
+}
+
+export async function ensureBaseWalletAccount(
+  provider: Pick<Provider.Provider, 'request'>,
+  address: Address,
+  allowSwitch = true,
+) {
   const chainId = toHex(base.id);
   const currentChainId = await provider.request({ method: 'eth_chainId' });
-  if (Number(currentChainId) !== base.id) {
+  if (Number(currentChainId) !== base.id && allowSwitch) {
     await provider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId }],
@@ -34,9 +53,4 @@ export async function sendBaseNativeToken({
   if (Number(verifiedChainId) !== base.id) {
     throw new Error('Wallet is not on Base. No transaction was submitted.');
   }
-
-  return provider.request({
-    method: 'eth_sendTransaction',
-    params: [{ from: address, to: recipient, value: toHex(value), chainId }],
-  });
 }

@@ -72,13 +72,13 @@ requests. No mobile build is needed.
 
 Connect your GitHub fork, then configure:
 
-| Setting | Value |
-| --- | --- |
-| Production branch | `main` (or the branch containing the wallet and relay changes) |
-| Framework preset | None |
-| Root directory | Leave blank: repository root |
-| Build command | `pnpm build:packages && pnpm --filter farcaster-web build` |
-| Build output directory | `apps/farcaster-web/dist` |
+| Setting                | Value                                                          |
+| ---------------------- | -------------------------------------------------------------- |
+| Production branch      | `main` (or the branch containing the wallet and relay changes) |
+| Framework preset       | None                                                           |
+| Root directory         | Leave blank: repository root                                   |
+| Build command          | `pnpm build:packages && pnpm --filter farcaster-web build`     |
+| Build output directory | `apps/farcaster-web/dist`                                      |
 
 Do not set the root directory to `apps/farcaster-web`: this repository keeps
 `functions/` at the repository root. Pages discovers Functions relative to the
@@ -90,10 +90,10 @@ uploading the `dist` folder through the dashboard. See Cloudflare's
 
 Set these in Cloudflare before deploying:
 
-| Variable | Value |
-| --- | --- |
-| `NODE_VERSION` | `20.19.5` |
-| `PNPM_VERSION` | `10.8.1` |
+| Variable                        | Value                     |
+| ------------------------------- | ------------------------- |
+| `NODE_VERSION`                  | `20.19.5`                 |
+| `PNPM_VERSION`                  | `10.8.1`                  |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Your own Reown project ID |
 
 Cloudflare does not receive your ignored `.env.local` file. The `VITE_` project
@@ -179,13 +179,53 @@ or assume every miniapp will work on a fork's domain.
 
 ## Built-in wallet actions
 
-- View the connected address and native balance
+- View the connected address, native ETH, and Base ERC-20 balances
 - Receive with an address QR code
-- Send the connected chain's native token
+- Send ETH and ERC-20 tokens on Base with exact integer amounts and live checks
 - Swap ETH and arbitrary ERC-20 tokens on Base
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
+
+## Wallet data sources
+
+The built-in Base wallet uses LI.FI, not Farcaster's wallet positions API:
+
+- `GET https://li.quest/v1/wallets/{address}/balances?extended=true` discovers
+  token contracts and estimated USD prices. Only Base entries are displayed.
+- `GET https://li.quest/v1/token?chain=8453&token={contract}` resolves tokens
+  entered manually in Send or Trade. Unsupported tokens produce an error, not
+  a fabricated zero balance. LI.FI native ETH is the zero-address marker.
+- LI.FI indexed quantities are **not** used as spendable balances. Base RPC
+  reads verify native balances, ERC-20 `balanceOf`, and token decimals.
+- Portfolio, the ETH header, Send, and Trade use the same React Query balance
+  cache keyed by chain ID, wallet address, and contract. Fresh preflight checks
+  publish into this cache. Confirmed sends/swaps invalidate the wallet cache.
+- Balance reads refresh every 30 seconds while observed; discovery every 60
+  seconds. The portfolio checks 20 token rows at a time, with Show more.
+- USD values are live quantities multiplied by LI.FI's estimated token prices.
+  Unknown prices and failed balance reads show unavailable/`—`, not zero.
+
+No LI.FI API key or new build variable is added by this integration. Requests
+use the public REST API directly, as swaps already did; rate limits or service
+changes can affect availability. Farcaster authentication is not required by
+the wallet-data hooks, although the surrounding client still uses Farcaster
+for social features and login. LI.FI receives the public wallet address and
+requested contracts; chain RPC providers receive balance queries. No Farcaster
+auth headers, cookies, private keys, or seeds are sent to LI.FI.
+
+LI.FI discovery can be incomplete or delayed. Its verification labels are not
+a security guarantee. Unverified tokens are hidden by default and can be shown
+explicitly. Known zero balances are omitted from portfolio rows; RPC failures
+remain visible as unavailable. Contract entry in Send/Trade supports tokens
+recognized by LI.FI but does not persist a custom token list yet.
+
+Live checks cannot guarantee a later transaction succeeds: funds can move,
+fees can change, and tokens can impose restrictions. Signing remains external.
+Swap approvals are exact-amount; approval receipts must succeed before a swap.
+If a refreshed quote worsens the reviewed minimum or changes spender, the user
+must obtain and review a new quote. Submission is distinguished from receipt
+confirmation. This patch does not add multichain transfers or portfolio history.
 
 ## Troubleshooting
 
