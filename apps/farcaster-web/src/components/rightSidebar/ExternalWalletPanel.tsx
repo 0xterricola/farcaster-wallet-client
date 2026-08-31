@@ -14,6 +14,10 @@ import { useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
+import {
+  ExternalWalletNetworkBoundary,
+  ExternalWalletNetworkHeader,
+} from '~/components/rightSidebar/ExternalWalletNetworkStatus';
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
@@ -25,15 +29,23 @@ import { LIFI_NATIVE_ADDRESS } from '~/utils/lifiWallet';
 type WalletView = 'overview' | 'receive' | 'send' | 'trade';
 
 function ExternalWalletPanel() {
-  const { address, clearPreferredWallet, connectors, setPreferredWallet } =
-    useWallet();
+  const {
+    address,
+    clearPreferredWallet,
+    connectors,
+    network,
+    setPreferredWallet,
+  } = useWallet();
   const { connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
   const {
     data: balance,
     isLoading: isBalanceLoading,
     isError: balanceError,
-  } = useLifiAsset(address, LIFI_NATIVE_ADDRESS);
+  } = useLifiAsset(
+    network.status === 'ready' ? address : undefined,
+    LIFI_NATIVE_ADDRESS,
+  );
   const [view, setView] = useState<WalletView>('overview');
   const [copied, setCopied] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -156,102 +168,108 @@ function ExternalWalletPanel() {
       className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
       onClick={(event) => event.stopPropagation()}
     >
-      {view === 'overview' && (
-        <>
-          <div className="rounded-2xl p-4 bg-elevated-nohover">
-            <div className="text-sm text-muted">{base.name}</div>
-            <div className="mt-1 text-3xl font-semibold text-default">
-              {formattedBalance}
+      <ExternalWalletNetworkHeader network={network} />
+      <ExternalWalletNetworkBoundary
+        network={network}
+        onDisconnect={handleDisconnect}
+      >
+        {view === 'overview' && (
+          <>
+            <div className="rounded-2xl p-4 bg-elevated-nohover">
+              <div className="text-sm text-muted">{base.name}</div>
+              <div className="mt-1 text-3xl font-semibold text-default">
+                {formattedBalance}
+              </div>
+              <button
+                type="button"
+                className="mt-3 flex items-center gap-2 text-sm text-muted hover:text-default"
+                onClick={copyAddress}
+              >
+                <span>{truncateAddress(address, 6)}</span>
+                {copied ? (
+                  <CheckIcon className="size-4" />
+                ) : (
+                  <CopyIcon className="size-4" />
+                )}
+              </button>
             </div>
-            <button
-              type="button"
-              className="mt-3 flex items-center gap-2 text-sm text-muted hover:text-default"
-              onClick={copyAddress}
-            >
-              <span>{truncateAddress(address, 6)}</span>
-              {copied ? (
-                <CheckIcon className="size-4" />
-              ) : (
-                <CopyIcon className="size-4" />
-              )}
-            </button>
-          </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <WalletAction
-              label="Receive"
-              icon={<ArrowDownToLineIcon className="size-5" />}
-              onClick={() => setView('receive')}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <WalletAction
+                label="Receive"
+                icon={<ArrowDownToLineIcon className="size-5" />}
+                onClick={() => setView('receive')}
+              />
+              <WalletAction
+                label="Send"
+                icon={<ArrowUpFromLineIcon className="size-5" />}
+                onClick={() => setView('send')}
+              />
+              <WalletAction
+                label="Trade"
+                icon={<ArrowLeftRightIcon className="size-5" />}
+                onClick={() => setView('trade')}
+              />
+            </div>
+
+            <ExternalWalletPortfolio
+              key={address.toLowerCase()}
+              address={address}
             />
-            <WalletAction
-              label="Send"
-              icon={<ArrowUpFromLineIcon className="size-5" />}
-              onClick={() => setView('send')}
-            />
-            <WalletAction
-              label="Trade"
-              icon={<ArrowLeftRightIcon className="size-5" />}
-              onClick={() => setView('trade')}
-            />
-          </div>
 
-          <ExternalWalletPortfolio
-            key={address.toLowerCase()}
-            address={address}
-          />
-
-          <div className="mt-auto pt-6">
-            <DefaultButton
-              className="w-full"
-              variant="danger"
-              onClick={handleDisconnect}
-            >
-              Disconnect
-            </DefaultButton>
-          </div>
-        </>
-      )}
-
-      {view === 'receive' && (
-        <WalletSubscreen
-          title="Receive on Base"
-          onBack={() => setView('overview')}
-        >
-          <div className="flex flex-col items-center gap-4 py-4">
-            <div className="text-center text-sm text-muted">
-              Select Base as the sending network. This QR code contains only
-              your address; it does not select the network for the sender.
+            <div className="mt-auto pt-6">
+              <DefaultButton
+                className="w-full"
+                variant="danger"
+                onClick={handleDisconnect}
+              >
+                Disconnect
+              </DefaultButton>
             </div>
-            <div className="overflow-hidden rounded-2xl bg-white p-2">
-              <QRCode value={address} size={180} quietZone={8} />
-            </div>
-            <div className="break-all text-center text-sm text-muted">
-              {address}
-            </div>
-            <DefaultButton className="w-full" onClick={copyAddress}>
-              {copied ? 'Copied' : 'Copy address'}
-            </DefaultButton>
-          </div>
-        </WalletSubscreen>
-      )}
+          </>
+        )}
 
-      {view === 'send' && (
-        <WalletSubscreen
-          title="Send on Base"
-          onBack={() => setView('overview')}
-        >
-          <ExternalWalletSend key={address.toLowerCase()} address={address} />
-        </WalletSubscreen>
-      )}
+        {view === 'receive' && (
+          <WalletSubscreen
+            title="Receive on Base"
+            onBack={() => setView('overview')}
+          >
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="text-center text-sm text-muted">
+                Select Base as the sending network. This QR code contains only
+                your address; it does not select the network for the sender.
+              </div>
+              <div className="overflow-hidden rounded-2xl bg-white p-2">
+                <QRCode value={address} size={180} quietZone={8} />
+              </div>
+              <div className="break-all text-center text-sm text-muted">
+                {address}
+              </div>
+              <DefaultButton className="w-full" onClick={copyAddress}>
+                {copied ? 'Copied' : 'Copy address'}
+              </DefaultButton>
+            </div>
+          </WalletSubscreen>
+        )}
 
-      {view === 'trade' && (
-        <WalletSubscreen
-          title="Trade on Base"
-          onBack={() => setView('overview')}
-        >
-          <ExternalWalletSwap key={address.toLowerCase()} />
-        </WalletSubscreen>
-      )}
+        {view === 'send' && (
+          <WalletSubscreen
+            title="Send on Base"
+            onBack={() => setView('overview')}
+          >
+            <ExternalWalletSend key={address.toLowerCase()} address={address} />
+          </WalletSubscreen>
+        )}
+
+        {view === 'trade' && (
+          <WalletSubscreen
+            title="Trade on Base"
+            onBack={() => setView('overview')}
+          >
+            <ExternalWalletSwap key={address.toLowerCase()} />
+          </WalletSubscreen>
+        )}
+      </ExternalWalletNetworkBoundary>
     </div>
   );
 }
