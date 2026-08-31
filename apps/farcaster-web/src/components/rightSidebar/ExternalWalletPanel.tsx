@@ -8,15 +8,16 @@ import {
 } from 'lucide-react';
 import { FormEvent, ReactNode, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
-import { formatUnits, isAddress, parseEther, toHex } from 'viem';
+import { formatUnits, isAddress, parseEther } from 'viem';
 import { base } from 'viem/chains';
-import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi';
+import { useBalance, useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { useWallet } from '~/contexts/WalletProvider';
 import { truncateAddress } from '~/utils/ethereumUtils';
+import { sendBaseNativeToken } from '~/utils/sendBaseNativeToken';
 
 type WalletView = 'overview' | 'receive' | 'send' | 'trade';
 
@@ -28,11 +29,11 @@ function ExternalWalletPanel() {
     connectors,
     setPreferredWallet,
   } = useWallet();
-  const { chain } = useAccount();
   const { connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: balance, isLoading: isBalanceLoading } = useBalance({
     address,
+    chainId: base.id,
   });
   const [view, setView] = useState<WalletView>('overview');
   const [copied, setCopied] = useState(false);
@@ -186,15 +187,11 @@ function ExternalWalletPanel() {
 
     setIsSending(true);
     try {
-      const hash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: address,
-            to: recipient,
-            value: toHex(value),
-          },
-        ],
+      const hash = await sendBaseNativeToken({
+        provider,
+        address,
+        recipient,
+        value,
       });
       setTransactionHash(String(hash));
       setAmount('');
@@ -215,7 +212,7 @@ function ExternalWalletPanel() {
       {view === 'overview' && (
         <>
           <div className="rounded-2xl p-4 bg-elevated-nohover">
-            <div className="text-sm text-muted">{chain?.name ?? 'Wallet'}</div>
+            <div className="text-sm text-muted">{base.name}</div>
             <div className="mt-1 text-3xl font-semibold text-default">
               {formattedBalance}
             </div>
@@ -264,8 +261,15 @@ function ExternalWalletPanel() {
       )}
 
       {view === 'receive' && (
-        <WalletSubscreen title="Receive" onBack={() => setView('overview')}>
+        <WalletSubscreen
+          title="Receive on Base"
+          onBack={() => setView('overview')}
+        >
           <div className="flex flex-col items-center gap-4 py-4">
+            <div className="text-center text-sm text-muted">
+              Select Base as the sending network. This QR code contains only
+              your address; it does not select the network for the sender.
+            </div>
             <div className="overflow-hidden rounded-2xl bg-white p-2">
               <QRCode value={address} size={180} quietZone={8} />
             </div>
@@ -280,8 +284,15 @@ function ExternalWalletPanel() {
       )}
 
       {view === 'send' && (
-        <WalletSubscreen title="Send" onBack={() => setView('overview')}>
+        <WalletSubscreen
+          title="Send ETH on Base"
+          onBack={() => setView('overview')}
+        >
           <form className="flex flex-col gap-4 pt-4" onSubmit={handleSend}>
+            <div className="text-sm text-muted">
+              Sends use Base. If your wallet is on another network, you will be
+              asked to switch before reviewing the transaction.
+            </div>
             <label className="flex flex-col gap-2 text-sm text-default">
               Recipient
               <input
@@ -292,7 +303,7 @@ function ExternalWalletPanel() {
               />
             </label>
             <label className="flex flex-col gap-2 text-sm text-default">
-              Amount ({balance?.symbol ?? 'ETH'})
+              Amount ({base.nativeCurrency.symbol})
               <input
                 className="rounded-xl border px-3 py-2 bg-app border-default"
                 inputMode="decimal"
