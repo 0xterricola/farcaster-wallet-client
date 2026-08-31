@@ -1,7 +1,12 @@
 import { Provider } from 'ox';
+import { bsc } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
-import { sendBaseNativeToken } from '~/utils/sendBaseNativeToken';
+import {
+  ensureEvmWalletAccount,
+  sendBaseNativeToken,
+  sendEvmNativeToken,
+} from '~/utils/sendBaseNativeToken';
 
 const address = '0x1111111111111111111111111111111111111111';
 const recipient = '0x2222222222222222222222222222222222222222';
@@ -114,5 +119,59 @@ describe('sendBaseNativeToken', () => {
     expect(
       methods().filter((method) => method === 'eth_sendTransaction'),
     ).toHaveLength(1);
+  });
+});
+
+describe('generic EVM wallet guards', () => {
+  it('verifies and sends with the requested BSC chain ID', async () => {
+    let chain = '0x1';
+    const request = vi.fn(async ({ method }) => {
+      if (method === 'eth_chainId') {
+        return chain;
+      }
+      if (method === 'wallet_switchEthereumChain') {
+        chain = '0x38';
+        return null;
+      }
+      if (method === 'eth_accounts') {
+        return [address];
+      }
+      if (method === 'eth_sendTransaction') {
+        return hash;
+      }
+      throw new Error(`Unexpected method ${method}`);
+    });
+    await expect(
+      sendEvmNativeToken({
+        provider: { request } as never,
+        address,
+        recipient,
+        value: 1n,
+        chain: bsc,
+      }),
+    ).resolves.toBe(hash);
+    expect(request).toHaveBeenCalledWith({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x38' }],
+    });
+    expect(request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [{ from: address, to: recipient, value: '0x1', chainId: '0x38' }],
+    });
+  });
+
+  it('names the requested chain when final verification fails', async () => {
+    const request = vi.fn(async ({ method }) => {
+      if (method === 'eth_chainId') {
+        return '0x1';
+      }
+      if (method === 'eth_accounts') {
+        return [address];
+      }
+      return null;
+    });
+    await expect(
+      ensureEvmWalletAccount({ request } as never, address, bsc, false),
+    ).rejects.toThrow('not on BNB Smart Chain');
   });
 });

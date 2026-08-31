@@ -6,6 +6,7 @@ import {
   PublicClient,
   zeroAddress,
 } from 'viem';
+import { bsc } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,7 +15,9 @@ import {
   createBaseTransferReader,
   parseTransferAmount,
   prepareBaseTransfer,
+  prepareEvmTransfer,
   submitBaseTransfer,
+  submitEvmTransfer,
 } from '~/utils/baseWalletTransfer';
 
 const address = '0x1111111111111111111111111111111111111111';
@@ -278,6 +281,56 @@ describe('submitBaseTransfer', () => {
       'User rejected',
     );
     expect(fixture.sent()).toHaveLength(1);
+  });
+});
+
+describe('chain-parameterized EVM transfers', () => {
+  it('uses BNB metadata and submits with the BSC chain ID', async () => {
+    const fixture = setup();
+    fixture.setChain('0x38');
+    const prepared = await prepareEvmTransfer(
+      fixture.reader,
+      { ...input, tokenAddress: undefined, amount: '0.1' },
+      bsc,
+    );
+    expect(prepared).toMatchObject({
+      symbol: 'BNB',
+      chain: expect.objectContaining({ id: 56, name: 'BNB Smart Chain' }),
+    });
+    await expect(submitEvmTransfer({ ...fixture, prepared })).resolves.toBe(
+      hash,
+    );
+    expect(fixture.request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          from: address,
+          to: recipient,
+          chainId: '0x38',
+        }),
+      ],
+    });
+  });
+
+  it('uses the requested chain in balance and gas errors', async () => {
+    const { reader } = setup();
+    reader.tokenDetails.mockResolvedValue({
+      symbol: 'TOKEN',
+      decimals: 6,
+      balance: 0n,
+    });
+    await expect(prepareEvmTransfer(reader, input, bsc)).rejects.toThrow(
+      'TOKEN on BNB Smart Chain',
+    );
+    reader.tokenDetails.mockResolvedValue({
+      symbol: 'TOKEN',
+      decimals: 6,
+      balance: 5_000_000n,
+    });
+    reader.nativeBalance.mockResolvedValue(0n);
+    await expect(prepareEvmTransfer(reader, input, bsc)).rejects.toThrow(
+      'Not enough BNB on BNB Smart Chain',
+    );
   });
 });
 
