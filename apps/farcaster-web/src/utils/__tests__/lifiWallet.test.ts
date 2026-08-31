@@ -1,9 +1,10 @@
 import { PublicClient, zeroAddress } from 'viem';
-import { base } from 'viem/chains';
+import { base, bsc } from 'viem/chains';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   BASE_NATIVE_TOKEN,
+  createLifiNativeToken,
   fetchLifiToken,
   fetchLifiWalletTokens,
   formatLifiBalance,
@@ -115,6 +116,33 @@ describe('LI.FI wallet data', () => {
       normalizeLifiAddress('0x4200000000000000000000000000000000000006'),
     ).not.toBe(zeroAddress);
   });
+  it('uses each chain native symbol without treating ETH as BNB', () => {
+    expect(normalizeLifiAddress('BNB', 'BNB')).toBe(zeroAddress);
+    expect(() => normalizeLifiAddress('ETH', 'BNB')).toThrow('BNB');
+    expect(createLifiNativeToken(bsc)).toMatchObject({
+      chainId: 56,
+      address: zeroAddress,
+      symbol: 'BNB',
+      decimals: 18,
+    });
+  });
+  it('parses and discovers only the explicitly requested chain', async () => {
+    const bscToken = { ...token, chainId: 56, symbol: 'BSC-TOKEN' };
+    respond({
+      walletAddress: wallet,
+      balances: { 8453: [token], 56: [bscToken] },
+    });
+    const result = await fetchLifiWalletTokens(wallet, undefined, 56, 'BNB');
+    expect(result.tokens).toEqual([
+      expect.objectContaining({ chainId: 56, symbol: 'BSC-TOKEN' }),
+    ]);
+    expect(() => parseLifiToken(token, 56, 'BNB')).toThrow('chain 56');
+  });
+  it('isolates wallet, token and balance cache keys by chain', () => {
+    expect(lifiBalanceKey(wallet, token.address, 56, 'BNB')).not.toEqual(
+      lifiBalanceKey(wallet, token.address, 8453, 'ETH'),
+    );
+  });
   it('rejects wrong contracts returned by token lookup', async () => {
     respond({ ...token, address: wallet });
     await expect(fetchLifiToken(token.address)).rejects.toThrow(
@@ -168,6 +196,27 @@ describe('LI.FI wallet data', () => {
       (await readLifiAsset(client, wallet, parseLifiToken(token))).balance,
     ).toBe(0n);
   });
+  it('reads native and ERC-20 balances with the requested chain RPC', async () => {
+    const bscToken = parseLifiToken({ ...token, chainId: 56 }, 56, 'BNB');
+    const client = {
+      chain: bsc,
+      readContract: vi
+        .fn()
+        .mockImplementation(({ functionName }) =>
+          Promise.resolve(functionName === 'decimals' ? 6 : 42n),
+        ),
+    } as unknown as PublicClient;
+    await expect(
+      readLifiAsset(client, wallet, bscToken),
+    ).resolves.toMatchObject({ chainId: 56, balance: 42n });
+    await expect(
+      readLifiAsset(
+        { chain: base } as unknown as PublicClient,
+        wallet,
+        createLifiNativeToken(bsc),
+      ),
+    ).rejects.toThrow('chain 56');
+  });
   it('rejects RPC errors and decimals mismatches instead of returning zero', async () => {
     const readContract = vi.fn().mockRejectedValue(new Error('offline'));
     const client = { chain: base, readContract } as unknown as PublicClient;
@@ -179,7 +228,7 @@ describe('LI.FI wallet data', () => {
       readLifiAsset(client, wallet, parseLifiToken(token)),
     ).rejects.toThrow('decimals');
   });
-  it('scopes every balance to Base and wallet + contract', async () => {
+  it('scopes every balance to chain, wallet and contract', async () => {
     expect(lifiBalanceKey(wallet, token.address)).not.toEqual(
       lifiBalanceKey(token.address, token.address),
     );
@@ -192,6 +241,6 @@ describe('LI.FI wallet data', () => {
         wallet,
         BASE_NATIVE_TOKEN,
       ),
-    ).rejects.toThrow('Base');
+    ).rejects.toThrow('chain 8453');
   });
 });

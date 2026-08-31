@@ -2,7 +2,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { Address, PublicClient, zeroAddress } from 'viem';
+import { Address, Chain, PublicClient, zeroAddress } from 'viem';
+import { base, bsc } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -11,15 +12,21 @@ import {
   useLifiAsset,
   useLifiWalletTokens,
 } from '~/hooks/useLifiWallet';
-import { LifiAsset, lifiBalanceKey } from '~/utils/lifiWallet';
+import { LifiAsset, lifiBalanceKey, lifiTokenKey } from '~/utils/lifiWallet';
 
 const mocks = vi.hoisted(() => ({
   client: {},
   metadata: vi.fn(),
   discover: vi.fn(),
   read: vi.fn(),
+  publicClient: vi.fn(),
 }));
-vi.mock('wagmi', () => ({ usePublicClient: () => mocks.client }));
+vi.mock('wagmi', () => ({
+  usePublicClient: (parameters: unknown) => {
+    mocks.publicClient(parameters);
+    return mocks.client;
+  },
+}));
 vi.mock('~/utils/lifiWallet', async (importOriginal) => ({
   ...(await importOriginal<typeof import('~/utils/lifiWallet')>()),
   fetchLifiToken: mocks.metadata,
@@ -40,12 +47,14 @@ function View({
   name,
   address = wallet,
   contract = token.address,
+  chain = base,
 }: {
   name: string;
   address?: Address;
   contract?: Address;
+  chain?: Chain;
 }) {
-  const { data, isError } = useLifiAsset(address, contract);
+  const { data, isError } = useLifiAsset(address, contract, chain);
   return (
     <p data-testid={name}>
       {isError ? 'unavailable' : data ? data.balance.toString() : 'loading'}
@@ -253,7 +262,12 @@ describe('shared LI.FI wallet cache', () => {
     expect(
       queryClient.getQueryData(lifiBalanceKey(wallet, token.address)),
     ).toBeUndefined();
-    expect(mocks.discover).toHaveBeenCalledWith(wallet, expect.anything());
+    expect(mocks.discover).toHaveBeenCalledWith(
+      wallet,
+      expect.anything(),
+      base.id,
+      'ETH',
+    );
   });
   it('keeps ETH and ERC-20 balances separate', async () => {
     mocks.read.mockImplementation((_client, _wallet, metadata) =>
@@ -272,5 +286,52 @@ describe('shared LI.FI wallet cache', () => {
       expect(screen.getByTestId('token').textContent).toBe('20'),
     );
     expect(screen.getByTestId('native').textContent).toBe('10');
+  });
+  it('isolates identical accounts and contracts across chains', async () => {
+    mocks.metadata.mockImplementation((_address, _signal, chainId: number) =>
+      Promise.resolve({ ...token, chainId }),
+    );
+    mocks.read.mockImplementation((_client, _wallet, metadata) =>
+      Promise.resolve({
+        ...metadata,
+        balance: metadata.chainId === bsc.id ? 56n : 8453n,
+      }),
+    );
+    mount(
+      <>
+        <View name="base" />
+        <View name="bsc" chain={bsc} />
+      </>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('bsc').textContent).toBe('56'),
+    );
+    expect(screen.getByTestId('base').textContent).toBe('8453');
+    expect(mocks.read).toHaveBeenCalledTimes(2);
+    expect(mocks.publicClient).toHaveBeenCalledWith({ chainId: base.id });
+    expect(mocks.publicClient).toHaveBeenCalledWith({ chainId: bsc.id });
+  });
+  it('passes the selected chain to discovery and its token cache', async () => {
+    const setQueryData = vi.spyOn(queryClient, 'setQueryData');
+    function Discovery() {
+      const { data } = useLifiWalletTokens(wallet, bsc);
+      return <p>{data ? 'discovered' : 'loading'}</p>;
+    }
+    mocks.discover.mockResolvedValue({
+      tokens: [{ ...token, chainId: bsc.id }],
+      skipped: 0,
+    });
+    mount(<Discovery />);
+    await screen.findByText('discovered');
+    expect(mocks.discover).toHaveBeenCalledWith(
+      wallet,
+      expect.anything(),
+      bsc.id,
+      'BNB',
+    );
+    expect(setQueryData).toHaveBeenCalledWith(
+      lifiTokenKey(token.address, bsc.id, 'BNB'),
+      expect.objectContaining({ chainId: bsc.id }),
+    );
   });
 });
