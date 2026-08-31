@@ -14,6 +14,7 @@ import { useBalance, useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
+import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { useWallet } from '~/contexts/WalletProvider';
 import { truncateAddress } from '~/utils/ethereumUtils';
@@ -247,6 +248,11 @@ function ExternalWalletPanel() {
               onClick={() => setView('trade')}
             />
           </div>
+
+          <ExternalWalletPortfolio
+            key={address.toLowerCase()}
+            address={address}
+          />
 
           <div className="mt-auto pt-6">
             <DefaultButton
