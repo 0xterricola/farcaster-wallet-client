@@ -76,6 +76,19 @@ Open the local URL printed by Vite. When actively changing shared packages, run
 See [`apps/farcaster-web/README.md`](./apps/farcaster-web/README.md) for web-only
 commands and configuration details.
 
+## Cloudflare Pages deployment
+
+Demo: [farcaster-wallet-client.pages.dev](https://farcaster-wallet-client.pages.dev/).
+
+The hosted client needs both the web build and the same-origin API relay in
+`functions/~api/[[path]].ts`. Uploading only the static build is not enough for
+hosted Farcaster login. The relay forwards API requests to Farcaster; this fork
+does not include an independent Farcaster backend.
+
+Use Cloudflare Pages Git integration with the repository root as the build
+root. See the [deployment guide](./apps/farcaster-web/README.md#cloudflare-pages-deployment)
+for exact build settings, environment variables, login checks, and limitations.
+
 ## Validation
 
 ```sh
@@ -106,7 +119,10 @@ miniapp transactions, sends, swaps, and rejected approvals.
 - Built-in swaps currently target Base.
 - The send screen currently sends the connected chain's native token.
 - Swap execution depends on LI.FI route availability and downstream liquidity.
-- Local Farcaster sessions use the current production Farcaster API.
+- Local development uses the production Farcaster API directly by default;
+  hosted builds use it through the same-origin relay. This is not a sandbox.
+- Some miniapps restrict embedding or trusted client origins. The API relay
+  does not remove those restrictions; compatibility depends on each miniapp.
 
 ## Upstream snapshot
 
