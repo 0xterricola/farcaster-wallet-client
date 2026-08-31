@@ -8,6 +8,7 @@ import {
   DEFAULT_WALLET_CHAIN_ID,
   parseWalletChainId,
   readWalletChainId,
+  SELECTABLE_WALLET_CHAINS,
   walletNetworkName,
 } from '~/utils/walletNetwork';
 
@@ -15,6 +16,7 @@ describe('wallet network configuration', () => {
   it('keeps Base as the only dashboard-enabled chain for this step', () => {
     expect(DEFAULT_WALLET_CHAIN_ID).toBe(8453);
     expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453]);
+    expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1]);
   });
 
   it('builds exact add-chain parameters from the trusted chain definition', () => {

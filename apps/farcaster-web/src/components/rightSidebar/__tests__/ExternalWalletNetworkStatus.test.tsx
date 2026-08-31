@@ -51,6 +51,32 @@ describe('external wallet network UI', () => {
     expect(
       screen.getByText('Confirmed by your connected wallet.'),
     ).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Ethereum' })).toBeTruthy();
+  });
+
+  it('shows confirmed Ethereum while keeping financial content locked', () => {
+    const network = controller({
+      actualChainId: 1,
+      selectedChainId: 1,
+      status: 'unavailable',
+    });
+    render(
+      <>
+        <ExternalWalletNetworkHeader network={network} />
+        <ExternalWalletNetworkBoundary network={network} onDisconnect={vi.fn()}>
+          <div>Send transaction</div>
+        </ExternalWalletNetworkBoundary>
+      </>,
+    );
+    expect(
+      (screen.getByLabelText('Current network') as HTMLSelectElement).value,
+    ).toBe('1');
+    expect(screen.queryByText('Send transaction')).toBeNull();
+    expect(
+      screen.getByText(/Ethereum wallet screens are not enabled yet/),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Base' }));
+    expect(network.switchNetwork).toHaveBeenCalledWith(8453);
   });
 
   it('blocks wallet content and explains a recognized network mismatch', () => {

@@ -1,13 +1,24 @@
 import { Provider } from 'ox';
 import { Chain, toHex } from 'viem';
-import { base } from 'viem/chains';
+import { base, mainnet } from 'viem/chains';
 
 export const DEFAULT_WALLET_CHAIN_ID = base.id;
 
 // Base is intentionally the only dashboard-enabled chain in this first step.
 // More chains belong here only after their balance, send and swap paths exist.
-export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map([
+export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map<
+  number,
+  Chain
+>([[base.id, base]]);
+
+// Networks that the shared provider can intentionally follow. A network is
+// added to DASHBOARD_CHAINS only after its read and transaction screens ship.
+export const SELECTABLE_WALLET_CHAINS: ReadonlyMap<number, Chain> = new Map<
+  number,
+  Chain
+>([
   [base.id, base],
+  [mainnet.id, mainnet],
 ]);
 
 const KNOWN_WALLET_NETWORK_NAMES: ReadonlyMap<number, string> = new Map([

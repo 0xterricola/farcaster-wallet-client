@@ -9,6 +9,7 @@ import {
   DEFAULT_WALLET_CHAIN_ID,
   parseWalletChainId,
   readWalletChainId,
+  SELECTABLE_WALLET_CHAINS,
   WalletNetworkError,
 } from '~/utils/walletNetwork';
 
@@ -17,6 +18,7 @@ export type WalletNetworkStatus =
   | 'loading'
   | 'ready'
   | 'mismatch'
+  | 'unavailable'
   | 'checking'
   | 'switching'
   | 'adding'
@@ -24,7 +26,9 @@ export type WalletNetworkStatus =
 
 export function useWalletNetworkController(provider?: Provider.Provider) {
   const [actualChainId, setActualChainId] = useState<number>();
-  const [selectedChainId] = useState(DEFAULT_WALLET_CHAIN_ID);
+  const [selectedChainId, setSelectedChainId] = useState<number>(
+    DEFAULT_WALLET_CHAIN_ID,
+  );
   const [previousWorkingChainId, setPreviousWorkingChainId] =
     useState<number>();
   const [requestedChainId, setRequestedChainId] = useState<number>();
@@ -32,9 +36,14 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
     'idle' | 'checking' | 'switching' | 'adding'
   >('idle');
   const [error, setError] = useState<WalletNetworkError>();
+  const selectedChainIdRef = useRef(selectedChainId);
   const providerGeneration = useRef(0);
   const actionGeneration = useRef(0);
   const actionRunning = useRef(false);
+
+  useEffect(() => {
+    selectedChainIdRef.current = selectedChainId;
+  }, [selectedChainId]);
 
   const reportChainChanged = useCallback((value: unknown) => {
     const chainId = parseWalletChainId(value);
@@ -42,6 +51,9 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
       return;
     }
     setActualChainId(chainId);
+    if (SELECTABLE_WALLET_CHAINS.has(chainId)) {
+      setSelectedChainId(chainId);
+    }
     if (DASHBOARD_CHAINS.has(chainId)) {
       setPreviousWorkingChainId(chainId);
     }
@@ -71,7 +83,7 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
         if (generation === providerGeneration.current) {
           setError({
             kind: 'switch_failed',
-            requestedChainId: selectedChainId,
+            requestedChainId: selectedChainIdRef.current,
             message: 'Could not read the connected wallet network.',
           });
         }
@@ -80,7 +92,7 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
       providerGeneration.current += 1;
       provider.removeListener('chainChanged', changed);
     };
-  }, [provider, reportChainChanged, selectedChainId]);
+  }, [provider, reportChainChanged]);
 
   const performSwitch = useCallback(
     async (chainId: number, operation: number) => {
@@ -107,7 +119,7 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
 
   const switchNetwork = useCallback(
     async (chainId: number) => {
-      if (!DASHBOARD_CHAINS.has(chainId) || actionRunning.current) {
+      if (!SELECTABLE_WALLET_CHAINS.has(chainId) || actionRunning.current) {
         return false;
       }
       actionRunning.current = true;
@@ -162,7 +174,7 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
         return false;
       }
       reportChainChanged(confirmed);
-      return confirmed === selectedChainId;
+      return SELECTABLE_WALLET_CHAINS.has(confirmed);
     } catch {
       if (operation === actionGeneration.current) {
         setError({
@@ -182,7 +194,7 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
 
   const addNetwork = useCallback(
     async (chainId: number) => {
-      const chain = DASHBOARD_CHAINS.get(chainId);
+      const chain = SELECTABLE_WALLET_CHAINS.get(chainId);
       if (!provider || !chain || actionRunning.current) {
         return false;
       }
@@ -236,7 +248,10 @@ export function useWalletNetworkController(provider?: Provider.Provider) {
     if (!actualChainId) {
       return 'loading';
     }
-    return actualChainId === selectedChainId ? 'ready' : 'mismatch';
+    if (actualChainId !== selectedChainId) {
+      return 'mismatch';
+    }
+    return DASHBOARD_CHAINS.has(actualChainId) ? 'ready' : 'unavailable';
   }, [action, actualChainId, error, provider, selectedChainId]);
 
   return {

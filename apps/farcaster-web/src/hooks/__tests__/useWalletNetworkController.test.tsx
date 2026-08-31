@@ -59,6 +59,66 @@ describe('shared wallet network controller', () => {
     );
   });
 
+  it('follows confirmed Ethereum but keeps its financial screens unavailable', async () => {
+    const provider = walletProvider('0x1');
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+    expect(result.current).toMatchObject({
+      actualChainId: 1,
+      selectedChainId: 1,
+      previousWorkingChainId: undefined,
+    });
+  });
+
+  it('switches from Base to Ethereum and adopts it only after confirmation', async () => {
+    const provider = walletProvider();
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    await act(async () => {
+      await expect(result.current.switchNetwork(1)).resolves.toBe(true);
+    });
+    expect(provider.request).toHaveBeenCalledWith({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x1' }],
+    });
+    expect(result.current).toMatchObject({
+      actualChainId: 1,
+      selectedChainId: 1,
+      previousWorkingChainId: 8453,
+      status: 'unavailable',
+    });
+  });
+
+  it('keeps Base selected when an Ethereum switch is rejected', async () => {
+    const provider = walletProvider();
+    provider.request.mockImplementation(async ({ method }) => {
+      if (method === 'eth_chainId') {
+        return '0x2105';
+      }
+      if (method === 'wallet_switchEthereumChain') {
+        throw { code: 4001 };
+      }
+      return null;
+    });
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    await act(async () => {
+      await expect(result.current.switchNetwork(1)).resolves.toBe(false);
+    });
+    expect(result.current).toMatchObject({
+      actualChainId: 8453,
+      selectedChainId: 8453,
+      status: 'error',
+      error: expect.objectContaining({ kind: 'rejected' }),
+    });
+  });
+
   it('detects a network change initiated by the wallet or a miniapp', async () => {
     const provider = walletProvider();
     const { result } = renderHook(() =>
