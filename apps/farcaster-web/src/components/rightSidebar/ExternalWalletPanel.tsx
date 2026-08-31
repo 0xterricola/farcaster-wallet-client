@@ -6,56 +6,51 @@ import {
   CheckIcon,
   CopyIcon,
 } from 'lucide-react';
-import { FormEvent, ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
-import { formatUnits, isAddress, parseEther, toHex } from 'viem';
+import { formatUnits } from 'viem';
 import { base } from 'viem/chains';
-import { useAccount, useBalance, useConnect, useDisconnect } from 'wagmi';
+import { useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
+import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
+import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { useWallet } from '~/contexts/WalletProvider';
+import { useLifiAsset } from '~/hooks/useLifiWallet';
 import { truncateAddress } from '~/utils/ethereumUtils';
+import { LIFI_NATIVE_ADDRESS } from '~/utils/lifiWallet';
 
 type WalletView = 'overview' | 'receive' | 'send' | 'trade';
 
 function ExternalWalletPanel() {
-  const {
-    address,
-    provider,
-    clearPreferredWallet,
-    connectors,
-    setPreferredWallet,
-  } = useWallet();
-  const { chain } = useAccount();
+  const { address, clearPreferredWallet, connectors, setPreferredWallet } =
+    useWallet();
   const { connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
-  const { data: balance, isLoading: isBalanceLoading } = useBalance({
-    address,
-  });
+  const {
+    data: balance,
+    isLoading: isBalanceLoading,
+    isError: balanceError,
+  } = useLifiAsset(address, LIFI_NATIVE_ADDRESS);
   const [view, setView] = useState<WalletView>('overview');
   const [copied, setCopied] = useState(false);
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [sendError, setSendError] = useState<string>();
-  const [transactionHash, setTransactionHash] = useState<string>();
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string>();
 
   const formattedBalance = useMemo(() => {
-    if (!balance) {
+    if (!balance || balanceError) {
       return isBalanceLoading ? 'Loading…' : '—';
     }
 
     const value = Number(
-      formatUnits(balance.value, balance.decimals),
+      formatUnits(balance.balance, balance.decimals),
     ).toLocaleString(undefined, {
       maximumFractionDigits: 6,
     });
     return `${value} ${balance.symbol}`;
-  }, [balance, isBalanceLoading]);
+  }, [balance, isBalanceLoading, balanceError]);
 
   const browserWallets = connectors.filter(
     (connector) => connector.type === 'injected',
@@ -156,57 +151,6 @@ function ExternalWalletPanel() {
     clearPreferredWallet();
   };
 
-  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSendError(undefined);
-    setTransactionHash(undefined);
-
-    if (!provider) {
-      setSendError('Wallet provider is unavailable. Reconnect and try again.');
-      return;
-    }
-
-    if (!isAddress(recipient)) {
-      setSendError('Enter a valid EVM address.');
-      return;
-    }
-
-    let value: bigint;
-    try {
-      value = parseEther(amount);
-    } catch {
-      setSendError('Enter a valid amount.');
-      return;
-    }
-
-    if (value <= 0n) {
-      setSendError('Amount must be greater than zero.');
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const hash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: address,
-            to: recipient,
-            value: toHex(value),
-          },
-        ],
-      });
-      setTransactionHash(String(hash));
-      setAmount('');
-    } catch (error) {
-      setSendError(
-        error instanceof Error ? error.message : 'Transaction was not sent.',
-      );
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   return (
     <div
       className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
@@ -215,7 +159,7 @@ function ExternalWalletPanel() {
       {view === 'overview' && (
         <>
           <div className="rounded-2xl p-4 bg-elevated-nohover">
-            <div className="text-sm text-muted">{chain?.name ?? 'Wallet'}</div>
+            <div className="text-sm text-muted">{base.name}</div>
             <div className="mt-1 text-3xl font-semibold text-default">
               {formattedBalance}
             </div>
@@ -251,6 +195,11 @@ function ExternalWalletPanel() {
             />
           </div>
 
+          <ExternalWalletPortfolio
+            key={address.toLowerCase()}
+            address={address}
+          />
+
           <div className="mt-auto pt-6">
             <DefaultButton
               className="w-full"
@@ -264,8 +213,15 @@ function ExternalWalletPanel() {
       )}
 
       {view === 'receive' && (
-        <WalletSubscreen title="Receive" onBack={() => setView('overview')}>
+        <WalletSubscreen
+          title="Receive on Base"
+          onBack={() => setView('overview')}
+        >
           <div className="flex flex-col items-center gap-4 py-4">
+            <div className="text-center text-sm text-muted">
+              Select Base as the sending network. This QR code contains only
+              your address; it does not select the network for the sender.
+            </div>
             <div className="overflow-hidden rounded-2xl bg-white p-2">
               <QRCode value={address} size={180} quietZone={8} />
             </div>
@@ -280,44 +236,11 @@ function ExternalWalletPanel() {
       )}
 
       {view === 'send' && (
-        <WalletSubscreen title="Send" onBack={() => setView('overview')}>
-          <form className="flex flex-col gap-4 pt-4" onSubmit={handleSend}>
-            <label className="flex flex-col gap-2 text-sm text-default">
-              Recipient
-              <input
-                className="rounded-xl border px-3 py-2 bg-app border-default"
-                placeholder="0x…"
-                value={recipient}
-                onChange={(event) => setRecipient(event.target.value.trim())}
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm text-default">
-              Amount ({balance?.symbol ?? 'ETH'})
-              <input
-                className="rounded-xl border px-3 py-2 bg-app border-default"
-                inputMode="decimal"
-                placeholder="0.0"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-            </label>
-            {sendError && (
-              <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-                {sendError}
-              </div>
-            )}
-            {transactionHash && (
-              <div className="rounded-xl bg-green-50 p-3 text-sm text-green-700">
-                <div>Transaction submitted</div>
-                <div className="mt-1 break-all">
-                  {truncateAddress(transactionHash, 8)}
-                </div>
-              </div>
-            )}
-            <DefaultButton type="submit" isLoading={isSending}>
-              Review in wallet
-            </DefaultButton>
-          </form>
+        <WalletSubscreen
+          title="Send on Base"
+          onBack={() => setView('overview')}
+        >
+          <ExternalWalletSend key={address.toLowerCase()} address={address} />
         </WalletSubscreen>
       )}
 
@@ -326,7 +249,7 @@ function ExternalWalletPanel() {
           title="Trade on Base"
           onBack={() => setView('overview')}
         >
-          <ExternalWalletSwap />
+          <ExternalWalletSwap key={address.toLowerCase()} />
         </WalletSubscreen>
       )}
     </div>

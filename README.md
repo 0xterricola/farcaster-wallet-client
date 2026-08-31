@@ -14,9 +14,9 @@ in their own wallet.
 - Automatic discovery of modern EIP-6963 browser wallets
 - One persistent wallet across the dashboard and Farcaster miniapps
 - EIP-1193 provider support for miniapp signatures and transactions
-- Connected address and native-token balance
+- Connected address, native ETH balance, and Base token portfolio
 - Receive address with QR code and copy action
-- Native-token sending
+- ETH and ERC-20 sending on Base, with live balance checks
 - Base swaps between ETH and arbitrary Base ERC-20 contract addresses
 - Quote, route, minimum received, allowance, approval, and transaction handling
 - Explicit disconnect and reconnect flow
@@ -33,6 +33,13 @@ phrase or private key is created, requested, or stored by this client.
 
 Base swap quotes and transaction requests come from the public LI.FI quote API.
 The connected wallet remains responsible for approvals and transaction signing.
+
+LI.FI also supplies wallet token discovery, token metadata, and estimated prices.
+Portfolio, Send, and Trade share one cache keyed by Base + wallet + token contract.
+Displayed quantities are checked onchain rather than trusting indexed holdings;
+preflight reads update that same cache before sending or swapping. Farcaster's
+wallet positions API is not used by these screens. See the web README for
+[wallet data sources and limitations](apps/farcaster-web/README.md#wallet-data-sources).
 
 ## Requirements
 
@@ -117,7 +124,10 @@ miniapp transactions, sends, swaps, and rejected approvals.
 - Wallet additions currently target the web client; the mobile client remains
   the upstream snapshot implementation.
 - Built-in swaps currently target Base.
-- The send screen currently sends the connected chain's native token.
+- Portfolio, receive guidance, sends, and swaps currently target Base. Miniapps
+  continue to use the shared wallet provider for their own supported networks.
+- Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
+  be unavailable. Transfer history is not implemented in this dashboard yet.
 - Swap execution depends on LI.FI route availability and downstream liquidity.
 - Local development uses the production Farcaster API directly by default;
   hosted builds use it through the same-origin relay. This is not a sandbox.
