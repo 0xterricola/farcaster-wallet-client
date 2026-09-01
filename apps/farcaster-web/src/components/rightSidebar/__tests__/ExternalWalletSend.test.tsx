@@ -9,7 +9,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -373,5 +373,45 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on Arbiscan' })
         .getAttribute('href'),
     ).toBe(`https://arbiscan.io/tx/${hash}`);
+  });
+
+  it('uses BSC data, BNB fees, receipts, and BscScan links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'BNB', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={bsc} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(bsc);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      bsc,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: bsc.id }),
+    );
+    expect(
+      screen.getByText('Available on BNB Smart Chain: 1.23 BNB'),
+    ).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      bsc,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review BNB Smart Chain transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('BNB');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on BscScan' })
+        .getAttribute('href'),
+    ).toBe(`https://bscscan.com/tx/${hash}`);
   });
 });

@@ -15,7 +15,7 @@ const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
     [base.id, { read: true, send: true, swap: true }],
     [mainnet.id, { read: true, send: true, swap: true }],
     [arbitrum.id, { read: true, send: true, swap: true }],
-    [bsc.id, { read: true, send: false, swap: false }],
+    [bsc.id, { read: true, send: true, swap: false }],
   ]);
 
 export function walletChainCapabilities(chainId: number) {
