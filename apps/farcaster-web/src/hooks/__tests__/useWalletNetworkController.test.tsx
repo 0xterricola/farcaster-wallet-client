@@ -124,6 +124,19 @@ describe('shared wallet network controller', () => {
     });
   });
 
+  it('follows confirmed Robinhood Chain once its read-only dashboard is enabled', async () => {
+    const provider = walletProvider('0x1237');
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current).toMatchObject({
+      actualChainId: 4663,
+      selectedChainId: 4663,
+      previousWorkingChainId: 4663,
+    });
+  });
+
   it('switches from Base to Ethereum and adopts it only after confirmation', async () => {
     const provider = walletProvider();
     const { result } = renderHook(() =>

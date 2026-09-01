@@ -71,6 +71,12 @@ const monadRpcUrl =
 const hyperevmRpcUrl =
   import.meta.env.VITE_HYPEREVM_RPC_URL || 'https://rpc.hyperliquid.xyz/evm';
 
+// Robinhood Chain's mainnet endpoint accepts browser requests. Keep an override
+// for deployments that need a dedicated provider or higher limits.
+const robinhoodRpcUrl =
+  import.meta.env.VITE_ROBINHOOD_RPC_URL ||
+  'https://rpc.mainnet.chain.robinhood.com';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -86,7 +92,9 @@ const transports = chains.reduce(
                 ? monadRpcUrl
                 : chain.id === hyperevm.id
                   ? hyperevmRpcUrl
-                  : undefined;
+                  : chain.id === robinhood.id
+                    ? robinhoodRpcUrl
+                    : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

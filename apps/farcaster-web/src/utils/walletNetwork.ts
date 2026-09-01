@@ -1,4 +1,4 @@
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import { Provider } from 'ox';
 import { Chain, toHex } from 'viem';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
@@ -20,6 +20,7 @@ const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
     [celo.id, { read: true, send: true, swap: true }],
     [monad.id, { read: true, send: true, swap: true }],
     [hyperevm.id, { read: true, send: true, swap: true }],
+    [robinhood.id, { read: true, send: false, swap: false }],
   ]);
 
 export function walletChainCapabilities(chainId: number) {
@@ -45,6 +46,7 @@ export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map<
   [celo.id, celo],
   [monad.id, monad],
   [hyperevm.id, hyperevm],
+  [robinhood.id, robinhood],
 ]);
 
 // Networks that the shared provider can intentionally follow. A network is
@@ -60,6 +62,7 @@ export const SELECTABLE_WALLET_CHAINS: ReadonlyMap<number, Chain> = new Map<
   [celo.id, celo],
   [monad.id, monad],
   [hyperevm.id, hyperevm],
+  [robinhood.id, robinhood],
 ]);
 
 const KNOWN_WALLET_NETWORK_NAMES: ReadonlyMap<number, string> = new Map([

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
 import { zeroAddress } from 'viem';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
@@ -333,6 +333,29 @@ describe('LI.FI portfolio', () => {
       mocks.client,
       wallet,
       hyperevm.id,
+    );
+  });
+  it('uses Robinhood Chain for ETH and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={robinhood} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, robinhood);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      robinhood,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Robinhood Chain token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Robinhood Chain')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${robinhood.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native ETH is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      robinhood.id,
     );
   });
   it('warns when discovery is partial', () => {
