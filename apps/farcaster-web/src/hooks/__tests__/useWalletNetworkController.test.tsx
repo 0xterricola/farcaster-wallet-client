@@ -59,16 +59,16 @@ describe('shared wallet network controller', () => {
     );
   });
 
-  it('follows confirmed Ethereum but keeps its financial screens unavailable', async () => {
+  it('follows confirmed Ethereum once its read-only dashboard is enabled', async () => {
     const provider = walletProvider('0x1');
     const { result } = renderHook(() =>
       useWalletNetworkController(provider as never),
     );
-    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(result.current).toMatchObject({
       actualChainId: 1,
       selectedChainId: 1,
-      previousWorkingChainId: undefined,
+      previousWorkingChainId: 1,
     });
   });
 
@@ -88,8 +88,8 @@ describe('shared wallet network controller', () => {
     expect(result.current).toMatchObject({
       actualChainId: 1,
       selectedChainId: 1,
-      previousWorkingChainId: 8453,
-      status: 'unavailable',
+      previousWorkingChainId: 1,
+      status: 'ready',
     });
   });
 

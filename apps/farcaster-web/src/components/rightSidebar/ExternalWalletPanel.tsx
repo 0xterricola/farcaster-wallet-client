@@ -6,7 +6,7 @@ import {
   CheckIcon,
   CopyIcon,
 } from 'lucide-react';
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import { formatUnits } from 'viem';
 import { base } from 'viem/chains';
@@ -25,6 +25,10 @@ import { useWallet } from '~/contexts/WalletProvider';
 import { useLifiAsset } from '~/hooks/useLifiWallet';
 import { truncateAddress } from '~/utils/ethereumUtils';
 import { LIFI_NATIVE_ADDRESS } from '~/utils/lifiWallet';
+import {
+  DASHBOARD_CHAINS,
+  walletChainCapabilities,
+} from '~/utils/walletNetwork';
 
 type WalletView = 'overview' | 'receive' | 'send' | 'trade';
 
@@ -38,6 +42,8 @@ function ExternalWalletPanel() {
   } = useWallet();
   const { connectAsync } = useConnect();
   const { disconnect } = useDisconnect();
+  const chain = DASHBOARD_CHAINS.get(network.selectedChainId) ?? base;
+  const capabilities = walletChainCapabilities(chain.id);
   const {
     data: balance,
     isLoading: isBalanceLoading,
@@ -45,11 +51,16 @@ function ExternalWalletPanel() {
   } = useLifiAsset(
     network.status === 'ready' ? address : undefined,
     LIFI_NATIVE_ADDRESS,
+    chain,
   );
   const [view, setView] = useState<WalletView>('overview');
   const [copied, setCopied] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string>();
+
+  useEffect(() => {
+    setView('overview');
+  }, [network.selectedChainId]);
 
   const formattedBalance = useMemo(() => {
     if (!balance || balanceError) {
@@ -176,7 +187,7 @@ function ExternalWalletPanel() {
         {view === 'overview' && (
           <>
             <div className="rounded-2xl p-4 bg-elevated-nohover">
-              <div className="text-sm text-muted">{base.name}</div>
+              <div className="text-sm text-muted">{chain.name}</div>
               <div className="mt-1 text-3xl font-semibold text-default">
                 {formattedBalance}
               </div>
@@ -204,17 +215,28 @@ function ExternalWalletPanel() {
                 label="Send"
                 icon={<ArrowUpFromLineIcon className="size-5" />}
                 onClick={() => setView('send')}
+                disabled={!capabilities.send}
               />
               <WalletAction
                 label="Trade"
                 icon={<ArrowLeftRightIcon className="size-5" />}
                 onClick={() => setView('trade')}
+                disabled={!capabilities.swap}
               />
             </div>
 
+            {(!capabilities.send || !capabilities.swap) && (
+              <div className="mt-3 rounded-xl p-3 text-xs leading-relaxed text-muted bg-elevated-nohover">
+                {chain.name} balances and Receive are available. Send and Trade
+                stay disabled until their {chain.name} transaction paths are
+                ready.
+              </div>
+            )}
+
             <ExternalWalletPortfolio
-              key={address.toLowerCase()}
+              key={`${chain.id}:${address.toLowerCase()}`}
               address={address}
+              chain={chain}
             />
 
             <div className="mt-auto pt-6">
@@ -231,13 +253,14 @@ function ExternalWalletPanel() {
 
         {view === 'receive' && (
           <WalletSubscreen
-            title="Receive on Base"
+            title={`Receive on ${chain.name}`}
             onBack={() => setView('overview')}
           >
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="text-center text-sm text-muted">
-                Select Base as the sending network. This QR code contains only
-                your address; it does not select the network for the sender.
+                Select {chain.name} as the sending network. This QR code
+                contains only your address; it does not select the network for
+                the sender.
               </div>
               <div className="overflow-hidden rounded-2xl bg-white p-2">
                 <QRCode value={address} size={180} quietZone={8} />
@@ -252,7 +275,7 @@ function ExternalWalletPanel() {
           </WalletSubscreen>
         )}
 
-        {view === 'send' && (
+        {view === 'send' && capabilities.send && (
           <WalletSubscreen
             title="Send on Base"
             onBack={() => setView('overview')}
@@ -261,7 +284,7 @@ function ExternalWalletPanel() {
           </WalletSubscreen>
         )}
 
-        {view === 'trade' && (
+        {view === 'trade' && capabilities.swap && (
           <WalletSubscreen
             title="Trade on Base"
             onBack={() => setView('overview')}
@@ -278,16 +301,19 @@ function WalletAction({
   label,
   icon,
   onClick,
+  disabled = false,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold bg-elevated-nohover text-default hover:bg-overlay-light"
+      className="flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold bg-elevated-nohover text-default hover:bg-overlay-light disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-elevated-nohover"
       onClick={onClick}
+      disabled={disabled}
     >
       {icon}
       {label}

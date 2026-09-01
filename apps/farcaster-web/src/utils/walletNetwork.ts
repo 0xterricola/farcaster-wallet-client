@@ -4,15 +4,40 @@ import { base, mainnet } from 'viem/chains';
 
 export const DEFAULT_WALLET_CHAIN_ID = base.id;
 
-// Base is intentionally the only dashboard-enabled chain in this first step.
-// More chains belong here only after their balance, send and swap paths exist.
+export type WalletChainCapabilities = {
+  read: boolean;
+  send: boolean;
+  swap: boolean;
+};
+
+const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
+  new Map([
+    [base.id, { read: true, send: true, swap: true }],
+    [mainnet.id, { read: true, send: false, swap: false }],
+  ]);
+
+export function walletChainCapabilities(chainId: number) {
+  return (
+    WALLET_CHAIN_CAPABILITIES.get(chainId) ?? {
+      read: false,
+      send: false,
+      swap: false,
+    }
+  );
+}
+
+// A chain is dashboard-enabled once its read-only balance and receive surfaces
+// are safe. Transaction capabilities are enabled separately above.
 export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map<
   number,
   Chain
->([[base.id, base]]);
+>([
+  [base.id, base],
+  [mainnet.id, mainnet],
+]);
 
 // Networks that the shared provider can intentionally follow. A network is
-// added to DASHBOARD_CHAINS only after its read and transaction screens ship.
+// added to DASHBOARD_CHAINS only after its read-only wallet screen ships.
 export const SELECTABLE_WALLET_CHAINS: ReadonlyMap<number, Chain> = new Map<
   number,
   Chain

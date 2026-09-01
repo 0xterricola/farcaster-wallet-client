@@ -1,4 +1,4 @@
-import { base } from 'viem/chains';
+import { base, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,14 +9,33 @@ import {
   parseWalletChainId,
   readWalletChainId,
   SELECTABLE_WALLET_CHAINS,
+  walletChainCapabilities,
   walletNetworkName,
 } from '~/utils/walletNetwork';
 
 describe('wallet network configuration', () => {
-  it('keeps Base as the only dashboard-enabled chain for this step', () => {
+  it('enables read-only dashboard data for Base and Ethereum', () => {
     expect(DEFAULT_WALLET_CHAIN_ID).toBe(8453);
-    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453]);
+    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453, 1]);
     expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1]);
+  });
+
+  it('keeps Ethereum transactions locked behind explicit capabilities', () => {
+    expect(walletChainCapabilities(base.id)).toEqual({
+      read: true,
+      send: true,
+      swap: true,
+    });
+    expect(walletChainCapabilities(mainnet.id)).toEqual({
+      read: true,
+      send: false,
+      swap: false,
+    });
+    expect(walletChainCapabilities(123456)).toEqual({
+      read: false,
+      send: false,
+      swap: false,
+    });
   });
 
   it('builds exact add-chain parameters from the trusted chain definition', () => {

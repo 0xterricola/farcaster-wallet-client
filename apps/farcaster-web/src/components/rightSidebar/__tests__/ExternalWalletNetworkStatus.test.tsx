@@ -54,11 +54,11 @@ describe('external wallet network UI', () => {
     expect(screen.getByRole('option', { name: 'Ethereum' })).toBeTruthy();
   });
 
-  it('shows confirmed Ethereum while keeping financial content locked', () => {
+  it('shows confirmed Ethereum and allows its capability-gated dashboard', () => {
     const network = controller({
       actualChainId: 1,
       selectedChainId: 1,
-      status: 'unavailable',
+      status: 'ready',
     });
     render(
       <>
@@ -71,12 +71,7 @@ describe('external wallet network UI', () => {
     expect(
       (screen.getByLabelText('Current network') as HTMLSelectElement).value,
     ).toBe('1');
-    expect(screen.queryByText('Send transaction')).toBeNull();
-    expect(
-      screen.getByText(/Ethereum wallet screens are not enabled yet/),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Return to Base' }));
-    expect(network.switchNetwork).toHaveBeenCalledWith(8453);
+    expect(screen.getByText('Send transaction')).toBeTruthy();
   });
 
   it('blocks wallet content and explains a recognized network mismatch', () => {

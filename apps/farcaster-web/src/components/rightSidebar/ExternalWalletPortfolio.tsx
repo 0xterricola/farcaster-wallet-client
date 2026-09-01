@@ -1,7 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { LoaderCircleIcon, RefreshCwIcon } from 'lucide-react';
 import React, { useState } from 'react';
-import { Address, zeroAddress } from 'viem';
+import { Address, Chain, zeroAddress } from 'viem';
+import { base } from 'viem/chains';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import {
@@ -15,11 +16,20 @@ import { formatLifiBalance, lifiAssetUsd } from '~/utils/lifiWallet';
 
 const PAGE_SIZE = 20;
 
-export function ExternalWalletPortfolio({ address }: { address: Address }) {
+export function ExternalWalletPortfolio({
+  address,
+  chain = base,
+}: {
+  address: Address;
+  chain?: Chain;
+}) {
   const queryClient = useQueryClient();
   const [showUnverified, setShowUnverified] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const { data, isPending, isError, isFetching } = useLifiWalletTokens(address);
+  const { data, isPending, isError, isFetching } = useLifiWalletTokens(
+    address,
+    chain,
+  );
   const allTokens = (data?.tokens ?? []).filter(
     (token) => token.address !== zeroAddress,
   );
@@ -33,7 +43,9 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
   const balances = useLifiAssets(
     address,
     visible.map((token) => token.address),
+    chain,
   );
+  const explorerUrl = chain.blockExplorers?.default.url;
   const initialLoading = isPending && !data && !isError;
   const loadingBalances = visible.some(
     (_, index) => !balances[index]?.data && !balances[index]?.isError,
@@ -53,13 +65,13 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
   return (
     <section
       className="mt-6 rounded-2xl border p-4 border-default"
-      aria-label="Base token portfolio"
+      aria-label={`${chain.name} token portfolio`}
       aria-busy={Boolean(refreshing)}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-default">
-            Tokens on Base
+            Tokens on {chain.name}
           </h3>
           <p className="mt-1 text-xs text-muted">
             Token balances · Estimated USD value
@@ -71,7 +83,7 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
           size="sm"
           className="inline-flex shrink-0 items-center gap-2"
           disabled={refreshing}
-          onClick={() => void refreshLifiWallet(queryClient, address)}
+          onClick={() => void refreshLifiWallet(queryClient, address, chain.id)}
         >
           <RefreshCwIcon
             aria-hidden="true"
@@ -89,7 +101,7 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
             aria-hidden="true"
             className="text-accent-primary size-6 animate-spin motion-reduce:animate-none"
           />
-          <span>Loading Base tokens…</span>
+          <span>Loading {chain.name} tokens…</span>
         </div>
       )}
       {loadingBalances && !initialLoading && (
@@ -101,7 +113,7 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
             aria-hidden="true"
             className="size-4 animate-spin motion-reduce:animate-none"
           />
-          Checking token balances on Base…
+          Checking token balances on {chain.name}…
         </div>
       )}
       {refreshing && !initialLoading && !loadingBalances && (
@@ -146,8 +158,8 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
           )}
           {(tokens.length === 0 || allZero) && (
             <p className="mt-4 rounded-xl p-4 text-sm leading-relaxed text-muted bg-elevated-nohover">
-              No non-zero Base token balances in this selection. Native ETH is
-              shown above.
+              No non-zero {chain.name} token balances in this selection. Native{' '}
+              {chain.nativeCurrency.symbol} is shown above.
             </p>
           )}
           <ul className="divide-default mt-4 divide-y">
@@ -180,15 +192,21 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
                           : 'Checking balance…'}
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <a
-                        className="text-accent-primary text-xs hover:underline"
-                        href={`https://basescan.org/token/${token.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`View contract ${token.address} on BaseScan`}
-                      >
-                        {truncateAddress(token.address, 4)}
-                      </a>
+                      {explorerUrl ? (
+                        <a
+                          className="text-accent-primary text-xs hover:underline"
+                          href={`${explorerUrl}/token/${token.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`View contract ${token.address} on ${chain.name} explorer`}
+                        >
+                          {truncateAddress(token.address, 4)}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted">
+                          {truncateAddress(token.address, 4)}
+                        </span>
+                      )}
                       {token.verificationStatus !== 'verified' && (
                         <span className="rounded-full border px-1.5 py-0.5 text-xs text-muted border-default">
                           Unverified
@@ -216,8 +234,7 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
             </DefaultButton>
           )}
           <p className="mt-4 text-xs leading-relaxed text-muted">
-            Missing a token? You can enter its Base contract in Send or Trade if
-            LI.FI recognizes it.
+            Missing a token? LI.FI may not recognize every {chain.name} asset.
           </p>
         </>
       )}
@@ -225,7 +242,7 @@ export function ExternalWalletPortfolio({ address }: { address: Address }) {
         <summary className="cursor-pointer">About these balances</summary>
         <p className="mt-2">
           Token discovery and estimated prices by LI.FI. Balances are checked on
-          Base and shared with Send and Trade. Native ETH is shown above.
+          {chain.name}. Native {chain.nativeCurrency.symbol} is shown above.
         </p>
       </details>
     </section>

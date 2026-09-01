@@ -26,6 +26,13 @@ Add the public project identifier from the
 VITE_WALLETCONNECT_PROJECT_ID=your_reown_project_id
 ```
 
+Ethereum reads use a browser-compatible public RPC by default. Deployments may
+override it with their own endpoint:
+
+```env
+VITE_ETHEREUM_RPC_URL=https://your-ethereum-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -95,6 +102,11 @@ Set these in Cloudflare before deploying:
 | `NODE_VERSION`                  | `20.19.5`                 |
 | `PNPM_VERSION`                  | `10.8.1`                  |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Your own Reown project ID |
+
+`VITE_ETHEREUM_RPC_URL` is optional. Set it to a browser-compatible Ethereum
+RPC if you do not want to use the public default. Because it is exposed to the
+browser, do not place a secret RPC credential in this variable unless the
+provider restricts it by origin and treats it as public client configuration.
 
 Cloudflare does not receive your ignored `.env.local` file. The `VITE_` project
 ID is public client configuration and is embedded at build time; redeploy after
@@ -231,6 +243,8 @@ confirmation. This patch does not add multichain transfers or portfolio history.
 
 - If WalletConnect is unavailable, verify
   `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
+- If Ethereum balances are unavailable, confirm that `VITE_ETHEREUM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear

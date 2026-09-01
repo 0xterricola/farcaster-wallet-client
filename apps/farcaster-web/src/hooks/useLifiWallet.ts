@@ -187,7 +187,7 @@ export function useLifiTransferReader() {
 export function refreshLifiWallet(
   queryClient: QueryClient,
   address: Address,
-  chainId = base.id,
+  chainId: number = base.id,
 ) {
   return queryClient.invalidateQueries({
     queryKey: lifiWalletKey(address, chainId),

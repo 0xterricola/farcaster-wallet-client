@@ -37,9 +37,16 @@ const chains = [
   robinhood,
 ] as const;
 
+// viem's default Ethereum RPC currently rejects browser CORS requests. Keep a
+// browser-compatible public default while allowing deployments to bring their
+// own authenticated or self-hosted endpoint.
+const ethereumRpcUrl =
+  import.meta.env.VITE_ETHEREUM_RPC_URL ||
+  'https://ethereum-rpc.publicnode.com';
+
 const transports = chains.reduce(
   (acc, chain) => {
-    acc[chain.id] = http();
+    acc[chain.id] = http(chain.id === mainnet.id ? ethereumRpcUrl : undefined);
     return acc;
   },
   {} as Record<number, Transport>,

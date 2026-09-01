@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { zeroAddress } from 'viem';
+import { base, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
@@ -151,8 +152,8 @@ describe('LI.FI portfolio', () => {
   });
   it('uses the connected wallet without requiring Farcaster authentication', () => {
     render(<ExternalWalletPortfolio address={wallet} />);
-    expect(mocks.tokens).toHaveBeenCalledWith(wallet);
-    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address]);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, base);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], base);
     expect(screen.getByText('$2.00')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
   });
@@ -205,7 +206,26 @@ describe('LI.FI portfolio', () => {
   it('refreshes the shared wallet cache', () => {
     render(<ExternalWalletPortfolio address={wallet} />);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
-    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet);
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, base.id);
+  });
+
+  it('uses the selected chain for Ethereum discovery, reads, labels, and links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={mainnet} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, mainnet);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], mainnet);
+    expect(
+      screen.getByRole('region', { name: 'Ethereum token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Ethereum')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://etherscan.io/token/${token.address}`,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      mainnet.id,
+    );
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({
