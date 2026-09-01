@@ -1,5 +1,5 @@
 import { Provider } from 'ox';
-import { bsc } from 'viem/chains';
+import { bsc, celo } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -157,6 +157,45 @@ describe('generic EVM wallet guards', () => {
     expect(request).toHaveBeenLastCalledWith({
       method: 'eth_sendTransaction',
       params: [{ from: address, to: recipient, value: '0x1', chainId: '0x38' }],
+    });
+  });
+
+  it('verifies and sends with the requested Celo chain ID', async () => {
+    let chain = '0x1';
+    const request = vi.fn(async ({ method }) => {
+      if (method === 'eth_chainId') {
+        return chain;
+      }
+      if (method === 'wallet_switchEthereumChain') {
+        chain = '0xa4ec';
+        return null;
+      }
+      if (method === 'eth_accounts') {
+        return [address];
+      }
+      if (method === 'eth_sendTransaction') {
+        return hash;
+      }
+      throw new Error(`Unexpected method ${method}`);
+    });
+    await expect(
+      sendEvmNativeToken({
+        provider: { request } as never,
+        address,
+        recipient,
+        value: 1n,
+        chain: celo,
+      }),
+    ).resolves.toBe(hash);
+    expect(request).toHaveBeenCalledWith({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0xa4ec' }],
+    });
+    expect(request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        { from: address, to: recipient, value: '0x1', chainId: '0xa4ec' },
+      ],
     });
   });
 

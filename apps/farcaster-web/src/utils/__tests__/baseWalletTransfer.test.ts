@@ -6,7 +6,7 @@ import {
   PublicClient,
   zeroAddress,
 } from 'viem';
-import { bsc } from 'viem/chains';
+import { bsc, celo } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -308,6 +308,33 @@ describe('chain-parameterized EVM transfers', () => {
           from: address,
           to: recipient,
           chainId: '0x38',
+        }),
+      ],
+    });
+  });
+
+  it('uses CELO metadata and submits with the Celo chain ID', async () => {
+    const fixture = setup();
+    fixture.setChain('0xa4ec');
+    const prepared = await prepareEvmTransfer(
+      fixture.reader,
+      { ...input, tokenAddress: undefined, amount: '0.1' },
+      celo,
+    );
+    expect(prepared).toMatchObject({
+      symbol: 'CELO',
+      chain: expect.objectContaining({ id: 42220, name: 'Celo' }),
+    });
+    await expect(submitEvmTransfer({ ...fixture, prepared })).resolves.toBe(
+      hash,
+    );
+    expect(fixture.request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          from: address,
+          to: recipient,
+          chainId: '0xa4ec',
         }),
       ],
     });

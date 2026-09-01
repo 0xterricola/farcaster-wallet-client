@@ -9,7 +9,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
-import { arbitrum, base, bsc, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -413,5 +413,43 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on BscScan' })
         .getAttribute('href'),
     ).toBe(`https://bscscan.com/tx/${hash}`);
+  });
+
+  it('uses Celo data, CELO fees, receipts, and Celoscan links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'CELO', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={celo} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(celo);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      celo,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: celo.id }),
+    );
+    expect(screen.getByText('Available on Celo: 1.23 CELO')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      celo,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Celo transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('CELO');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Celo Explorer' })
+        .getAttribute('href'),
+    ).toBe(`https://celoscan.io/tx/${hash}`);
   });
 });
