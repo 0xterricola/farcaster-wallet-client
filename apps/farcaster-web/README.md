@@ -233,8 +233,8 @@ or assume every miniapp will work on a fork's domain.
   tokens, and swap through LI.FI using Circle-issued Celo USDC
   (`0xcebA9300f2b948710d2653dD7B07f33A8B32118C`, 6 decimals) as the default
   stablecoin.
-- View Monad MON and token balances and receive guidance. Send and Trade remain
-  disabled until their Monad transaction paths are enabled.
+- View Monad MON and token balances, receive guidance, and send MON or ERC-20
+  tokens. Trade remains disabled until its Monad transaction path is enabled.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.

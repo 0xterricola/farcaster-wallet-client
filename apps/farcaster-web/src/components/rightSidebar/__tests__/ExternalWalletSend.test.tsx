@@ -9,7 +9,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
-import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -451,5 +451,43 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on Celo Explorer' })
         .getAttribute('href'),
     ).toBe(`https://celoscan.io/tx/${hash}`);
+  });
+
+  it('uses Monad data, MON fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'MON', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={monad} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(monad);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      monad,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: monad.id }),
+    );
+    expect(screen.getByText('Available on Monad: 1.23 MON')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      monad,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Monad transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('MON');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Monvision' })
+        .getAttribute('href'),
+    ).toBe(`${monad.blockExplorers.default.url}/tx/${hash}`);
   });
 });

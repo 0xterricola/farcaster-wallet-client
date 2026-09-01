@@ -52,7 +52,7 @@ describe('wallet network configuration', () => {
     });
     expect(walletChainCapabilities(monad.id)).toEqual({
       read: true,
-      send: false,
+      send: true,
       swap: false,
     });
     expect(walletChainCapabilities(123456)).toEqual({
