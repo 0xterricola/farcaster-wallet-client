@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { hyperevm } from 'farcaster-client-data';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
@@ -26,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   tokens: vi.fn(),
   refetchTokens: vi.fn(),
   readContract: vi.fn(),
+  call: vi.fn(),
   wait: vi.fn(),
   queryClient: {},
   walletAddress: '0x1111111111111111111111111111111111111111',
@@ -58,6 +60,7 @@ vi.mock('~/contexts/WalletProvider', () => ({
 vi.mock('wagmi', () => ({
   usePublicClient: () => ({
     readContract: mocks.readContract,
+    call: mocks.call,
     waitForTransactionReceipt: mocks.wait,
   }),
   useWaitForTransactionReceipt: mocks.receipt,
@@ -111,6 +114,7 @@ beforeEach(() => {
   mocks.guard.mockResolvedValue(undefined);
   mocks.receipt.mockReturnValue({ data: undefined, isError: false });
   mocks.readContract.mockReset().mockResolvedValue(0n);
+  mocks.call.mockReset().mockResolvedValue({ data: '0x' });
   mocks.wait
     .mockReset()
     .mockResolvedValue({ status: 'success', blockNumber: 123n });
@@ -358,8 +362,7 @@ describe('WETH approval sequencing', () => {
     await screen.findByRole('button', { name: 'Review swap' });
     expect(mocks.request).toHaveBeenCalledOnce();
     // Approval confirmation must not depend on LI.FI returning another route.
-    // The separate Review swap click refreshes the quote before submission.
-    expect(mocks.quote).toHaveBeenCalledTimes(2);
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(screen.getByLabelText('Token approval').textContent).toContain(
       'Approved: 0.25 WETH',
     );
@@ -373,7 +376,7 @@ describe('WETH approval sequencing', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
     await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
-    expect(mocks.quote).toHaveBeenCalledTimes(3);
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(mocks.request.mock.calls[1][0].params[0]).toMatchObject({
       chainId: '0x2105',
       from: wallet,
@@ -436,7 +439,7 @@ describe('WETH approval sequencing', () => {
     );
     expect(mocks.request).toHaveBeenCalledOnce();
   });
-  it('blocks the swap if the spender changes after approval', async () => {
+  it('keeps the approved reviewed spender instead of silently replacing the route', async () => {
     setupWeth();
     mocks.readContract
       .mockResolvedValueOnce(0n)
@@ -444,18 +447,17 @@ describe('WETH approval sequencing', () => {
       .mockResolvedValue(wethUnits);
     render(<ExternalWalletSwap />);
     await quoteWeth();
-    mocks.quote.mockResolvedValueOnce(wethRoute).mockResolvedValueOnce({
+    fireEvent.click(screen.getByRole('button', { name: 'Approve WETH' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    mocks.quote.mockResolvedValue({
       ...wethRoute,
       estimate: { ...wethRoute.estimate, approvalAddress: contract },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Approve WETH' }));
-    await screen.findByRole('button', { name: 'Review swap' });
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Quote changed',
-    );
-    expect(mocks.request).toHaveBeenCalledOnce();
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(mocks.request.mock.calls[0][0].params[0].to).toBe(wethAddress);
+    expect(mocks.request.mock.calls[1][0].params[0].to).toBe(spender);
   });
   it('stops after approval if the connected account changes while waiting', async () => {
     setupWeth();
@@ -474,7 +476,7 @@ describe('WETH approval sequencing', () => {
     view.rerender(<ExternalWalletSwap />);
     await act(async () => confirmApproval({ status: 'success' }));
     expect(mocks.request).toHaveBeenCalledOnce();
-    expect(mocks.quote).toHaveBeenCalledTimes(2);
+    expect(mocks.quote).toHaveBeenCalledOnce();
   });
   it('does not treat buying WETH with native ETH as spending WETH', async () => {
     setupWeth();
@@ -937,6 +939,14 @@ describe('LI.FI swap balance integration', () => {
         params: [expect.objectContaining({ chainId: '0x2105', from: wallet })],
       }),
     );
+    expect(mocks.call).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: wallet,
+        to: contract,
+        data: '0xabcd',
+        value: 1000000000000n,
+      }),
+    );
     expect(mocks.refresh).toHaveBeenCalledWith(
       mocks.queryClient,
       wallet,
@@ -954,6 +964,17 @@ describe('LI.FI swap balance integration', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Insufficient',
     );
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+  it('blocks submission when the selected route fails preflight simulation', async () => {
+    mocks.call.mockRejectedValueOnce(new Error('execution reverted'));
+    render(<ExternalWalletSwap />);
+    await getQuote();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'failed a Base preflight simulation',
+    );
+    expect(mocks.call).toHaveBeenCalledOnce();
     expect(mocks.request).not.toHaveBeenCalled();
   });
   it('rejects excess fractional precision instead of rounding', async () => {
@@ -981,15 +1002,31 @@ describe('LI.FI swap balance integration', () => {
     expect(mocks.request).toHaveBeenCalledOnce();
     expect(screen.queryByRole('link')).toBeNull();
   });
-  it('requires new review if the refreshed minimum worsens', async () => {
+  it('submits the exact reviewed quote instead of replacing it at signing time', async () => {
+    const reviewedRoute = {
+      tool: 'test',
+      action: { fromAmount: '1000000000000' },
+      estimate: { toAmount: '1000', toAmountMin: '990' },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+      },
+    };
+    mocks.quote.mockResolvedValue(reviewedRoute);
     render(<ExternalWalletSwap />);
     await getQuote();
-    mocks.quote.mockResolvedValue({ estimate: { toAmountMin: '1' } });
+    mocks.quote.mockResolvedValue({
+      ...reviewedRoute,
+      estimate: { ...reviewedRoute.estimate, toAmountMin: '1' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Quote changed',
-    );
-    expect(mocks.request).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
+    expect(mocks.quote).toHaveBeenCalledOnce();
+    expect(mocks.request.mock.calls[0][0].params[0]).toMatchObject({
+      to: reviewedRoute.transactionRequest.to,
+      data: reviewedRoute.transactionRequest.data,
+    });
   });
   it('does not sign after the view unmounts during preflight', async () => {
     let resolve!: () => void;
@@ -1539,6 +1576,115 @@ describe('Monad swap integration', () => {
       mocks.queryClient,
       wallet,
       monad.id,
+    );
+  });
+});
+
+describe('HyperEVM swap integration', () => {
+  const hyperEvmUsdc = '0xb88339CB7199b77E23DB6E890353E22632Ba630f';
+  const hypeNative = {
+    ...from,
+    chainId: hyperevm.id,
+    symbol: 'HYPE',
+    name: 'HyperEVM',
+  };
+  const hyperEvmUsdcAsset = {
+    ...to,
+    chainId: hyperevm.id,
+    address: hyperEvmUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses native HyperEVM USDC without native approval and submits on HyperEVM', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? hypeNative : hyperEvmUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? hypeNative : hyperEvmUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'hyperflow',
+      action: { fromAmount: '10000000000000000' },
+      estimate: {
+        approvalAddress: contract,
+        toAmount: '822315',
+        toAmountMin: '818184',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x2386f26fc10000',
+        gasPrice: '0x1619eb00',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={hyperevm} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'HYPE',
+      hyperEvmUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on HyperEVM');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: hyperEvmUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.01' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      hypeNative,
+      hyperEvmUsdcAsset,
+      10000000000000000n,
+      hyperevm,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review HyperEVM swap' }),
+    ).toBeTruthy();
+    mocks.quote.mockResolvedValue({
+      tool: 'hyperflow',
+      action: { fromAmount: '10000000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '822314',
+        toAmountMin: '818183',
+      },
+      transactionRequest: {
+        to: spender,
+        data: '0xdead',
+        value: '0x2386f26fc10000',
+        gasPrice: '0x1619eb00',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /HyperScan/ });
+    expect(mocks.quote).toHaveBeenCalledOnce();
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, hyperevm);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x3e7',
+          from: wallet,
+          gasPrice: '0x1619eb00',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${hyperevm.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      hyperevm.id,
     );
   });
 });

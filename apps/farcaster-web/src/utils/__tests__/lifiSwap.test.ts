@@ -1,3 +1,4 @@
+import { hyperevm } from 'farcaster-client-data';
 import { zeroAddress } from 'viem';
 import { arbitrum, bsc, celo, mainnet, monad } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
@@ -210,6 +211,23 @@ describe('LI.FI quote validation', () => {
     quote.transactionRequest.chainId = monad.id;
     expect(() =>
       validateLifiQuote(quote, wallet, monadFrom, monadTo, 100n, monad),
+    ).not.toThrow();
+  });
+
+  it('accepts a matching HyperEVM native same-chain swap', () => {
+    const hypeFrom = { ...from, chainId: hyperevm.id, symbol: 'HYPE' };
+    const hyperEvmTo = { ...to, chainId: hyperevm.id };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: hyperevm.id,
+      toChainId: hyperevm.id,
+      fromToken: hypeFrom,
+      toToken: hyperEvmTo,
+    };
+    quote.transactionRequest.chainId = hyperevm.id;
+    expect(() =>
+      validateLifiQuote(quote, wallet, hypeFrom, hyperEvmTo, 100n, hyperevm),
     ).not.toThrow();
   });
 });

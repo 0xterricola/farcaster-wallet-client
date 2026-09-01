@@ -244,10 +244,10 @@ or assume every miniapp will work on a fork's domain.
   tokens, and swap through LI.FI using verified Monad USDC
   (`0x754704Bc059F8C67012fEd69BC8A327a5aafb603`, 6 decimals) as the default
   stablecoin.
-- View HyperEVM HYPE and token balances, receive guidance, and send HYPE or
-  ERC-20 tokens. Trade remains disabled until its HyperEVM transaction path is
-  enabled. Native USDC is `0xb88339CB7199b77E23DB6E890353E22632Ba630f`
-  with 6 decimals.
+- View HyperEVM HYPE and token balances, receive guidance, send HYPE or ERC-20
+  tokens, and swap through LI.FI using Circle-issued native USDC
+  (`0xb88339CB7199b77E23DB6E890353E22632Ba630f`, 6 decimals) as the default
+  stablecoin.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.

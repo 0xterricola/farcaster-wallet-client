@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { hyperevm } from 'farcaster-client-data';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Address,
@@ -42,7 +43,7 @@ type Review = {
 };
 
 // Default USDC contracts for the token picker. Base, Ethereum, Arbitrum and
-// Celo use Circle-issued native USDC. BNB Smart Chain uses verified
+// Celo and HyperEVM use Circle-issued native USDC. BNB Smart Chain uses verified
 // Binance-Peg USDC because Circle does not issue native USDC on BSC. Monad
 // uses the verified USDC configured by the Farcaster client. Balances, metadata
 // and quotes still use the shared LI.FI/RPC path.
@@ -104,6 +105,16 @@ const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
     {
       chainId: monad.id,
       address: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    hyperevm.id,
+    {
+      chainId: hyperevm.id,
+      address: '0xb88339CB7199b77E23DB6E890353E22632Ba630f',
       symbol: 'USDC',
       name: 'USD Coin',
       decimals: 6,
@@ -317,27 +328,11 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
         throw new Error('Token decimals changed. Get a new quote.');
       }
       checkBalance(from, review.units);
-      const quote = await fetchLifiQuote(
-        address,
-        from,
-        review.to,
-        review.units,
-        chain,
-      );
-      assertCurrent();
-      const checkChanges = (next: LifiQuote) => {
-        if (
-          BigInt(next.estimate.toAmountMin) <
-            BigInt(review.quote.estimate.toAmountMin) ||
-          next.estimate.approvalAddress?.toLowerCase() !==
-            review.quote.estimate.approvalAddress?.toLowerCase()
-        ) {
-          throw new Error(
-            'Quote changed. Get a new quote and review it before swapping.',
-          );
-        }
-      };
-      checkChanges(quote);
+      // Submit the exact route and minimum the user reviewed. Refetching here
+      // can create an endless review loop when prices move between clicks.
+      // Balance, allowance and the on-chain preflight below still protect a
+      // stale route before any swap transaction reaches the wallet.
+      const quote = review.quote;
       if (from.address !== zeroAddress) {
         const spender = quote.estimate.approvalAddress;
         if (!spender) {
@@ -437,6 +432,37 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
         );
       }
       await ensureEvmWalletAccount(provider, address, chain, false);
+      assertCurrent();
+      setStatus(`Simulating swap on ${chain.name}…`);
+      try {
+        const simulation = {
+          account: address,
+          to: tx.to,
+          data: tx.data,
+          ...(tx.value ? { value: BigInt(tx.value) } : {}),
+          ...(tx.gasLimit ? { gas: BigInt(tx.gasLimit) } : {}),
+        };
+        if (tx.gasPrice) {
+          await client.call({
+            ...simulation,
+            type: 'legacy',
+            gasPrice: BigInt(tx.gasPrice),
+          });
+        } else if (tx.maxFeePerGas && tx.maxPriorityFeePerGas) {
+          await client.call({
+            ...simulation,
+            type: 'eip1559',
+            maxFeePerGas: BigInt(tx.maxFeePerGas),
+            maxPriorityFeePerGas: BigInt(tx.maxPriorityFeePerGas),
+          });
+        } else {
+          await client.call(simulation);
+        }
+      } catch {
+        throw new Error(
+          `The selected route failed a ${chain.name} preflight simulation. No transaction was submitted. Get a new quote before trying again.`,
+        );
+      }
       assertCurrent();
       setStatus('Review swap and network fees in your wallet…');
       const transactionHash = (await provider.request({
