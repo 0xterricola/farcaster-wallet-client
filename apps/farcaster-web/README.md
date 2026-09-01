@@ -47,6 +47,13 @@ optional override is also available:
 VITE_BSC_RPC_URL=https://your-bsc-rpc.example
 ```
 
+Celo reads use its documented browser-compatible Forno RPC by default. An
+optional override is also available:
+
+```env
+VITE_CELO_RPC_URL=https://your-celo-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -215,6 +222,8 @@ or assume every miniapp will work on a fork's domain.
   BEP-20 tokens, and swap through LI.FI. The default stablecoin is verified
   Binance-Peg USDC (`0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d`, 18
   decimals), not Circle-issued native USDC.
+- View Celo CELO and token balances and receive guidance. Send and Trade remain
+  disabled until their Celo transaction paths are enabled.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
@@ -269,6 +278,8 @@ confirmation. This patch does not add multichain transfers or portfolio history.
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If BNB Smart Chain balances are unavailable, confirm that `VITE_BSC_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
+- If Celo balances are unavailable, confirm that `VITE_CELO_RPC_URL` accepts
+  JSON-RPC requests from the deployed site's browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear

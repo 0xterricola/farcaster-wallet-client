@@ -54,6 +54,11 @@ const arbitrumRpcUrl =
 const bscRpcUrl =
   import.meta.env.VITE_BSC_RPC_URL || 'https://bsc-dataseed.bnbchain.org';
 
+// Celo's documented best-effort endpoint accepts browser requests. Keep an
+// override for deployments that need a dedicated provider or higher limits.
+const celoRpcUrl =
+  import.meta.env.VITE_CELO_RPC_URL || 'https://forno.celo.org';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -63,7 +68,9 @@ const transports = chains.reduce(
           ? arbitrumRpcUrl
           : chain.id === bsc.id
             ? bscRpcUrl
-            : undefined;
+            : chain.id === celo.id
+              ? celoRpcUrl
+              : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

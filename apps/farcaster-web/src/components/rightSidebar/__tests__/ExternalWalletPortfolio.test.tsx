@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { zeroAddress } from 'viem';
-import { arbitrum, base, bsc, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
@@ -263,6 +263,21 @@ describe('LI.FI portfolio', () => {
     expect(screen.getByText(/Native BNB is shown above/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
     expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, bsc.id);
+  });
+  it('uses Celo for CELO and token portfolio reads and Celoscan links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={celo} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, celo);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], celo);
+    expect(
+      screen.getByRole('region', { name: 'Celo token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Celo')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://celoscan.io/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native CELO is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, celo.id);
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({

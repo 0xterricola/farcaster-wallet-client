@@ -85,6 +85,19 @@ describe('shared wallet network controller', () => {
     });
   });
 
+  it('follows confirmed Celo once its read-only dashboard is enabled', async () => {
+    const provider = walletProvider('0xa4ec');
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current).toMatchObject({
+      actualChainId: 42220,
+      selectedChainId: 42220,
+      previousWorkingChainId: 42220,
+    });
+  });
+
   it('switches from Base to Ethereum and adopts it only after confirmation', async () => {
     const provider = walletProvider();
     const { result } = renderHook(() =>
