@@ -1,5 +1,5 @@
 import { zeroAddress } from 'viem';
-import { arbitrum, mainnet } from 'viem/chains';
+import { arbitrum, bsc, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import { LifiQuote, validateLifiQuote } from '~/utils/lifiSwap';
@@ -128,6 +128,26 @@ describe('LI.FI quote validation', () => {
         100n,
         arbitrum,
       ),
+    ).not.toThrow();
+    expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
+      'Base swap',
+    );
+  });
+
+  it('accepts a matching BSC same-chain swap and rejects Base metadata', () => {
+    const bscFrom = { ...from, chainId: bsc.id, symbol: 'BNB' };
+    const bscTo = { ...to, chainId: bsc.id, decimals: 18 };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: bsc.id,
+      toChainId: bsc.id,
+      fromToken: bscFrom,
+      toToken: bscTo,
+    };
+    quote.transactionRequest.chainId = bsc.id;
+    expect(() =>
+      validateLifiQuote(quote, wallet, bscFrom, bscTo, 100n, bsc),
     ).not.toThrow();
     expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
       'Base swap',

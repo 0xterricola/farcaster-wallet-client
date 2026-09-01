@@ -10,7 +10,7 @@ import {
   toHex,
   zeroAddress,
 } from 'viem';
-import { arbitrum, base } from 'viem/chains';
+import { arbitrum, base, bsc } from 'viem/chains';
 import { usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -36,10 +36,13 @@ type Review = {
   allowance?: bigint;
 };
 
-// Circle's native USDC contracts. Picker metadata only; balances, token
-// metadata and quotes still use the shared LI.FI/RPC path.
+// Default USDC contracts for the token picker. Base, Ethereum and Arbitrum use
+// Circle-issued native USDC. BNB Smart Chain uses verified Binance-Peg USDC,
+// because Circle does not issue native USDC on BSC. Balances, metadata and
+// quotes still use the shared LI.FI/RPC path.
 // https://developers.circle.com/stablecoins/usdc-contract-addresses
-const OFFICIAL_USDC: ReadonlyMap<number, LifiToken> = new Map([
+// https://bscscan.com/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
+const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
   [
     base.id,
     {
@@ -70,21 +73,37 @@ const OFFICIAL_USDC: ReadonlyMap<number, LifiToken> = new Map([
       decimals: 6,
     },
   ],
+  [
+    bsc.id,
+    {
+      chainId: bsc.id,
+      address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 18,
+    },
+  ],
 ]);
 
-function isOfficialUsdc(token: LifiToken, official?: LifiToken) {
+function isDefaultUsdc(token: LifiToken, defaultUsdc?: LifiToken) {
   return (
-    official !== undefined &&
-    token.chainId === official.chainId &&
-    token.address.toLowerCase() === official.address.toLowerCase()
+    defaultUsdc !== undefined &&
+    token.chainId === defaultUsdc.chainId &&
+    token.address.toLowerCase() === defaultUsdc.address.toLowerCase()
   );
+}
+
+function defaultUsdcLabel(chain: Chain) {
+  return chain.id === bsc.id
+    ? `Binance-Peg USDC on ${chain.name}`
+    : `native USDC on ${chain.name}`;
 }
 
 export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
   const { address, provider } = useWallet();
   const queryClient = useQueryClient();
   const client = usePublicClient({ chainId: chain.id });
-  const officialUsdc = OFFICIAL_USDC.get(chain.id);
+  const defaultUsdc = DEFAULT_USDC.get(chain.id);
   const [fromInput, setFromInput] = useState(chain.nativeCurrency.symbol);
   const [toInput, setToInput] = useState('');
   const [amount, setAmount] = useState('');
@@ -108,23 +127,21 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
     .filter(
       (token) => token.chainId === chain.id && token.address !== zeroAddress,
     )
-    .map((token) =>
-      isOfficialUsdc(token, officialUsdc) ? officialUsdc! : token,
-    );
+    .map((token) => (isDefaultUsdc(token, defaultUsdc) ? defaultUsdc! : token));
   const unverifiedCount = allTokens.filter(
     (token) =>
-      !isOfficialUsdc(token, officialUsdc) &&
+      !isDefaultUsdc(token, defaultUsdc) &&
       token.verificationStatus !== 'verified',
   ).length;
   const tokenOptions = allTokens.filter(
     (token) =>
-      isOfficialUsdc(token, officialUsdc) ||
+      isDefaultUsdc(token, defaultUsdc) ||
       showUnverified ||
       token.verificationStatus === 'verified',
   );
   const buyTokenOptions = [
-    ...(officialUsdc ? [officialUsdc] : []),
-    ...tokenOptions.filter((token) => !isOfficialUsdc(token, officialUsdc)),
+    ...(defaultUsdc ? [defaultUsdc] : []),
+    ...tokenOptions.filter((token) => !isDefaultUsdc(token, defaultUsdc)),
   ];
   const fromBalance = useLifiAsset(
     address,
@@ -506,7 +523,7 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
               setFromInput(value);
             }}
             chain={chain}
-            officialUsdc={officialUsdc}
+            defaultUsdc={defaultUsdc}
           />
           <label className="flex flex-col gap-2 text-sm text-default">
             Amount
@@ -533,7 +550,7 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
               setToInput(value);
             }}
             chain={chain}
-            officialUsdc={officialUsdc}
+            defaultUsdc={defaultUsdc}
           />
           <DefaultButton type="submit" disabled={busy || !address || !client}>
             {busy ? 'Checking wallet…' : review ? 'Refresh quote' : 'Get quote'}
@@ -648,7 +665,7 @@ function TokenInput({
   error,
   onChange,
   chain,
-  officialUsdc,
+  defaultUsdc,
 }: {
   label: string;
   tokens: LifiToken[];
@@ -657,7 +674,7 @@ function TokenInput({
   error: boolean;
   onChange: (value: string) => void;
   chain: Chain;
-  officialUsdc?: LifiToken;
+  defaultUsdc?: LifiToken;
 }) {
   const address = inputAddress(value, chain);
   const selected =
@@ -683,10 +700,10 @@ function TokenInput({
           {tokens.map((token) => (
             <option key={token.address} value={token.address}>
               {token.symbol} —{' '}
-              {isOfficialUsdc(token, officialUsdc)
-                ? `native USDC on ${chain.name}`
+              {isDefaultUsdc(token, defaultUsdc)
+                ? defaultUsdcLabel(chain)
                 : truncateAddress(token.address, 4)}
-              {!isOfficialUsdc(token, officialUsdc) &&
+              {!isDefaultUsdc(token, defaultUsdc) &&
               token.verificationStatus !== 'verified'
                 ? ' (unverified)'
                 : ''}

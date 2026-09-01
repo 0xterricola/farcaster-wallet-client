@@ -211,8 +211,10 @@ or assume every miniapp will work on a fork's domain.
 - Swap ETH and arbitrary ERC-20 tokens on Base
 - View Arbitrum One balances, receive guidance, send ETH or ERC-20 tokens, and
   swap through LI.FI using Circle-issued Arbitrum USDC as the default stablecoin.
-- View BNB Smart Chain BNB and BEP-20 balances, receive guidance, and send BNB
-  or BEP-20 tokens. Trade remains disabled until its BSC path is enabled.
+- View BNB Smart Chain BNB and BEP-20 balances, receive guidance, send BNB or
+  BEP-20 tokens, and swap through LI.FI. The default stablecoin is verified
+  Binance-Peg USDC (`0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d`, 18
+  decimals), not Circle-issued native USDC.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.

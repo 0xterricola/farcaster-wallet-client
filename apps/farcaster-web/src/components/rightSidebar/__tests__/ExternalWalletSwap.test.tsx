@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
@@ -1204,6 +1204,99 @@ describe('Arbitrum swap integration', () => {
       mocks.queryClient,
       wallet,
       arbitrum.id,
+    );
+  });
+});
+
+describe('BNB Smart Chain swap integration', () => {
+  const bscUsdc = '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d';
+  const bscNative = {
+    ...from,
+    chainId: bsc.id,
+    symbol: 'BNB',
+    name: 'BNB',
+  };
+  const bscUsdcAsset = {
+    ...to,
+    chainId: bsc.id,
+    address: bscUsdc,
+    symbol: 'USDC',
+    decimals: 18,
+  };
+
+  it('uses verified Binance-Peg USDC, BSC transaction fields, and BscScan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? bscNative : bscUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? bscNative : bscUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'bsc-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: {
+        toAmount: '1000000000000000',
+        toAmountMin: '990000000000000',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={bsc} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'BNB',
+      bscUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain(
+      'Binance-Peg USDC on BNB Smart Chain',
+    );
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: bscUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      bscNative,
+      bscUsdcAsset,
+      1000000000000n,
+      bsc,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review BNB Smart Chain swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /BscScan/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, bsc);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x38',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://bscscan.com/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      bsc.id,
     );
   });
 });
