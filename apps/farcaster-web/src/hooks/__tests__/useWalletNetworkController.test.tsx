@@ -111,6 +111,19 @@ describe('shared wallet network controller', () => {
     });
   });
 
+  it('follows confirmed HyperEVM once its read-only dashboard is enabled', async () => {
+    const provider = walletProvider('0x3e7');
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current).toMatchObject({
+      actualChainId: 999,
+      selectedChainId: 999,
+      previousWorkingChainId: 999,
+    });
+  });
+
   it('switches from Base to Ethereum and adopts it only after confirmation', async () => {
     const provider = walletProvider();
     const { result } = renderHook(() =>

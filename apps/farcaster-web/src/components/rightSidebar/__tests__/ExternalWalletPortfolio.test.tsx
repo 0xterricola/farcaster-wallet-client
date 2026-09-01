@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { hyperevm } from 'farcaster-client-data';
 import React from 'react';
 import { zeroAddress } from 'viem';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
@@ -310,6 +311,29 @@ describe('LI.FI portfolio', () => {
     expect(screen.getByText(/Native MON is shown above/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
     expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, monad.id);
+  });
+  it('uses HyperEVM for HYPE and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={hyperevm} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, hyperevm);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      hyperevm,
+    );
+    expect(
+      screen.getByRole('region', { name: 'HyperEVM token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on HyperEVM')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${hyperevm.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native HYPE is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      hyperevm.id,
+    );
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({

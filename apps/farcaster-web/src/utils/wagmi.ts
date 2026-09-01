@@ -1,5 +1,5 @@
 import { walletConnect } from '@wagmi/connectors';
-import { robinhood } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import { bsc, degen, monad, monadTestnet, unichain } from 'viem/chains';
 import { Config, createConfig, http, Transport } from 'wagmi';
 import {
@@ -35,6 +35,7 @@ const chains = [
   sepolia,
   mainnet,
   bsc,
+  hyperevm,
   robinhood,
 ] as const;
 
@@ -65,6 +66,11 @@ const celoRpcUrl =
 const monadRpcUrl =
   import.meta.env.VITE_MONAD_RPC_URL || 'https://rpc.monad.xyz';
 
+// HyperEVM's mainnet endpoint accepts browser requests. Keep an override for
+// deployments that need a dedicated provider or higher limits.
+const hyperevmRpcUrl =
+  import.meta.env.VITE_HYPEREVM_RPC_URL || 'https://rpc.hyperliquid.xyz/evm';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -78,7 +84,9 @@ const transports = chains.reduce(
               ? celoRpcUrl
               : chain.id === monad.id
                 ? monadRpcUrl
-                : undefined;
+                : chain.id === hyperevm.id
+                  ? hyperevmRpcUrl
+                  : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

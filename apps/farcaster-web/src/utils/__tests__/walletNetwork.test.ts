@@ -1,3 +1,4 @@
+import { hyperevm } from 'farcaster-client-data';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
@@ -17,10 +18,10 @@ describe('wallet network configuration', () => {
   it('enables dashboard data only for completed read integrations', () => {
     expect(DEFAULT_WALLET_CHAIN_ID).toBe(8453);
     expect([...DASHBOARD_CHAINS.keys()]).toEqual([
-      8453, 1, 42161, 56, 42220, 143,
+      8453, 1, 42161, 56, 42220, 143, 999,
     ]);
     expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([
-      8453, 1, 42161, 56, 42220, 143,
+      8453, 1, 42161, 56, 42220, 143, 999,
     ]);
   });
 
@@ -54,6 +55,11 @@ describe('wallet network configuration', () => {
       read: true,
       send: true,
       swap: true,
+    });
+    expect(walletChainCapabilities(hyperevm.id)).toEqual({
+      read: true,
+      send: false,
+      swap: false,
     });
     expect(walletChainCapabilities(123456)).toEqual({
       read: false,
