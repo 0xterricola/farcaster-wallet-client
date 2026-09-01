@@ -8,6 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { hyperevm } from 'farcaster-client-data';
 import React from 'react';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -489,5 +490,43 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on Monvision' })
         .getAttribute('href'),
     ).toBe(`${monad.blockExplorers.default.url}/tx/${hash}`);
+  });
+
+  it('uses HyperEVM data, HYPE fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'HYPE', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={hyperevm} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(hyperevm);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      hyperevm,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: hyperevm.id }),
+    );
+    expect(screen.getByText('Available on HyperEVM: 1.23 HYPE')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      hyperevm,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review HyperEVM transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('HYPE');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on HyperScan' })
+        .getAttribute('href'),
+    ).toBe(`${hyperevm.blockExplorers.default.url}/tx/${hash}`);
   });
 });
