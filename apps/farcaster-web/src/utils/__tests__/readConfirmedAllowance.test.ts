@@ -38,6 +38,23 @@ describe('confirmed allowance RPC catch-up', () => {
     expect(await result).toBe(25n);
     expect(input.onRetry).toHaveBeenCalledTimes(2);
   });
+  it('retries Celo block-out-of-range responses', async () => {
+    const input = options(
+      vi
+        .fn()
+        .mockRejectedValueOnce({
+          cause: {
+            details: '{"code":-32019,"message":"block is out of range"}',
+          },
+        })
+        .mockResolvedValue(25n),
+    );
+    const result = readConfirmedAllowance(input);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(await result).toBe(25n);
+    expect(input.read).toHaveBeenCalledTimes(2);
+    expect(input.onRetry).toHaveBeenCalledOnce();
+  });
   it('stops after eight attempts with a clear message', async () => {
     const input = options(
       vi.fn().mockRejectedValue(new Error('unknown block')),
@@ -49,6 +66,17 @@ describe('confirmed allowance RPC catch-up', () => {
     await result;
     expect(input.read).toHaveBeenCalledTimes(8);
     expect(input.onRetry).toHaveBeenCalledTimes(7);
+  });
+  it('names the active chain when its confirmed block stays unavailable', async () => {
+    const input = {
+      ...options(vi.fn().mockRejectedValue(new Error('unknown block'))),
+      chainName: 'Ethereum',
+    };
+    const result = expect(readConfirmedAllowance(input)).rejects.toThrow(
+      'Ethereum RPC could not read its block yet',
+    );
+    await vi.runAllTimersAsync();
+    await result;
   });
   it.each(['execution reverted', 'HTTP 403', 'invalid address'])(
     'does not retry an unrelated failure: %s',

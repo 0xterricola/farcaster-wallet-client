@@ -5,13 +5,16 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { Address, PublicClient, zeroAddress } from 'viem';
+import { Address, Chain, PublicClient, zeroAddress } from 'viem';
 import { base } from 'viem/chains';
 import { usePublicClient } from 'wagmi';
 
-import { createBaseTransferReader } from '~/utils/baseWalletTransfer';
 import {
-  BASE_NATIVE_TOKEN,
+  createBaseTransferReader,
+  createStandardEvmTransferReader,
+} from '~/utils/baseWalletTransfer';
+import {
+  createLifiNativeToken,
   fetchLifiToken,
   fetchLifiWalletTokens,
   LifiAsset,
@@ -35,21 +38,28 @@ function assetOptions(
   client: PublicClient | undefined,
   address: Address,
   token: Address,
+  chain: Chain,
 ) {
-  const canonicalToken = normalizeLifiAddress(token);
+  const nativeSymbol = chain.nativeCurrency.symbol;
+  const canonicalToken = normalizeLifiAddress(token, nativeSymbol);
   return {
-    queryKey: lifiBalanceKey(address, canonicalToken),
+    queryKey: lifiBalanceKey(address, canonicalToken, chain.id, nativeSymbol),
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
       if (!client) {
-        throw new Error('Base connection is not ready.');
+        throw new Error(`${chain.name} connection is not ready.`);
       }
       const metadata =
         canonicalToken === zeroAddress
-          ? BASE_NATIVE_TOKEN
+          ? createLifiNativeToken(chain)
           : await queryClient.fetchQuery({
-              queryKey: lifiTokenKey(canonicalToken),
+              queryKey: lifiTokenKey(canonicalToken, chain.id, nativeSymbol),
               queryFn: ({ signal: tokenSignal }) =>
-                fetchLifiToken(canonicalToken, tokenSignal),
+                fetchLifiToken(
+                  canonicalToken,
+                  tokenSignal,
+                  chain.id,
+                  nativeSymbol,
+                ),
               staleTime: 60_000,
             });
       if (signal.aborted) {
@@ -69,21 +79,29 @@ function assetOptions(
   };
 }
 
-export function useLifiWalletTokens(address?: Address) {
+export function useLifiWalletTokens(address?: Address, chain: Chain = base) {
   const queryClient = useQueryClient();
   return useQuery({
-    queryKey: [...lifiWalletKey(address ?? zeroAddress), 'tokens'],
+    queryKey: [...lifiWalletKey(address ?? zeroAddress, chain.id), 'tokens'],
     enabled: Boolean(address),
     queryFn: async ({ signal }) => {
       if (!address) {
         throw new Error('Connect a wallet first.');
       }
-      const result = await fetchLifiWalletTokens(address, signal);
+      const result = await fetchLifiWalletTokens(
+        address,
+        signal,
+        chain.id,
+        chain.nativeCurrency.symbol,
+      );
       if (signal.aborted) {
         throw new Error('Token request cancelled.');
       }
       for (const token of result.tokens) {
-        queryClient.setQueryData(lifiTokenKey(token.address), token);
+        queryClient.setQueryData(
+          lifiTokenKey(token.address, chain.id, chain.nativeCurrency.symbol),
+          token,
+        );
       }
       return result;
     },
@@ -94,8 +112,12 @@ export function useLifiWalletTokens(address?: Address) {
   });
 }
 
-export function useLifiAsset(address?: Address, token?: Address) {
-  const client = usePublicClient({ chainId: base.id });
+export function useLifiAsset(
+  address?: Address,
+  token?: Address,
+  chain: Chain = base,
+) {
+  const client = usePublicClient({ chainId: chain.id });
   const queryClient = useQueryClient();
   return useQuery({
     ...assetOptions(
@@ -103,6 +125,7 @@ export function useLifiAsset(address?: Address, token?: Address) {
       client,
       address ?? zeroAddress,
       token ?? zeroAddress,
+      chain,
     ),
     enabled: Boolean(address && token && client),
   });
@@ -113,8 +136,9 @@ export async function fetchFreshLifiAsset(
   client: PublicClient,
   address: Address,
   token: Address,
+  chain: Chain = base,
 ) {
-  const options = assetOptions(queryClient, client, address, token);
+  const options = assetOptions(queryClient, client, address, token, chain);
   // Do not reuse a background read that started before this preflight check.
   await queryClient.cancelQueries({ queryKey: options.queryKey, exact: true });
   return selectAsset(
@@ -122,25 +146,31 @@ export async function fetchFreshLifiAsset(
   );
 }
 
-export function useLifiAssets(address: Address, tokens: Address[]) {
-  const client = usePublicClient({ chainId: base.id });
+export function useLifiAssets(
+  address: Address,
+  tokens: Address[],
+  chain: Chain = base,
+) {
+  const client = usePublicClient({ chainId: chain.id });
   const queryClient = useQueryClient();
   return useQueries({
     queries: tokens.map((token) => ({
-      ...assetOptions(queryClient, client, address, token),
+      ...assetOptions(queryClient, client, address, token, chain),
       enabled: Boolean(client),
     })),
   });
 }
 
-export function useLifiTransferReader() {
-  const client = usePublicClient({ chainId: base.id });
+export function useLifiTransferReader(chain: Chain = base) {
+  const client = usePublicClient({ chainId: chain.id });
   const queryClient = useQueryClient();
   return useMemo(
     () =>
       client
         ? {
-            ...createBaseTransferReader(client),
+            ...(chain.id === base.id
+              ? createBaseTransferReader(client)
+              : createStandardEvmTransferReader(client, chain)),
             nativeBalance: async (wallet: Address) =>
               (
                 await fetchFreshLifiAsset(
@@ -148,16 +178,23 @@ export function useLifiTransferReader() {
                   client,
                   wallet,
                   zeroAddress,
+                  chain,
                 )
               ).balance,
             tokenDetails: (token: Address, wallet: Address) =>
-              fetchFreshLifiAsset(queryClient, client, wallet, token),
+              fetchFreshLifiAsset(queryClient, client, wallet, token, chain),
           }
         : undefined,
-    [client, queryClient],
+    [chain, client, queryClient],
   );
 }
 
-export function refreshLifiWallet(queryClient: QueryClient, address: Address) {
-  return queryClient.invalidateQueries({ queryKey: lifiWalletKey(address) });
+export function refreshLifiWallet(
+  queryClient: QueryClient,
+  address: Address,
+  chainId: number = base.id,
+) {
+  return queryClient.invalidateQueries({
+    queryKey: lifiWalletKey(address, chainId),
+  });
 }

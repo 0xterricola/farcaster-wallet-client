@@ -7,11 +7,14 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
+import { CELO_NATIVE_TOKEN_ADDRESS } from '~/utils/lifiWallet';
 
 const mocks = vi.hoisted(() => ({
   fresh: vi.fn(),
@@ -24,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   tokens: vi.fn(),
   refetchTokens: vi.fn(),
   readContract: vi.fn(),
+  call: vi.fn(),
   wait: vi.fn(),
   queryClient: {},
   walletAddress: '0x1111111111111111111111111111111111111111',
@@ -56,6 +60,7 @@ vi.mock('~/contexts/WalletProvider', () => ({
 vi.mock('wagmi', () => ({
   usePublicClient: () => ({
     readContract: mocks.readContract,
+    call: mocks.call,
     waitForTransactionReceipt: mocks.wait,
   }),
   useWaitForTransactionReceipt: mocks.receipt,
@@ -66,9 +71,12 @@ vi.mock('~/hooks/useLifiWallet', () => ({
   refreshLifiWallet: mocks.refresh,
   useLifiWalletTokens: mocks.tokens,
 }));
-vi.mock('~/utils/lifiSwap', () => ({ fetchLifiQuote: mocks.quote }));
+vi.mock('~/utils/lifiSwap', async (importOriginal) => {
+  const original = await importOriginal<typeof import('~/utils/lifiSwap')>();
+  return { ...original, fetchLifiQuote: mocks.quote };
+});
 vi.mock('~/utils/sendBaseNativeToken', () => ({
-  ensureBaseWalletAccount: mocks.guard,
+  ensureEvmWalletAccount: mocks.guard,
 }));
 vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   DefaultButton: ({
@@ -106,6 +114,7 @@ beforeEach(() => {
   mocks.guard.mockResolvedValue(undefined);
   mocks.receipt.mockReturnValue({ data: undefined, isError: false });
   mocks.readContract.mockReset().mockResolvedValue(0n);
+  mocks.call.mockReset().mockResolvedValue({ data: '0x' });
   mocks.wait
     .mockReset()
     .mockResolvedValue({ status: 'success', blockNumber: 123n });
@@ -352,6 +361,8 @@ describe('WETH approval sequencing', () => {
     );
     await screen.findByRole('button', { name: 'Review swap' });
     expect(mocks.request).toHaveBeenCalledOnce();
+    // Approval confirmation must not depend on LI.FI returning another route.
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(screen.getByLabelText('Token approval').textContent).toContain(
       'Approved: 0.25 WETH',
     );
@@ -365,6 +376,7 @@ describe('WETH approval sequencing', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
     await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(mocks.request.mock.calls[1][0].params[0]).toMatchObject({
       chainId: '0x2105',
       from: wallet,
@@ -427,20 +439,25 @@ describe('WETH approval sequencing', () => {
     );
     expect(mocks.request).toHaveBeenCalledOnce();
   });
-  it('requires a new review if the spender changes after approval', async () => {
+  it('keeps the approved reviewed spender instead of silently replacing the route', async () => {
     setupWeth();
+    mocks.readContract
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValue(wethUnits);
     render(<ExternalWalletSwap />);
     await quoteWeth();
-    mocks.quote.mockResolvedValueOnce(wethRoute).mockResolvedValueOnce({
+    fireEvent.click(screen.getByRole('button', { name: 'Approve WETH' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    mocks.quote.mockResolvedValue({
       ...wethRoute,
       estimate: { ...wethRoute.estimate, approvalAddress: contract },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Approve WETH' }));
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Quote changed',
-    );
-    expect(mocks.request).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    expect(mocks.quote).toHaveBeenCalledOnce();
     expect(mocks.request.mock.calls[0][0].params[0].to).toBe(wethAddress);
+    expect(mocks.request.mock.calls[1][0].params[0].to).toBe(spender);
   });
   it('stops after approval if the connected account changes while waiting', async () => {
     setupWeth();
@@ -459,7 +476,7 @@ describe('WETH approval sequencing', () => {
     view.rerender(<ExternalWalletSwap />);
     await act(async () => confirmApproval({ status: 'success' }));
     expect(mocks.request).toHaveBeenCalledOnce();
-    expect(mocks.quote).toHaveBeenCalledTimes(2);
+    expect(mocks.quote).toHaveBeenCalledOnce();
   });
   it('does not treat buying WETH with native ETH as spending WETH', async () => {
     setupWeth();
@@ -528,7 +545,7 @@ describe('trade selector regressions', () => {
     expect((screen.getByLabelText('Buy token') as HTMLInputElement).value).toBe(
       usdc,
     );
-    expect(mocks.asset).toHaveBeenCalledWith(wallet, usdc);
+    expect(mocks.asset).toHaveBeenCalledWith(wallet, usdc, base);
     expect(mocks.quote).not.toHaveBeenCalled();
     expect(mocks.request).not.toHaveBeenCalled();
   });
@@ -557,6 +574,7 @@ describe('trade selector regressions', () => {
       from,
       usdcAsset,
       1000000000000n,
+      base,
     );
     expect(mocks.request).not.toHaveBeenCalled();
   });
@@ -623,6 +641,31 @@ describe('trade selector regressions', () => {
     expect(lookalike?.textContent).toContain('(unverified)');
     expect(lookalike?.textContent).not.toContain('native USDC');
   });
+  it('does not offer CeloToken separately from native CELO', () => {
+    mocks.tokens.mockReturnValue({
+      data: {
+        tokens: [
+          {
+            ...to,
+            chainId: celo.id,
+            address: CELO_NATIVE_TOKEN_ADDRESS,
+            symbol: 'CELO',
+            verificationStatus: 'verified',
+          },
+        ],
+      },
+    });
+    render(<ExternalWalletSwap chain={celo} />);
+    expect(choices('Choose sell asset').map((option) => option.value)).toEqual([
+      'CELO',
+      'custom',
+    ]);
+    expect(choices('Choose buy asset').map((option) => option.value)).toEqual([
+      'CELO',
+      '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+      'custom',
+    ]);
+  });
   it('selects buy and sell contracts independently without opening the wallet', () => {
     setupWeth();
     render(<ExternalWalletSwap />);
@@ -660,8 +703,8 @@ describe('trade selector regressions', () => {
       (screen.getByLabelText('Choose sell asset') as HTMLSelectElement).value,
     ).toBe('custom');
     expect(mocks.asset.mock.calls.slice(-2)).toEqual([
-      [wallet, contract],
-      [wallet, undefined],
+      [wallet, contract, base],
+      [wallet, undefined, base],
     ]);
     expect(mocks.request).not.toHaveBeenCalled();
   });
@@ -728,7 +771,7 @@ describe('LI.FI swap balance integration', () => {
     expect(
       (screen.getByLabelText('Sell token') as HTMLInputElement).value,
     ).toBe(contract);
-    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract);
+    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract, base);
   });
   it('reveals unverified tokens with explicit labels and keeps them distinct by contract', () => {
     mocks.tokens.mockReturnValue({
@@ -771,7 +814,7 @@ describe('LI.FI swap balance integration', () => {
     expect(
       (screen.getByLabelText('Choose sell asset') as HTMLSelectElement).value,
     ).toBe('custom');
-    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract);
+    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract, base);
     expect(screen.getByText(/token list unavailable/)).toBeTruthy();
   });
   it('clears an existing quote when a different dropdown token is selected', async () => {
@@ -850,7 +893,11 @@ describe('LI.FI swap balance integration', () => {
     expect(screen.getByRole('status').textContent).toContain(
       'Swap confirmed on Base',
     );
-    expect(mocks.refresh).toHaveBeenCalledWith(mocks.queryClient, wallet);
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      base.id,
+    );
   });
   it('blocks duplicate execution clicks', async () => {
     let resolve!: (value: string) => void;
@@ -872,8 +919,14 @@ describe('LI.FI swap balance integration', () => {
     render(<ExternalWalletSwap />);
     await getQuote();
     expect(screen.getByText('Available on Base: 1 ETH')).toBeTruthy();
-    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract);
-    expect(mocks.quote).toHaveBeenCalledWith(wallet, from, to, 1000000000000n);
+    expect(mocks.asset).toHaveBeenCalledWith(wallet, contract, base);
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      from,
+      to,
+      1000000000000n,
+      base,
+    );
     expect(mocks.request).not.toHaveBeenCalled();
   });
   it('checks balances again before signing and refreshes after submission', async () => {
@@ -886,7 +939,19 @@ describe('LI.FI swap balance integration', () => {
         params: [expect.objectContaining({ chainId: '0x2105', from: wallet })],
       }),
     );
-    expect(mocks.refresh).toHaveBeenCalledWith(mocks.queryClient, wallet);
+    expect(mocks.call).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: wallet,
+        to: contract,
+        data: '0xabcd',
+        value: 1000000000000n,
+      }),
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      base.id,
+    );
     expect((await screen.findByRole('status')).textContent).toContain(
       'Waiting for confirmation',
     );
@@ -899,6 +964,17 @@ describe('LI.FI swap balance integration', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Insufficient',
     );
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+  it('blocks submission when the selected route fails preflight simulation', async () => {
+    mocks.call.mockRejectedValueOnce(new Error('execution reverted'));
+    render(<ExternalWalletSwap />);
+    await getQuote();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'failed a Base preflight simulation',
+    );
+    expect(mocks.call).toHaveBeenCalledOnce();
     expect(mocks.request).not.toHaveBeenCalled();
   });
   it('rejects excess fractional precision instead of rounding', async () => {
@@ -926,15 +1002,31 @@ describe('LI.FI swap balance integration', () => {
     expect(mocks.request).toHaveBeenCalledOnce();
     expect(screen.queryByRole('link')).toBeNull();
   });
-  it('requires new review if the refreshed minimum worsens', async () => {
+  it('submits the exact reviewed quote instead of replacing it at signing time', async () => {
+    const reviewedRoute = {
+      tool: 'test',
+      action: { fromAmount: '1000000000000' },
+      estimate: { toAmount: '1000', toAmountMin: '990' },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+      },
+    };
+    mocks.quote.mockResolvedValue(reviewedRoute);
     render(<ExternalWalletSwap />);
     await getQuote();
-    mocks.quote.mockResolvedValue({ estimate: { toAmountMin: '1' } });
+    mocks.quote.mockResolvedValue({
+      ...reviewedRoute,
+      estimate: { ...reviewedRoute.estimate, toAmountMin: '1' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Quote changed',
-    );
-    expect(mocks.request).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
+    expect(mocks.quote).toHaveBeenCalledOnce();
+    expect(mocks.request.mock.calls[0][0].params[0]).toMatchObject({
+      to: reviewedRoute.transactionRequest.to,
+      data: reviewedRoute.transactionRequest.data,
+    });
   });
   it('does not sign after the view unmounts during preflight', async () => {
     let resolve!: () => void;
@@ -950,5 +1042,756 @@ describe('LI.FI swap balance integration', () => {
     view.unmount();
     await act(async () => resolve());
     expect(mocks.request).not.toHaveBeenCalled();
+  });
+});
+
+describe('Ethereum swap integration', () => {
+  const ethereumUsdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+  const ethereumNative = { ...from, chainId: mainnet.id };
+  const ethereumUsdcAsset = {
+    ...to,
+    chainId: mainnet.id,
+    address: ethereumUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses Ethereum USDC, quote validation inputs, transaction fields, and Etherscan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? ethereumNative : ethereumUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(
+        token === zeroAddress ? ethereumNative : ethereumUsdcAsset,
+      ),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'ethereum-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: { toAmount: '1000', toAmountMin: '990' },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+        maxFeePerGas: '0x64',
+        maxPriorityFeePerGas: '0x2',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={mainnet} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'ETH',
+      ethereumUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Ethereum');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: ethereumUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      ethereumNative,
+      ethereumUsdcAsset,
+      1000000000000n,
+      mainnet,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Ethereum swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Etherscan/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, mainnet);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x1',
+          from: wallet,
+          maxFeePerGas: '0x64',
+          maxPriorityFeePerGas: '0x2',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://etherscan.io/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      mainnet.id,
+    );
+  });
+
+  it('approves exactly the Ethereum token amount and confirms its allowance before swap review', async () => {
+    const fundedUsdc = { ...ethereumUsdcAsset, balance: 2_000_000n };
+    mocks.tokens.mockReturnValue({
+      data: { tokens: [{ ...fundedUsdc, verificationStatus: 'verified' }] },
+      refetch: mocks.refetchTokens,
+    });
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? ethereumNative : fundedUsdc,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? ethereumNative : fundedUsdc),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'ethereum-test',
+      estimate: {
+        toAmount: '1000000000000000',
+        toAmountMin: '990000000000000',
+        approvalAddress: spender,
+      },
+      transactionRequest: { to: spender, data: '0xabcd', value: '0x0' },
+    });
+    mocks.readContract
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValue(1_000_000n);
+
+    render(<ExternalWalletSwap chain={mainnet} />);
+    fireEvent.change(screen.getByLabelText('Choose sell asset'), {
+      target: { value: ethereumUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: 'ETH' },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Approve USDC' });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve USDC' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.request).toHaveBeenCalledOnce();
+    const approval = mocks.request.mock.calls[0][0].params[0];
+    expect(approval).toMatchObject({
+      chainId: '0x1',
+      from: wallet,
+      to: ethereumUsdc,
+    });
+    expect(decodeFunctionData({ abi: erc20Abi, data: approval.data })).toEqual({
+      functionName: 'approve',
+      args: [spender, 1_000_000n],
+    });
+    expect(mocks.wait).toHaveBeenCalledWith({ hash });
+    expect(mocks.readContract).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        blockNumber: 123n,
+        address: ethereumUsdc,
+        args: [wallet, spender],
+      }),
+    );
+    expect(screen.getByRole('status').textContent).toContain(
+      'Approval confirmed',
+    );
+  });
+});
+
+describe('Arbitrum swap integration', () => {
+  const arbitrumUsdc = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+  const arbitrumNative = { ...from, chainId: arbitrum.id };
+  const arbitrumUsdcAsset = {
+    ...to,
+    chainId: arbitrum.id,
+    address: arbitrumUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses Arbitrum USDC, transaction fields, and Arbiscan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? arbitrumNative : arbitrumUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(
+        token === zeroAddress ? arbitrumNative : arbitrumUsdcAsset,
+      ),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'arbitrum-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: { toAmount: '1000', toAmountMin: '990' },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+        maxFeePerGas: '0x64',
+        maxPriorityFeePerGas: '0x2',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={arbitrum} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'ETH',
+      arbitrumUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Arbitrum One');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: arbitrumUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      arbitrumNative,
+      arbitrumUsdcAsset,
+      1000000000000n,
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Arbitrum One swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Arbiscan/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, arbitrum);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0xa4b1',
+          from: wallet,
+          maxFeePerGas: '0x64',
+          maxPriorityFeePerGas: '0x2',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://arbiscan.io/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      arbitrum.id,
+    );
+  });
+});
+
+describe('BNB Smart Chain swap integration', () => {
+  const bscUsdc = '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d';
+  const bscNative = {
+    ...from,
+    chainId: bsc.id,
+    symbol: 'BNB',
+    name: 'BNB',
+  };
+  const bscUsdcAsset = {
+    ...to,
+    chainId: bsc.id,
+    address: bscUsdc,
+    symbol: 'USDC',
+    decimals: 18,
+  };
+
+  it('uses verified Binance-Peg USDC, BSC transaction fields, and BscScan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? bscNative : bscUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? bscNative : bscUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'bsc-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: {
+        toAmount: '1000000000000000',
+        toAmountMin: '990000000000000',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={bsc} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'BNB',
+      bscUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain(
+      'Binance-Peg USDC on BNB Smart Chain',
+    );
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: bscUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      bscNative,
+      bscUsdcAsset,
+      1000000000000n,
+      bsc,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review BNB Smart Chain swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /BscScan/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, bsc);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x38',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://bscscan.com/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      bsc.id,
+    );
+  });
+});
+
+describe('Celo swap integration', () => {
+  const celoUsdc = '0xcebA9300f2b948710d2653dD7B07f33A8B32118C';
+  const celoNative = {
+    ...from,
+    chainId: celo.id,
+    symbol: 'CELO',
+    name: 'CELO',
+  };
+  const celoSwapAsset = {
+    ...celoNative,
+    address: CELO_NATIVE_TOKEN_ADDRESS,
+  };
+  const celoUsdcAsset = {
+    ...to,
+    chainId: celo.id,
+    address: celoUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses Circle-native Celo USDC, Celo transaction fields, and Celoscan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? celoNative : celoUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) => {
+      if (token === zeroAddress) {
+        return Promise.resolve(celoNative);
+      }
+      return Promise.resolve(
+        token.toLowerCase() === CELO_NATIVE_TOKEN_ADDRESS.toLowerCase()
+          ? celoSwapAsset
+          : celoUsdcAsset,
+      );
+    });
+    mocks.readContract.mockResolvedValue(1000000000000n);
+    mocks.quote.mockResolvedValue({
+      tool: 'celo-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '1000',
+        toAmountMin: '990',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x0',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={celo} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'CELO',
+      celoUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Celo');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: celoUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      celoSwapAsset,
+      celoUsdcAsset,
+      1000000000000n,
+      celo,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Celo swap' }),
+    ).toBeTruthy();
+    expect(mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: CELO_NATIVE_TOKEN_ADDRESS,
+        args: [wallet, spender],
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Celo Explorer/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, celo);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0xa4ec',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://celoscan.io/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      celo.id,
+    );
+  });
+});
+
+describe('Monad swap integration', () => {
+  const monadUsdc = '0x754704Bc059F8C67012fEd69BC8A327a5aafb603';
+  const monadNative = {
+    ...from,
+    chainId: monad.id,
+    symbol: 'MON',
+    name: 'Monad',
+  };
+  const monadUsdcAsset = {
+    ...to,
+    chainId: monad.id,
+    address: monadUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses verified Monad USDC without native approval and submits on Monad', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? monadNative : monadUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? monadNative : monadUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'monad-test',
+      action: { fromAmount: '100000000000000000' },
+      estimate: {
+        approvalAddress: contract,
+        toAmount: '2649',
+        toAmountMin: '2636',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x16345785d8a0000',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={monad} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'MON',
+      monadUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Monad');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: monadUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      monadNative,
+      monadUsdcAsset,
+      100000000000000000n,
+      monad,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review Monad swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Monvision/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, monad);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x8f',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${monad.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      monad.id,
+    );
+  });
+});
+
+describe('HyperEVM swap integration', () => {
+  const hyperEvmUsdc = '0xb88339CB7199b77E23DB6E890353E22632Ba630f';
+  const hypeNative = {
+    ...from,
+    chainId: hyperevm.id,
+    symbol: 'HYPE',
+    name: 'HyperEVM',
+  };
+  const hyperEvmUsdcAsset = {
+    ...to,
+    chainId: hyperevm.id,
+    address: hyperEvmUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses native HyperEVM USDC without native approval and submits on HyperEVM', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? hypeNative : hyperEvmUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? hypeNative : hyperEvmUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'hyperflow',
+      action: { fromAmount: '10000000000000000' },
+      estimate: {
+        approvalAddress: contract,
+        toAmount: '822315',
+        toAmountMin: '818184',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x2386f26fc10000',
+        gasPrice: '0x1619eb00',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={hyperevm} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'HYPE',
+      hyperEvmUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on HyperEVM');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: hyperEvmUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.01' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      hypeNative,
+      hyperEvmUsdcAsset,
+      10000000000000000n,
+      hyperevm,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review HyperEVM swap' }),
+    ).toBeTruthy();
+    mocks.quote.mockResolvedValue({
+      tool: 'hyperflow',
+      action: { fromAmount: '10000000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '822314',
+        toAmountMin: '818183',
+      },
+      transactionRequest: {
+        to: spender,
+        data: '0xdead',
+        value: '0x2386f26fc10000',
+        gasPrice: '0x1619eb00',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /HyperScan/ });
+    expect(mocks.quote).toHaveBeenCalledOnce();
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, hyperevm);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x3e7',
+          from: wallet,
+          gasPrice: '0x1619eb00',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${hyperevm.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      hyperevm.id,
+    );
+  });
+});
+
+describe('Robinhood Chain swap integration', () => {
+  const robinhoodUsdg = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
+  const robinhoodNative = {
+    ...from,
+    chainId: robinhood.id,
+    symbol: 'ETH',
+    name: 'ETH',
+  };
+  const robinhoodUsdgAsset = {
+    ...to,
+    chainId: robinhood.id,
+    address: robinhoodUsdg,
+    symbol: 'USDG',
+    name: 'USDG',
+    decimals: 6,
+  };
+
+  it('uses canonical USDG without native approval and submits on Robinhood Chain', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? robinhoodNative : robinhoodUsdgAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(
+        token === zeroAddress ? robinhoodNative : robinhoodUsdgAsset,
+      ),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'nordstern',
+      action: { fromAmount: '100000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '239652',
+        toAmountMin: '238454',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x5af3107a4000',
+        gasPrice: '0x13f44350',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={robinhood} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'ETH',
+      robinhoodUsdg,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain(
+      'canonical USDG on Robinhood Chain',
+    );
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: robinhoodUsdg },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.0001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      robinhoodNative,
+      robinhoodUsdgAsset,
+      100000000000000n,
+      robinhood,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review Robinhood Chain swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Blockscout/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, robinhood);
+    expect(mocks.call).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: wallet,
+        to: contract,
+        data: '0xabcd',
+        value: 100000000000000n,
+        type: 'legacy',
+      }),
+    );
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x1237',
+          from: wallet,
+          gasPrice: '0x13f44350',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${robinhood.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      robinhood.id,
+    );
   });
 });

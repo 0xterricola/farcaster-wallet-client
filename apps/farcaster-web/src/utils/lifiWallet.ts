@@ -1,5 +1,6 @@
 import {
   Address,
+  Chain,
   erc20Abi,
   formatUnits,
   getAddress,
@@ -11,6 +12,8 @@ import { base } from 'viem/chains';
 
 export const LIFI_API_URL = 'https://li.quest/v1';
 export const LIFI_NATIVE_ADDRESS = zeroAddress;
+export const CELO_NATIVE_TOKEN_ADDRESS =
+  '0x471EcE3750Da237f93B8E339c536989b8978a438' as Address;
 export type LifiToken = {
   chainId: number;
   address: Address;
@@ -29,29 +32,68 @@ export const BASE_NATIVE_TOKEN: LifiToken = {
   decimals: 18,
 };
 
-export function normalizeLifiAddress(value: string): Address {
+// Celo's native CELO and CeloToken ERC-20 representation share one balance.
+// Treat both addresses as the same native asset so wallet surfaces do not
+// display or submit the balance twice.
+export function isNativeWalletAsset(address: Address, chainId: number) {
+  return (
+    address.toLowerCase() === zeroAddress ||
+    (chainId === 42220 &&
+      address.toLowerCase() === CELO_NATIVE_TOKEN_ADDRESS.toLowerCase())
+  );
+}
+
+export function createLifiNativeToken(
+  chain: Pick<Chain, 'id' | 'nativeCurrency'>,
+): LifiToken {
+  return {
+    chainId: chain.id,
+    address: zeroAddress,
+    symbol: chain.nativeCurrency.symbol,
+    name: chain.nativeCurrency.name,
+    decimals: chain.nativeCurrency.decimals,
+  };
+}
+
+export function normalizeLifiAddress(
+  value: string,
+  nativeSymbol: string = base.nativeCurrency.symbol,
+): Address {
   const input = value.trim();
   if (
-    input.toUpperCase() === 'ETH' ||
+    input.toUpperCase() === nativeSymbol.toUpperCase() ||
     input.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
   ) {
     return zeroAddress;
   }
   if (!isAddress(input)) {
-    throw new Error('Enter ETH or a valid Base token contract address.');
+    throw new Error(`Enter ${nativeSymbol} or a valid token contract address.`);
   }
   return getAddress(input);
 }
 
-export const lifiWalletKey = (address: Address) =>
-  ['lifiWallet', base.id, address.toLowerCase()] as const;
-export const lifiTokenKey = (token: Address) =>
-  ['lifiToken', base.id, normalizeLifiAddress(token).toLowerCase()] as const;
-export const lifiBalanceKey = (address: Address, token: Address) =>
+export const lifiWalletKey = (address: Address, chainId: number = base.id) =>
+  ['lifiWallet', chainId, address.toLowerCase()] as const;
+export const lifiTokenKey = (
+  token: Address,
+  chainId: number = base.id,
+  nativeSymbol: string = base.nativeCurrency.symbol,
+) =>
   [
-    ...lifiWalletKey(address),
+    'lifiToken',
+    chainId,
+    normalizeLifiAddress(token, nativeSymbol).toLowerCase(),
+  ] as const;
+export const lifiBalanceKey = (
+  address: Address,
+  token: Address,
+  chainId: number = base.id,
+  nativeSymbol: string = base.nativeCurrency.symbol,
+) =>
+  [
+    ...lifiWalletKey(address, chainId),
     'balance',
-    normalizeLifiAddress(token).toLowerCase(),
+    normalizeLifiAddress(token, nativeSymbol).toLowerCase(),
   ] as const;
 
 function object(value: unknown): Record<string, unknown> {
@@ -61,10 +103,14 @@ function object(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-export function parseLifiToken(value: unknown): LifiToken {
+export function parseLifiToken(
+  value: unknown,
+  chainId: number = base.id,
+  nativeSymbol: string = base.nativeCurrency.symbol,
+): LifiToken {
   const token = object(value);
   if (
-    token.chainId !== base.id ||
+    token.chainId !== chainId ||
     typeof token.address !== 'string' ||
     !isAddress(token.address) ||
     typeof token.decimals !== 'number' ||
@@ -74,15 +120,15 @@ export function parseLifiToken(value: unknown): LifiToken {
     typeof token.symbol !== 'string' ||
     !token.symbol.trim()
   ) {
-    throw new Error('Invalid Base token in LI.FI response.');
+    throw new Error(`Invalid token for chain ${chainId} in LI.FI response.`);
   }
   const price =
     typeof token.priceUSD === 'string' && token.priceUSD.trim() !== ''
       ? Number(token.priceUSD)
       : token.priceUSD;
   return {
-    chainId: base.id,
-    address: normalizeLifiAddress(token.address),
+    chainId,
+    address: normalizeLifiAddress(token.address, nativeSymbol),
     symbol: token.symbol,
     name: typeof token.name === 'string' ? token.name : token.symbol,
     decimals: token.decimals,
@@ -132,6 +178,8 @@ export async function requestLifi(
 export async function fetchLifiWalletTokens(
   address: Address,
   signal?: AbortSignal,
+  chainId: number = base.id,
+  nativeSymbol: string = base.nativeCurrency.symbol,
 ) {
   const body = object(
     await requestLifi(
@@ -146,15 +194,15 @@ export async function fetchLifiWalletTokens(
     throw new Error('LI.FI returned a different wallet.');
   }
   const balances = object(body.balances);
-  const rows = balances[base.id] ?? [];
+  const rows = balances[chainId] ?? [];
   if (!Array.isArray(rows)) {
-    throw new Error('Invalid LI.FI Base balances.');
+    throw new Error(`Invalid LI.FI balances for chain ${chainId}.`);
   }
   const tokens = new Map<string, LifiToken>();
   let skipped = 0;
   for (const row of rows) {
     try {
-      const token = parseLifiToken(row);
+      const token = parseLifiToken(row, chainId, nativeSymbol);
       tokens.set(token.address.toLowerCase(), token);
     } catch {
       skipped += 1;
@@ -173,12 +221,20 @@ export async function fetchLifiWalletTokens(
   };
 }
 
-export async function fetchLifiToken(address: Address, signal?: AbortSignal) {
+export async function fetchLifiToken(
+  address: Address,
+  signal?: AbortSignal,
+  chainId: number = base.id,
+  nativeSymbol: string = base.nativeCurrency.symbol,
+) {
   const token = parseLifiToken(
-    await requestLifi(`/token?chain=${base.id}&token=${address}`, signal),
+    await requestLifi(`/token?chain=${chainId}&token=${address}`, signal),
+    chainId,
+    nativeSymbol,
   );
   if (
-    token.address.toLowerCase() !== normalizeLifiAddress(address).toLowerCase()
+    token.address.toLowerCase() !==
+    normalizeLifiAddress(address, nativeSymbol).toLowerCase()
   ) {
     throw new Error('LI.FI returned a different token.');
   }
@@ -190,8 +246,8 @@ export async function readLifiAsset(
   wallet: Address,
   token: LifiToken,
 ): Promise<LifiAsset> {
-  if (client.chain?.id !== base.id || token.chainId !== base.id) {
-    throw new Error('Base RPC is required.');
+  if (client.chain?.id !== token.chainId) {
+    throw new Error(`RPC for chain ${token.chainId} is required.`);
   }
   if (token.address === zeroAddress) {
     return { ...token, balance: await client.getBalance({ address: wallet }) };

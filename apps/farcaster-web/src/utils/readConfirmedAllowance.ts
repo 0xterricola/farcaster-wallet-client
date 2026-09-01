@@ -14,7 +14,9 @@ function isMissingBlock(error: unknown): boolean {
       [details.message, details.details].some(
         (value) =>
           typeof value === 'string' &&
-          /block not found|unknown block|header not found/i.test(value),
+          /block not found|unknown block|header not found|block is out of range/i.test(
+            value,
+          ),
       )
     ) {
       return true;
@@ -28,10 +30,12 @@ export async function readConfirmedAllowance({
   read,
   assertCurrent,
   onRetry,
+  chainName = 'Base',
 }: {
   read: () => Promise<bigint>;
   assertCurrent: () => void;
   onRetry: () => void;
+  chainName?: string;
 }): Promise<bigint> {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     assertCurrent();
@@ -46,7 +50,7 @@ export async function readConfirmedAllowance({
       }
       if (attempt === 7) {
         throw new Error(
-          'Approval confirmed, but Base RPC could not read its block yet. Wait a moment and get a new quote. No swap was sent.',
+          `Approval confirmed, but ${chainName} RPC could not read its block yet. Wait a moment and get a new quote. No swap was sent.`,
         );
       }
       onRetry();

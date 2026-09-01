@@ -26,6 +26,55 @@ Add the public project identifier from the
 VITE_WALLETCONNECT_PROJECT_ID=your_reown_project_id
 ```
 
+Ethereum reads use a browser-compatible public RPC by default. Deployments may
+override it with their own endpoint:
+
+```env
+VITE_ETHEREUM_RPC_URL=https://your-ethereum-rpc.example
+```
+
+Arbitrum One reads use its browser-compatible official RPC by default. An
+optional override is also available:
+
+```env
+VITE_ARBITRUM_RPC_URL=https://your-arbitrum-rpc.example
+```
+
+BNB Smart Chain reads use a browser-compatible official RPC by default. An
+optional override is also available:
+
+```env
+VITE_BSC_RPC_URL=https://your-bsc-rpc.example
+```
+
+Celo reads use its documented browser-compatible Forno RPC by default. An
+optional override is also available:
+
+```env
+VITE_CELO_RPC_URL=https://your-celo-rpc.example
+```
+
+Monad reads use its browser-compatible mainnet RPC by default. An optional
+override is also available:
+
+```env
+VITE_MONAD_RPC_URL=https://your-monad-rpc.example
+```
+
+HyperEVM reads use its browser-compatible mainnet RPC by default. An optional
+override is also available:
+
+```env
+VITE_HYPEREVM_RPC_URL=https://your-hyperevm-rpc.example
+```
+
+Robinhood Chain reads use its browser-compatible mainnet RPC by default. An
+optional override is also available:
+
+```env
+VITE_ROBINHOOD_RPC_URL=https://your-robinhood-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -95,6 +144,11 @@ Set these in Cloudflare before deploying:
 | `NODE_VERSION`                  | `20.19.5`                 |
 | `PNPM_VERSION`                  | `10.8.1`                  |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Your own Reown project ID |
+
+`VITE_ETHEREUM_RPC_URL` is optional. Set it to a browser-compatible Ethereum
+RPC if you do not want to use the public default. Because it is exposed to the
+browser, do not place a secret RPC credential in this variable unless the
+provider restricts it by origin and treats it as public client configuration.
 
 Cloudflare does not receive your ignored `.env.local` file. The `VITE_` project
 ID is public client configuration and is embedded at build time; redeploy after
@@ -179,28 +233,61 @@ or assume every miniapp will work on a fork's domain.
 
 ## Built-in wallet actions
 
-- View the connected address, native ETH, and Base ERC-20 balances
+- View the connected address, native balance, and token portfolio on the
+  selected supported network
 - Receive with an address QR code
-- Send ETH and ERC-20 tokens on Base with exact integer amounts and live checks
-- Swap ETH and arbitrary ERC-20 tokens on Base
+- Send native assets and ERC-20 tokens with exact integer amounts and live
+  checks
+- Swap native assets and arbitrary ERC-20 tokens on the same network
+- Base remains the default network and uses Circle-issued Base USDC as its
+  default stablecoin.
+- View Ethereum balances, receive guidance, send ETH or ERC-20 tokens, and swap
+  through LI.FI using Circle-issued Ethereum USDC as the default stablecoin.
+- View Arbitrum One balances, receive guidance, send ETH or ERC-20 tokens, and
+  swap through LI.FI using Circle-issued Arbitrum USDC as the default stablecoin.
+- View BNB Smart Chain BNB and BEP-20 balances, receive guidance, send BNB or
+  BEP-20 tokens, and swap through LI.FI. The default stablecoin is verified
+  Binance-Peg USDC (`0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d`, 18
+  decimals), not Circle-issued native USDC.
+- View Celo CELO and token balances, receive guidance, send CELO or ERC-20
+  tokens, and swap through LI.FI using Circle-issued Celo USDC
+  (`0xcebA9300f2b948710d2653dD7B07f33A8B32118C`, 6 decimals) as the default
+  stablecoin.
+- View Monad MON and token balances, receive guidance, send MON or ERC-20
+  tokens, and swap through LI.FI using verified Monad USDC
+  (`0x754704Bc059F8C67012fEd69BC8A327a5aafb603`, 6 decimals) as the default
+  stablecoin.
+- View HyperEVM HYPE and token balances, receive guidance, send HYPE or ERC-20
+  tokens, and swap through LI.FI using Circle-issued native USDC
+  (`0xb88339CB7199b77E23DB6E890353E22632Ba630f`, 6 decimals) as the default
+  stablecoin.
+- View Robinhood Chain ETH and token balances, receive guidance, send ETH or
+  ERC-20 tokens, and swap through LI.FI using Robinhood's canonical USDG
+  (`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, 6 decimals) as the default
+  stablecoin. LI.FI currently reports the token as unverified, so the client
+  identifies it only by Robinhood's published canonical contract.
 
-Base swap quotes and transaction requests use LI.FI's public quote API. Token
+Swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
 
 ## Wallet data sources
 
-The built-in Base wallet uses LI.FI, not Farcaster's wallet positions API:
+The built-in multichain wallet uses LI.FI, not Farcaster's wallet positions
+API:
 
 - `GET https://li.quest/v1/wallets/{address}/balances?extended=true` discovers
-  token contracts and estimated USD prices. Only Base entries are displayed.
-- `GET https://li.quest/v1/token?chain=8453&token={contract}` resolves tokens
-  entered manually in Send or Trade. Unsupported tokens produce an error, not
-  a fabricated zero balance. LI.FI native ETH is the zero-address marker.
-- LI.FI indexed quantities are **not** used as spendable balances. Base RPC
-  reads verify native balances, ERC-20 `balanceOf`, and token decimals.
-- Portfolio, the ETH header, Send, and Trade use the same React Query balance
-  cache keyed by chain ID, wallet address, and contract. Fresh preflight checks
-  publish into this cache. Confirmed sends/swaps invalidate the wallet cache.
+  token contracts and estimated USD prices. The selected network's entries are
+  displayed.
+- `GET https://li.quest/v1/token?chain={chainId}&token={contract}` resolves
+  tokens entered manually in Send or Trade. Unsupported tokens produce an
+  error, not a fabricated zero balance. Native assets use the zero-address
+  marker in the wallet UI; Celo's LI.FI boundary uses its native-token alias.
+- LI.FI indexed quantities are **not** used as spendable balances. The selected
+  network's RPC verifies native balances, ERC-20 `balanceOf`, and token decimals.
+- Portfolio, the native-balance header, Send, and Trade use the same React Query
+  balance cache keyed by chain ID, wallet address, and contract. Fresh preflight
+  checks publish into this cache. Confirmed sends/swaps invalidate the wallet
+  cache.
 - Balance reads refresh every 30 seconds while observed; discovery every 60
   seconds. The portfolio checks 20 token rows at a time, with Show more.
 - USD values are live quantities multiplied by LI.FI's estimated token prices.
@@ -225,12 +312,28 @@ fees can change, and tokens can impose restrictions. Signing remains external.
 Swap approvals are exact-amount; approval receipts must succeed before a swap.
 If a refreshed quote worsens the reviewed minimum or changes spender, the user
 must obtain and review a new quote. Submission is distinguished from receipt
-confirmation. This patch does not add multichain transfers or portfolio history.
+confirmation. Swaps are same-chain; this patch does not add cross-chain swaps
+or portfolio history.
 
 ## Troubleshooting
 
 - If WalletConnect is unavailable, verify
   `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
+- If Ethereum balances are unavailable, confirm that `VITE_ETHEREUM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If Arbitrum balances are unavailable, confirm that `VITE_ARBITRUM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If BNB Smart Chain balances are unavailable, confirm that `VITE_BSC_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If Celo balances are unavailable, confirm that `VITE_CELO_RPC_URL` accepts
+  JSON-RPC requests from the deployed site's browser origin.
+- If Monad balances are unavailable, confirm that `VITE_MONAD_RPC_URL` accepts
+  JSON-RPC requests from the deployed site's browser origin.
+- If HyperEVM balances are unavailable, confirm that `VITE_HYPEREVM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If Robinhood Chain balances are unavailable, confirm that
+  `VITE_ROBINHOOD_RPC_URL` accepts JSON-RPC requests from the deployed site's
+  browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear
@@ -244,5 +347,5 @@ confirmation. This patch does not add multichain transfers or portfolio history.
   set the build variable in Cloudflare and redeploy.
 - If only a miniapp is blank, inspect its embedding/trusted-origin errors; see
   [Miniapp domain compatibility](#miniapp-domain-compatibility).
-- When testing arbitrary tokens, confirm the contract is on Base and has a
-  viable route and sufficient liquidity.
+- When testing arbitrary tokens, confirm the contract is on the selected
+  network and has a viable route and sufficient liquidity.

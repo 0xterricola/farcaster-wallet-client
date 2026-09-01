@@ -8,7 +8,9 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -19,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   receipt: vi.fn(),
   invalidate: vi.fn(),
   asset: vi.fn(),
+  transferReader: vi.fn(),
   refetch: vi.fn(),
   reader: { nativeBalance: vi.fn(), tokenDetails: vi.fn() },
   client: {},
@@ -50,7 +53,7 @@ vi.mock('wagmi', () => ({
   useWaitForTransactionReceipt: mocks.receipt,
 }));
 vi.mock('~/hooks/useLifiWallet', () => ({
-  useLifiTransferReader: () => mocks.reader,
+  useLifiTransferReader: mocks.transferReader,
   useLifiAsset: mocks.asset,
   refreshLifiWallet: mocks.invalidate,
   useLifiWalletTokens: () => ({
@@ -70,8 +73,8 @@ vi.mock('~/hooks/useLifiWallet', () => ({
 }));
 vi.mock('~/utils/baseWalletTransfer', () => ({
   createBaseTransferReader: () => mocks.reader,
-  prepareBaseTransfer: mocks.prepare,
-  submitBaseTransfer: mocks.submit,
+  prepareEvmTransfer: mocks.prepare,
+  submitEvmTransfer: mocks.submit,
 }));
 vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   DefaultButton: ({
@@ -103,6 +106,7 @@ beforeEach(() => {
   mocks.reader.tokenDetails
     .mockReset()
     .mockResolvedValue({ symbol: 'TOKEN', decimals: 6, balance: 5000001n });
+  mocks.transferReader.mockReturnValue(mocks.reader);
   mocks.prepare.mockResolvedValue(prepared);
   mocks.submit.mockResolvedValue(hash);
   mocks.receipt.mockReturnValue({ data: undefined, isError: false });
@@ -130,6 +134,7 @@ describe('ExternalWalletSend', () => {
     expect(mocks.asset).toHaveBeenCalledWith(
       address,
       '0x0000000000000000000000000000000000000000',
+      base,
     );
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.submit).not.toHaveBeenCalled();
@@ -142,7 +147,7 @@ describe('ExternalWalletSend', () => {
     });
     expect(screen.queryByText('Available on Base: 1.23 ETH')).toBeNull();
     await screen.findByText('Available on Base: 5.000001 TOKEN');
-    expect(mocks.asset).toHaveBeenCalledWith(address, tokenAddress);
+    expect(mocks.asset).toHaveBeenCalledWith(address, tokenAddress, base);
   });
   it('shows balance errors as unavailable and offers a shared refresh', async () => {
     mocks.asset.mockReturnValue({ isError: true, refetch: mocks.refetch });
@@ -168,6 +173,7 @@ describe('ExternalWalletSend', () => {
     expect(mocks.asset).toHaveBeenLastCalledWith(
       recipient,
       '0x0000000000000000000000000000000000000000',
+      base,
     );
   });
   it('prepares the selected token read-only before offering wallet confirmation', async () => {
@@ -176,12 +182,16 @@ describe('ExternalWalletSend', () => {
       screen.queryByRole('button', { name: 'Confirm in wallet' }),
     ).toBeNull();
     await review();
-    expect(mocks.prepare).toHaveBeenCalledWith(mocks.reader, {
-      address,
-      recipient,
-      amount: '1.25',
-      tokenAddress,
-    });
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      {
+        address,
+        recipient,
+        amount: '1.25',
+        tokenAddress,
+      },
+      base,
+    );
     expect(mocks.submit).not.toHaveBeenCalled();
     expect(
       screen.getByRole('region', { name: 'Review Base transfer' }).textContent,
@@ -304,5 +314,259 @@ describe('ExternalWalletSend', () => {
     expect(
       screen.queryByRole('button', { name: 'Confirm in wallet' }),
     ).toBeNull();
+  });
+
+  it('uses Ethereum data, receipts, review text, and explorer links', async () => {
+    render(<ExternalWalletSend address={address} chain={mainnet} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(mainnet);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      mainnet,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: mainnet.id }),
+    );
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      mainnet,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Ethereum transfer' })
+        .textContent,
+    ).toContain('Estimated fee:');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Etherscan' })
+        .getAttribute('href'),
+    ).toBe(`https://etherscan.io/tx/${hash}`);
+  });
+
+  it('uses Arbitrum data, receipts, review text, and explorer links', async () => {
+    render(<ExternalWalletSend address={address} chain={arbitrum} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(arbitrum);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      arbitrum,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: arbitrum.id }),
+    );
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Arbitrum One transfer' })
+        .textContent,
+    ).toContain('Estimated fee:');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Arbiscan' })
+        .getAttribute('href'),
+    ).toBe(`https://arbiscan.io/tx/${hash}`);
+  });
+
+  it('uses BSC data, BNB fees, receipts, and BscScan links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'BNB', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={bsc} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(bsc);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      bsc,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: bsc.id }),
+    );
+    expect(
+      screen.getByText('Available on BNB Smart Chain: 1.23 BNB'),
+    ).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      bsc,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review BNB Smart Chain transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('BNB');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on BscScan' })
+        .getAttribute('href'),
+    ).toBe(`https://bscscan.com/tx/${hash}`);
+  });
+
+  it('uses Celo data, CELO fees, receipts, and Celoscan links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'CELO', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={celo} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(celo);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      celo,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: celo.id }),
+    );
+    expect(screen.getByText('Available on Celo: 1.23 CELO')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      celo,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Celo transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('CELO');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Celo Explorer' })
+        .getAttribute('href'),
+    ).toBe(`https://celoscan.io/tx/${hash}`);
+  });
+
+  it('uses Monad data, MON fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'MON', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={monad} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(monad);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      monad,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: monad.id }),
+    );
+    expect(screen.getByText('Available on Monad: 1.23 MON')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      monad,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Monad transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('MON');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Monvision' })
+        .getAttribute('href'),
+    ).toBe(`${monad.blockExplorers.default.url}/tx/${hash}`);
+  });
+
+  it('uses HyperEVM data, HYPE fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'HYPE', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={hyperevm} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(hyperevm);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      hyperevm,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: hyperevm.id }),
+    );
+    expect(screen.getByText('Available on HyperEVM: 1.23 HYPE')).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      hyperevm,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review HyperEVM transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('HYPE');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on HyperScan' })
+        .getAttribute('href'),
+    ).toBe(`${hyperevm.blockExplorers.default.url}/tx/${hash}`);
+  });
+
+  it('uses Robinhood Chain data, ETH fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'ETH', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={robinhood} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(robinhood);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      robinhood,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: robinhood.id }),
+    );
+    expect(
+      screen.getByText('Available on Robinhood Chain: 1.23 ETH'),
+    ).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      robinhood,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Robinhood Chain transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('ETH');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Blockscout' })
+        .getAttribute('href'),
+    ).toBe(`${robinhood.blockExplorers.default.url}/tx/${hash}`);
   });
 });

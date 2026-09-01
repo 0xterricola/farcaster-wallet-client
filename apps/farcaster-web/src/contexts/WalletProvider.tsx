@@ -14,6 +14,10 @@ import { Connector, useAccount, useConnectors } from 'wagmi';
 
 import { useEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { PreferredWalletDialog } from '~/components/wallet/PreferredWalletDialog';
+import {
+  useWalletNetworkController,
+  WalletNetworkController,
+} from '~/hooks/useWalletNetworkController';
 import { logError } from '~/utils/logUtils';
 
 const PREFERRED_WALLET_KEY = 'preferred_wallet';
@@ -55,6 +59,7 @@ interface WalletContextType {
   // Common Wallet Data
   address: `0x${string}` | undefined;
   provider: Provider.Provider | undefined;
+  network: WalletNetworkController;
   connectionContextRef: MutableRefObject<
     | {
         domain: string;
@@ -74,6 +79,18 @@ const WalletContext = createContext<WalletContextType>({
   clearPreferredWallet: () => undefined,
   address: undefined,
   provider: undefined,
+  network: {
+    actualChainId: undefined,
+    selectedChainId: 8453,
+    previousWorkingChainId: undefined,
+    requestedChainId: undefined,
+    status: 'disconnected',
+    error: undefined,
+    refreshNetwork: async () => false,
+    switchNetwork: async () => false,
+    addNetwork: async () => false,
+    reportChainChanged: () => undefined,
+  },
   connectionContextRef: { current: undefined },
 });
 
@@ -123,6 +140,8 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
   >(undefined);
   const pendingConnectRequestsRef = useRef<PendingConnectRequest[]>([]);
   const refreshQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const network = useWalletNetworkController(connectedProvider);
+  const { reportChainChanged } = network;
 
   // Helper to update preferred wallet and trigger re-load if needed
   const setPreferredWalletInner = useCallback(
@@ -258,16 +277,39 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
   };
 
   // Helper: Wrap provider with event handling
-  const wrapProvider = (provider: Provider.Provider): Provider.Provider => {
-    return Provider.from(
-      {
-        on: provider.on.bind(provider),
-        removeListener: provider.removeListener.bind(provider),
-        request: (params) => provider.request(params as never),
-      },
-      { includeEvents: true },
-    );
-  };
+  const wrapProvider = useCallback(
+    (provider: Provider.Provider): Provider.Provider =>
+      Provider.from(
+        {
+          on: provider.on.bind(provider),
+          removeListener: provider.removeListener.bind(provider),
+          async request(params) {
+            const result = await provider.request(params as never);
+            if (
+              params.method === 'wallet_switchEthereumChain' ||
+              params.method === 'wallet_addEthereumChain'
+            ) {
+              try {
+                const actualChainId = await provider.request({
+                  method: 'eth_chainId',
+                });
+                reportChainChanged(actualChainId);
+              } catch (error) {
+                // The original wallet request succeeded. Event listeners or the
+                // next controller sync can recover without changing its result.
+                logError(
+                  '[WalletProvider] Failed to refresh network after provider request:',
+                  error,
+                );
+              }
+            }
+            return result;
+          },
+        },
+        { includeEvents: true },
+      ),
+    [reportChainChanged],
+  );
 
   // Resolve and set up the provider based on preferred wallet
   const refreshConnectedProvider = useCallback(async () => {
@@ -330,6 +372,7 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     ethProvider,
     openConnectModal,
     isExternalWalletConnected,
+    wrapProvider,
   ]);
 
   // Queue refreshes so connector updates are not dropped during restoration.
@@ -367,6 +410,7 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
           ? warpcastWalletAddress
           : address
         : undefined,
+      network,
 
       // Connection context
       connectionContextRef,
@@ -384,6 +428,7 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
       disconnectedProvider,
       warpcastWalletAddress,
       address,
+      network,
       connectionContextRef,
     ],
   );

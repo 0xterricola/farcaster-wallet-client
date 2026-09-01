@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Address,
+  Chain,
   encodeFunctionData,
   erc20Abi,
   formatUnits,
@@ -9,7 +11,7 @@ import {
   toHex,
   zeroAddress,
 } from 'viem';
-import { base } from 'viem/chains';
+import { arbitrum, base, bsc, celo, monad } from 'viem/chains';
 import { usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -22,10 +24,15 @@ import {
 } from '~/hooks/useLifiWallet';
 import { parseTransferAmount } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
-import { fetchLifiQuote, LifiQuote } from '~/utils/lifiSwap';
-import { LifiAsset, LifiToken, normalizeLifiAddress } from '~/utils/lifiWallet';
+import { fetchLifiQuote, LifiQuote, toLifiSwapAsset } from '~/utils/lifiSwap';
+import {
+  isNativeWalletAsset,
+  LifiAsset,
+  LifiToken,
+  normalizeLifiAddress,
+} from '~/utils/lifiWallet';
 import { readConfirmedAllowance } from '~/utils/readConfirmedAllowance';
-import { ensureBaseWalletAccount } from '~/utils/sendBaseNativeToken';
+import { ensureEvmWalletAccount } from '~/utils/sendBaseNativeToken';
 
 type Review = {
   quote: LifiQuote;
@@ -35,29 +42,122 @@ type Review = {
   allowance?: bigint;
 };
 
-// Circle's native Base USDC, not bridged USDbC. Picker metadata only;
-// balances, token metadata and quotes still use the shared LI.FI/RPC path.
+// Default stablecoin contracts for the token picker. Base, Ethereum, Arbitrum,
+// Celo and HyperEVM use Circle-issued native USDC. BNB Smart Chain uses verified
+// Binance-Peg USDC because Circle does not issue native USDC on BSC. Monad uses
+// the verified USDC configured by the Farcaster client. Robinhood Chain uses
+// the canonical USDG contract published in its official documentation.
+// Balances, metadata and quotes still use the shared LI.FI/RPC path.
 // https://developers.circle.com/stablecoins/usdc-contract-addresses
-const BASE_USDC: LifiToken = {
-  chainId: base.id,
-  address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  symbol: 'USDC',
-  name: 'USD Coin',
-  decimals: 6,
-};
+// https://bscscan.com/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
+// https://docs.robinhood.com/chain/contracts/
+const DEFAULT_STABLECOIN: ReadonlyMap<number, LifiToken> = new Map([
+  [
+    base.id,
+    {
+      chainId: base.id,
+      address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    1,
+    {
+      chainId: 1,
+      address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    arbitrum.id,
+    {
+      chainId: arbitrum.id,
+      address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    bsc.id,
+    {
+      chainId: bsc.id,
+      address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 18,
+    },
+  ],
+  [
+    celo.id,
+    {
+      chainId: celo.id,
+      address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    monad.id,
+    {
+      chainId: monad.id,
+      address: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    hyperevm.id,
+    {
+      chainId: hyperevm.id,
+      address: '0xb88339CB7199b77E23DB6E890353E22632Ba630f',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    robinhood.id,
+    {
+      chainId: robinhood.id,
+      address: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
+      symbol: 'USDG',
+      name: 'USDG',
+      decimals: 6,
+    },
+  ],
+]);
 
-function isBaseUsdc(token: LifiToken) {
+function isDefaultStablecoin(token: LifiToken, defaultStablecoin?: LifiToken) {
   return (
-    token.chainId === base.id &&
-    token.address.toLowerCase() === BASE_USDC.address.toLowerCase()
+    defaultStablecoin !== undefined &&
+    token.chainId === defaultStablecoin.chainId &&
+    token.address.toLowerCase() === defaultStablecoin.address.toLowerCase()
   );
 }
 
-export function ExternalWalletSwap() {
+function defaultStablecoinLabel(chain: Chain) {
+  if (chain.id === bsc.id) {
+    return `Binance-Peg USDC on ${chain.name}`;
+  }
+  if (chain.id === robinhood.id) {
+    return `canonical USDG on ${chain.name}`;
+  }
+  return `native USDC on ${chain.name}`;
+}
+
+export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
   const { address, provider } = useWallet();
   const queryClient = useQueryClient();
-  const client = usePublicClient({ chainId: base.id });
-  const [fromInput, setFromInput] = useState('ETH');
+  const client = usePublicClient({ chainId: chain.id });
+  const defaultStablecoin = DEFAULT_STABLECOIN.get(chain.id);
+  const [fromInput, setFromInput] = useState(chain.nativeCurrency.symbol);
   const [toInput, setToInput] = useState('');
   const [amount, setAmount] = useState('');
   const [review, setReview] = useState<Review>();
@@ -75,31 +175,45 @@ export function ExternalWalletSwap() {
     isError: tokensError,
     isFetching: tokensFetching,
     refetch: refetchTokens,
-  } = useLifiWalletTokens(address);
+  } = useLifiWalletTokens(address, chain);
   const allTokens = (walletTokens?.tokens ?? [])
     .filter(
-      (token) => token.chainId === base.id && token.address !== zeroAddress,
+      (token) =>
+        token.chainId === chain.id &&
+        !isNativeWalletAsset(token.address, chain.id),
     )
-    .map((token) => (isBaseUsdc(token) ? BASE_USDC : token));
+    .map((token) =>
+      isDefaultStablecoin(token, defaultStablecoin)
+        ? defaultStablecoin!
+        : token,
+    );
   const unverifiedCount = allTokens.filter(
-    (token) => !isBaseUsdc(token) && token.verificationStatus !== 'verified',
+    (token) =>
+      !isDefaultStablecoin(token, defaultStablecoin) &&
+      token.verificationStatus !== 'verified',
   ).length;
   const tokenOptions = allTokens.filter(
     (token) =>
-      isBaseUsdc(token) ||
+      isDefaultStablecoin(token, defaultStablecoin) ||
       showUnverified ||
       token.verificationStatus === 'verified',
   );
   const buyTokenOptions = [
-    BASE_USDC,
-    ...tokenOptions.filter((token) => !isBaseUsdc(token)),
+    ...(defaultStablecoin ? [defaultStablecoin] : []),
+    ...tokenOptions.filter(
+      (token) => !isDefaultStablecoin(token, defaultStablecoin),
+    ),
   ];
-  const fromBalance = useLifiAsset(address, inputAddress(fromInput));
-  const toBalance = useLifiAsset(address, inputAddress(toInput));
+  const fromBalance = useLifiAsset(
+    address,
+    inputAddress(fromInput, chain),
+    chain,
+  );
+  const toBalance = useLifiAsset(address, inputAddress(toInput, chain), chain);
   const { data: receipt, isError: receiptError } = useWaitForTransactionReceipt(
     {
       hash,
-      chainId: base.id,
+      chainId: chain.id,
       timeout: 60_000,
       onReplaced: (transaction) => setReplacement(transaction.reason),
     },
@@ -111,13 +225,13 @@ export function ExternalWalletSwap() {
     return () => {
       generation.current += 1;
     };
-  }, [address, provider]);
+  }, [address, provider, chain.id]);
   const receiptHash = receipt?.transactionHash;
   useEffect(() => {
     if (address && receiptHash) {
-      void refreshLifiWallet(queryClient, address);
+      void refreshLifiWallet(queryClient, address, chain.id);
     }
-  }, [receiptHash, address, queryClient]);
+  }, [receiptHash, address, queryClient, chain.id]);
 
   const edit = () => {
     generation.current += 1;
@@ -127,14 +241,14 @@ export function ExternalWalletSwap() {
   };
   const load = async (token: Address) => {
     if (!address || !client) {
-      throw new Error('Connect a wallet with a Base connection.');
+      throw new Error(`Connect a wallet with a ${chain.name} connection.`);
     }
-    return fetchFreshLifiAsset(queryClient, client, address, token);
+    return fetchFreshLifiAsset(queryClient, client, address, token, chain);
   };
   const checkBalance = (asset: LifiAsset, units: bigint) => {
     if (asset.balance < units) {
       throw new Error(
-        `Insufficient ${asset.symbol} balance. Available: ${formatUnits(asset.balance, asset.decimals)} ${asset.symbol} on Base.`,
+        `Insufficient ${asset.symbol} balance. Available: ${formatUnits(asset.balance, asset.decimals)} ${asset.symbol} on ${chain.name}.`,
       );
     }
   };
@@ -151,18 +265,26 @@ export function ExternalWalletSwap() {
     setReview(undefined);
     setStatus(undefined);
     try {
-      const fromAddress = normalizeLifiAddress(fromInput);
-      const toAddress = normalizeLifiAddress(toInput);
+      const fromAddress = normalizeLifiAddress(
+        fromInput,
+        chain.nativeCurrency.symbol,
+      );
+      const toAddress = normalizeLifiAddress(
+        toInput,
+        chain.nativeCurrency.symbol,
+      );
       if (fromAddress === toAddress) {
         throw new Error('Choose two different tokens.');
       }
-      const [from, to] = await Promise.all([
+      const [loadedFrom, loadedTo] = await Promise.all([
         load(fromAddress),
         load(toAddress),
       ]);
+      const from = toLifiSwapAsset(loadedFrom, chain);
+      const to = toLifiSwapAsset(loadedTo, chain);
       const units = parseTransferAmount(amount, from.decimals);
       checkBalance(from, units);
-      const quote = await fetchLifiQuote(address, from, to, units);
+      const quote = await fetchLifiQuote(address, from, to, units, chain);
       if (version !== generation.current) {
         return;
       }
@@ -220,29 +342,19 @@ export function ExternalWalletSwap() {
       }
     };
     try {
-      await ensureBaseWalletAccount(provider, address);
+      await ensureEvmWalletAccount(provider, address, chain);
       assertCurrent();
-      const from = await load(review.from.address);
+      const from = toLifiSwapAsset(await load(review.from.address), chain);
       assertCurrent();
       if (from.decimals !== review.from.decimals) {
         throw new Error('Token decimals changed. Get a new quote.');
       }
       checkBalance(from, review.units);
-      let quote = await fetchLifiQuote(address, from, review.to, review.units);
-      assertCurrent();
-      const checkChanges = (next: LifiQuote) => {
-        if (
-          BigInt(next.estimate.toAmountMin) <
-            BigInt(review.quote.estimate.toAmountMin) ||
-          next.estimate.approvalAddress?.toLowerCase() !==
-            review.quote.estimate.approvalAddress?.toLowerCase()
-        ) {
-          throw new Error(
-            'Quote changed. Get a new quote and review it before swapping.',
-          );
-        }
-      };
-      checkChanges(quote);
+      // Submit the exact route and minimum the user reviewed. Refetching here
+      // can create an endless review loop when prices move between clicks.
+      // Balance, allowance and the on-chain preflight below still protect a
+      // stale route before any swap transaction reaches the wallet.
+      const quote = review.quote;
       if (from.address !== zeroAddress) {
         const spender = quote.estimate.approvalAddress;
         if (!spender) {
@@ -264,7 +376,7 @@ export function ExternalWalletSwap() {
             );
             return;
           }
-          await ensureBaseWalletAccount(provider, address, false);
+          await ensureEvmWalletAccount(provider, address, chain, false);
           assertCurrent();
           setStatus(
             `Approve exactly ${formatUnits(review.units, from.decimals)} ${from.symbol} in your wallet…`,
@@ -273,7 +385,7 @@ export function ExternalWalletSwap() {
             method: 'eth_sendTransaction',
             params: [
               {
-                chainId: toHex(base.id),
+                chainId: toHex(chain.id),
                 from: address,
                 to: from.address,
                 data: encodeFunctionData({
@@ -293,12 +405,7 @@ export function ExternalWalletSwap() {
           if (approvalReceipt.status !== 'success') {
             throw new Error('Token approval reverted. Swap was not sent.');
           }
-          setStatus(
-            'Approval confirmed. Checking allowance and refreshing the swap…',
-          );
-          quote = await fetchLifiQuote(address, from, review.to, review.units);
-          assertCurrent();
-          checkChanges(quote);
+          setStatus('Approval confirmed. Checking token allowance…');
           const approved = await readConfirmedAllowance({
             read: () =>
               client.readContract({
@@ -312,8 +419,9 @@ export function ExternalWalletSwap() {
             assertCurrent,
             onRetry: () =>
               setStatus(
-                'Approval confirmed. Waiting for Base RPC to catch up…',
+                `Approval confirmed. Waiting for ${chain.name} RPC to catch up…`,
               ),
+            chainName: chain.name,
           });
           assertCurrent();
           if (approved < review.units) {
@@ -341,29 +449,64 @@ export function ExternalWalletSwap() {
       checkBalance(latest, review.units);
       const tx = quote.transactionRequest;
       if (native.balance < BigInt(tx.value ?? '0')) {
-        throw new Error('Insufficient ETH on Base for the swap value.');
+        throw new Error(
+          `Insufficient ${chain.nativeCurrency.symbol} on ${chain.name} for the swap value.`,
+        );
       }
-      await ensureBaseWalletAccount(provider, address, false);
+      await ensureEvmWalletAccount(provider, address, chain, false);
+      assertCurrent();
+      setStatus(`Simulating swap on ${chain.name}…`);
+      try {
+        const simulation = {
+          account: address,
+          to: tx.to,
+          data: tx.data,
+          ...(tx.value ? { value: BigInt(tx.value) } : {}),
+          ...(tx.gasLimit ? { gas: BigInt(tx.gasLimit) } : {}),
+        };
+        if (tx.gasPrice) {
+          await client.call({
+            ...simulation,
+            type: 'legacy',
+            gasPrice: BigInt(tx.gasPrice),
+          });
+        } else if (tx.maxFeePerGas && tx.maxPriorityFeePerGas) {
+          await client.call({
+            ...simulation,
+            type: 'eip1559',
+            maxFeePerGas: BigInt(tx.maxFeePerGas),
+            maxPriorityFeePerGas: BigInt(tx.maxPriorityFeePerGas),
+          });
+        } else {
+          await client.call(simulation);
+        }
+      } catch {
+        throw new Error(
+          `The selected route failed a ${chain.name} preflight simulation. No transaction was submitted. Get a new quote before trying again.`,
+        );
+      }
       assertCurrent();
       setStatus('Review swap and network fees in your wallet…');
       const transactionHash = (await provider.request({
         method: 'eth_sendTransaction',
         params: [
           {
-            chainId: toHex(base.id),
+            chainId: toHex(chain.id),
             from: address,
             to: tx.to,
             data: tx.data,
             value: tx.value,
             gas: tx.gasLimit,
             gasPrice: tx.gasPrice,
+            maxFeePerGas: tx.maxFeePerGas,
+            maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
           },
         ],
       })) as Hash;
       setHash(transactionHash);
       setStatus('Swap submitted. Waiting for confirmation…');
       setReview(undefined);
-      void refreshLifiWallet(queryClient, address);
+      void refreshLifiWallet(queryClient, address, chain.id);
     } catch (failure) {
       if (version === generation.current) {
         setError(
@@ -382,20 +525,22 @@ export function ExternalWalletSwap() {
     replacement === 'cancelled'
       ? 'Swap transaction cancelled.'
       : replacement === 'replaced'
-        ? 'Transaction replaced. Check BaseScan.'
+        ? `Transaction replaced. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'}.`
         : receipt
           ? receipt.status === 'success'
-            ? 'Swap confirmed on Base.'
-            : 'Swap reverted on Base.'
+            ? `Swap confirmed on ${chain.name}.`
+            : `Swap reverted on ${chain.name}.`
           : receiptError
-            ? 'Confirmation unavailable. Check BaseScan before trying again.'
+            ? `Confirmation unavailable. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'} before trying again.`
             : 'Swap submitted. Waiting for confirmation…';
+  const explorer = chain.blockExplorers?.default;
 
   return (
     <div className="flex flex-col gap-4 pt-4">
       <p className="rounded-xl p-3 text-xs text-muted bg-elevated-nohover">
-        Base only. LI.FI supplies token data and swap routes. Choose a wallet
-        token or enter ETH / a Base contract. Verify contracts before approving.
+        {chain.name} only. LI.FI supplies token data and swap routes. Choose a
+        wallet token or enter {chain.nativeCurrency.symbol} / a {chain.name}{' '}
+        contract. Verify contracts before approving.
       </p>
       <form className="flex flex-col gap-4" onSubmit={getQuote}>
         <fieldset className="flex min-w-0 flex-col gap-4" disabled={busy}>
@@ -444,6 +589,8 @@ export function ExternalWalletSwap() {
               edit();
               setFromInput(value);
             }}
+            chain={chain}
+            defaultStablecoin={defaultStablecoin}
           />
           <label className="flex flex-col gap-2 text-sm text-default">
             Amount
@@ -469,6 +616,8 @@ export function ExternalWalletSwap() {
               edit();
               setToInput(value);
             }}
+            chain={chain}
+            defaultStablecoin={defaultStablecoin}
           />
           <DefaultButton type="submit" disabled={busy || !address || !client}>
             {busy ? 'Checking wallet…' : review ? 'Refresh quote' : 'Get quote'}
@@ -477,7 +626,7 @@ export function ExternalWalletSwap() {
       </form>
       {review && (
         <section
-          aria-label="Review Base swap"
+          aria-label={`Review ${chain.name} swap`}
           className="rounded-xl p-4 bg-elevated-nohover"
         >
           <div className="text-xs text-muted">Estimated receive</div>
@@ -498,7 +647,10 @@ export function ExternalWalletSwap() {
           </div>
           <div aria-label="Token approval" className="mt-3 text-xs text-muted">
             {review.from.address === zeroAddress ? (
-              <p>Native ETH does not need token approval.</p>
+              <p>
+                Native {chain.nativeCurrency.symbol} does not need token
+                approval.
+              </p>
             ) : (
               <>
                 <p>
@@ -510,7 +662,7 @@ export function ExternalWalletSwap() {
                   {review.from.symbol}
                 </p>
                 <p className="break-all">
-                  Base spender: {review.quote.estimate.approvalAddress}
+                  {chain.name} spender: {review.quote.estimate.approvalAddress}
                 </p>
                 <p>
                   {needsApproval
@@ -550,23 +702,23 @@ export function ExternalWalletSwap() {
           {error}
         </p>
       )}
-      {hash && (
+      {hash && explorer && (
         <a
           className="text-accent-primary text-sm hover:underline"
-          href={`https://basescan.org/tx/${receipt?.transactionHash ?? hash}`}
+          href={`${explorer.url}/tx/${receipt?.transactionHash ?? hash}`}
           target="_blank"
           rel="noopener noreferrer"
         >
-          View {truncateAddress(hash, 8)} on BaseScan
+          View {truncateAddress(hash, 8)} on {explorer.name}
         </a>
       )}
     </div>
   );
 }
 
-function inputAddress(input: string) {
+function inputAddress(input: string, chain: Chain) {
   try {
-    return normalizeLifiAddress(input);
+    return normalizeLifiAddress(input, chain.nativeCurrency.symbol);
   } catch {
     return undefined;
   }
@@ -579,6 +731,8 @@ function TokenInput({
   asset,
   error,
   onChange,
+  chain,
+  defaultStablecoin,
 }: {
   label: string;
   tokens: LifiToken[];
@@ -586,11 +740,13 @@ function TokenInput({
   asset?: LifiAsset;
   error: boolean;
   onChange: (value: string) => void;
+  chain: Chain;
+  defaultStablecoin?: LifiToken;
 }) {
-  const address = inputAddress(value);
+  const address = inputAddress(value, chain);
   const selected =
     address === zeroAddress
-      ? 'ETH'
+      ? chain.nativeCurrency.symbol
       : (tokens.find(
           (token) => token.address.toLowerCase() === address?.toLowerCase(),
         )?.address ?? 'custom');
@@ -605,14 +761,17 @@ function TokenInput({
             onChange(event.target.value === 'custom' ? '' : event.target.value)
           }
         >
-          <option value="ETH">ETH — native asset</option>
+          <option value={chain.nativeCurrency.symbol}>
+            {chain.nativeCurrency.symbol} — native asset
+          </option>
           {tokens.map((token) => (
             <option key={token.address} value={token.address}>
               {token.symbol} —{' '}
-              {isBaseUsdc(token)
-                ? 'native USDC on Base'
+              {isDefaultStablecoin(token, defaultStablecoin)
+                ? defaultStablecoinLabel(chain)
                 : truncateAddress(token.address, 4)}
-              {!isBaseUsdc(token) && token.verificationStatus !== 'verified'
+              {!isDefaultStablecoin(token, defaultStablecoin) &&
+              token.verificationStatus !== 'verified'
                 ? ' (unverified)'
                 : ''}
             </option>
@@ -626,7 +785,7 @@ function TokenInput({
           className="rounded-xl border px-3 py-2 bg-app border-default"
           autoCapitalize="none"
           autoCorrect="off"
-          placeholder="ETH or 0x…"
+          placeholder={`${chain.nativeCurrency.symbol} or 0x…`}
           value={value}
           onChange={(event) => onChange(event.target.value.trim())}
         />
@@ -635,9 +794,9 @@ function TokenInput({
         {error
           ? 'Balance unavailable. Check the contract or refresh.'
           : asset
-            ? `Available on Base: ${formatUnits(asset.balance, asset.decimals)} ${asset.symbol}`
-            : inputAddress(value)
-              ? 'Loading balance on Base…'
+            ? `Available on ${chain.name}: ${formatUnits(asset.balance, asset.decimals)} ${asset.symbol}`
+            : inputAddress(value, chain)
+              ? `Loading balance on ${chain.name}…`
               : 'Enter a token contract.'}
       </span>
     </div>

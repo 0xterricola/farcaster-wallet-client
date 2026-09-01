@@ -1,6 +1,7 @@
 import { Provider } from 'ox';
 import {
   Address,
+  Chain,
   decodeFunctionResult,
   encodeFunctionData,
   erc20Abi,
@@ -16,7 +17,7 @@ import {
 import { base } from 'viem/chains';
 import { estimateTotalFee } from 'viem/op-stack';
 
-import { ensureBaseWalletAccount } from '~/utils/sendBaseNativeToken';
+import { ensureEvmWalletAccount } from '~/utils/sendBaseNativeToken';
 
 export type BaseTransferInput = {
   address: Address;
@@ -48,13 +49,37 @@ export type PreparedBaseTransfer = {
   balance: bigint;
   estimatedFee: bigint;
   preparedAt: number;
+  chain: Pick<Chain, 'id' | 'name' | 'nativeCurrency'>;
 };
 
 export function createBaseTransferReader(
   client: PublicClient,
 ): BaseTransferReader {
-  if (client.chain?.id !== base.id) {
-    throw new Error('Base RPC is required.');
+  return createTransferReader(client, base, (call) =>
+    estimateTotalFee(client, { ...call, chain: base }),
+  );
+}
+
+export function createStandardEvmTransferReader(
+  client: PublicClient,
+  chain: Chain,
+): BaseTransferReader {
+  return createTransferReader(client, chain, async (call) => {
+    const [gas, gasPrice] = await Promise.all([
+      client.estimateGas(call),
+      client.getGasPrice(),
+    ]);
+    return gas * gasPrice;
+  });
+}
+
+function createTransferReader(
+  client: PublicClient,
+  chain: Chain,
+  estimateFee: (call: TransferCall) => Promise<bigint>,
+): BaseTransferReader {
+  if (client.chain?.id !== chain.id) {
+    throw new Error(`${chain.name} RPC is required.`);
   }
   return {
     nativeBalance: (address) => client.getBalance({ address }),
@@ -94,9 +119,7 @@ export function createBaseTransferReader(
         }
       }
     },
-    // This installed viem version estimates L1 data + L2 execution fees.
-    // It is an estimate, not a guaranteed final fee or support for sponsored gas.
-    estimateFee: (call) => estimateTotalFee(client, { ...call, chain: base }),
+    estimateFee,
   };
 }
 
@@ -122,6 +145,14 @@ export async function prepareBaseTransfer(
   reader: BaseTransferReader,
   input: BaseTransferInput,
 ): Promise<PreparedBaseTransfer> {
+  return prepareEvmTransfer(reader, input, base);
+}
+
+export async function prepareEvmTransfer(
+  reader: BaseTransferReader,
+  input: BaseTransferInput,
+  chain: Pick<Chain, 'id' | 'name' | 'nativeCurrency'>,
+): Promise<PreparedBaseTransfer> {
   const recipient = input.recipient.trim();
   if (!isAddress(recipient) || recipient.toLowerCase() === zeroAddress) {
     throw new Error('Enter a valid, non-zero recipient address.');
@@ -134,20 +165,20 @@ export async function prepareBaseTransfer(
       tokenAddress.toLowerCase() ===
         '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')
   ) {
-    throw new Error('Choose a valid Base ERC-20 contract.');
+    throw new Error(`Choose a valid ${chain.name} ERC-20 contract.`);
   }
   const nativeBalance = await reader.nativeBalance(input.address);
   const details = tokenAddress
     ? await reader.tokenDetails(tokenAddress, input.address)
     : {
-        symbol: base.nativeCurrency.symbol,
-        decimals: base.nativeCurrency.decimals,
+        symbol: chain.nativeCurrency.symbol,
+        decimals: chain.nativeCurrency.decimals,
         balance: nativeBalance,
       };
   const units = parseTransferAmount(input.amount, details.decimals);
   if (units > details.balance) {
     throw new Error(
-      `Insufficient ${details.symbol} balance. Available: ${formatUnits(details.balance, details.decimals)} ${details.symbol} on Base.`,
+      `Insufficient ${details.symbol} balance. Available: ${formatUnits(details.balance, details.decimals)} ${details.symbol} on ${chain.name}.`,
     );
   }
   const call: TransferCall = {
@@ -174,7 +205,7 @@ export async function prepareBaseTransfer(
   const feeReserve = (estimatedFee * 120n + 99n) / 100n;
   if (nativeBalance < call.value + feeReserve) {
     throw new Error(
-      'Not enough ETH on Base for this send and estimated gas (including a 20% fee buffer).',
+      `Not enough ${chain.nativeCurrency.symbol} on ${chain.name} for this send and estimated gas (including a 20% fee buffer).`,
     );
   }
   return {
@@ -186,10 +217,25 @@ export async function prepareBaseTransfer(
     balance: details.balance,
     estimatedFee,
     preparedAt: Date.now(),
+    chain,
   };
 }
 
 export async function submitBaseTransfer({
+  provider,
+  reader,
+  prepared,
+  isCurrent = () => true,
+}: {
+  provider: Pick<Provider.Provider, 'request'>;
+  reader: BaseTransferReader;
+  prepared: PreparedBaseTransfer;
+  isCurrent?: () => boolean;
+}) {
+  return submitEvmTransfer({ provider, reader, prepared, isCurrent });
+}
+
+export async function submitEvmTransfer({
   provider,
   reader,
   prepared,
@@ -209,9 +255,17 @@ export async function submitBaseTransfer({
     }
   };
   assertCurrent();
-  await ensureBaseWalletAccount(provider, prepared.input.address);
+  await ensureEvmWalletAccount(
+    provider,
+    prepared.input.address,
+    prepared.chain,
+  );
   assertCurrent();
-  const fresh = await prepareBaseTransfer(reader, prepared.input);
+  const fresh = await prepareEvmTransfer(
+    reader,
+    prepared.input,
+    prepared.chain,
+  );
   if (
     fresh.units !== prepared.units ||
     fresh.decimals !== prepared.decimals ||
@@ -222,7 +276,12 @@ export async function submitBaseTransfer({
     throw new Error('Token details changed. Review the send again.');
   }
   // A miniapp may have changed networks while the live checks were running.
-  await ensureBaseWalletAccount(provider, prepared.input.address, false);
+  await ensureEvmWalletAccount(
+    provider,
+    prepared.input.address,
+    prepared.chain,
+    false,
+  );
   assertCurrent();
   return provider.request({
     method: 'eth_sendTransaction',
@@ -232,7 +291,7 @@ export async function submitBaseTransfer({
         to: fresh.call.to,
         value: toHex(fresh.call.value),
         ...(fresh.call.data ? { data: fresh.call.data } : {}),
-        chainId: toHex(base.id),
+        chainId: toHex(prepared.chain.id),
       },
     ],
   });

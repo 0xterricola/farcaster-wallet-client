@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
 import { zeroAddress } from 'viem';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
+import { CELO_NATIVE_TOKEN_ADDRESS } from '~/utils/lifiWallet';
 
 const mocks = vi.hoisted(() => ({
   tokens: vi.fn(),
@@ -151,8 +154,8 @@ describe('LI.FI portfolio', () => {
   });
   it('uses the connected wallet without requiring Farcaster authentication', () => {
     render(<ExternalWalletPortfolio address={wallet} />);
-    expect(mocks.tokens).toHaveBeenCalledWith(wallet);
-    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address]);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, base);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], base);
     expect(screen.getByText('$2.00')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
   });
@@ -162,6 +165,22 @@ describe('LI.FI portfolio', () => {
     );
     render(<ExternalWalletPortfolio address={wallet} />);
     expect(screen.queryByText('ETH', { exact: true })).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+  it('does not duplicate CeloToken because it shares the native CELO balance', () => {
+    mocks.tokens.mockReturnValue(
+      result([
+        {
+          ...token,
+          chainId: celo.id,
+          address: CELO_NATIVE_TOKEN_ADDRESS,
+          symbol: 'CELO',
+        },
+        { ...token, chainId: celo.id },
+      ]),
+    );
+    render(<ExternalWalletPortfolio address={wallet} chain={celo} />);
+    expect(screen.queryByText('CELO', { exact: true })).toBeNull();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
   it('hides verified zero balances even if the indexed API listed the token', () => {
@@ -205,7 +224,139 @@ describe('LI.FI portfolio', () => {
   it('refreshes the shared wallet cache', () => {
     render(<ExternalWalletPortfolio address={wallet} />);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
-    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet);
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, base.id);
+  });
+
+  it('uses the selected chain for Ethereum discovery, reads, labels, and links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={mainnet} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, mainnet);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], mainnet);
+    expect(
+      screen.getByRole('region', { name: 'Ethereum token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Ethereum')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://etherscan.io/token/${token.address}`,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      mainnet.id,
+    );
+  });
+  it('uses the selected chain for Arbitrum discovery, reads, labels, and links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={arbitrum} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, arbitrum);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Arbitrum One token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Arbitrum One')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://arbiscan.io/token/${token.address}`,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      arbitrum.id,
+    );
+  });
+  it('uses BSC for BNB and BEP-20 portfolio reads and BscScan links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={bsc} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, bsc);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], bsc);
+    expect(
+      screen.getByRole('region', { name: 'BNB Smart Chain token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on BNB Smart Chain')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://bscscan.com/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native BNB is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, bsc.id);
+  });
+  it('uses Celo for CELO and token portfolio reads and Celoscan links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={celo} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, celo);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], celo);
+    expect(
+      screen.getByRole('region', { name: 'Celo token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Celo')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://celoscan.io/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native CELO is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, celo.id);
+  });
+  it('uses Monad for MON and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={monad} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, monad);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], monad);
+    expect(
+      screen.getByRole('region', { name: 'Monad token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Monad')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${monad.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native MON is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, monad.id);
+  });
+  it('uses HyperEVM for HYPE and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={hyperevm} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, hyperevm);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      hyperevm,
+    );
+    expect(
+      screen.getByRole('region', { name: 'HyperEVM token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on HyperEVM')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${hyperevm.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native HYPE is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      hyperevm.id,
+    );
+  });
+  it('uses Robinhood Chain for ETH and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={robinhood} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, robinhood);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      robinhood,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Robinhood Chain token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Robinhood Chain')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${robinhood.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native ETH is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      robinhood.id,
+    );
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({

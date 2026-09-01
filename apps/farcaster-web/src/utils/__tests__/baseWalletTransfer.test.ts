@@ -6,15 +6,19 @@ import {
   PublicClient,
   zeroAddress,
 } from 'viem';
+import { bsc, celo } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   BaseTransferInput,
   BaseTransferReader,
   createBaseTransferReader,
+  createStandardEvmTransferReader,
   parseTransferAmount,
   prepareBaseTransfer,
+  prepareEvmTransfer,
   submitBaseTransfer,
+  submitEvmTransfer,
 } from '~/utils/baseWalletTransfer';
 
 const address = '0x1111111111111111111111111111111111111111';
@@ -281,6 +285,83 @@ describe('submitBaseTransfer', () => {
   });
 });
 
+describe('chain-parameterized EVM transfers', () => {
+  it('uses BNB metadata and submits with the BSC chain ID', async () => {
+    const fixture = setup();
+    fixture.setChain('0x38');
+    const prepared = await prepareEvmTransfer(
+      fixture.reader,
+      { ...input, tokenAddress: undefined, amount: '0.1' },
+      bsc,
+    );
+    expect(prepared).toMatchObject({
+      symbol: 'BNB',
+      chain: expect.objectContaining({ id: 56, name: 'BNB Smart Chain' }),
+    });
+    await expect(submitEvmTransfer({ ...fixture, prepared })).resolves.toBe(
+      hash,
+    );
+    expect(fixture.request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          from: address,
+          to: recipient,
+          chainId: '0x38',
+        }),
+      ],
+    });
+  });
+
+  it('uses CELO metadata and submits with the Celo chain ID', async () => {
+    const fixture = setup();
+    fixture.setChain('0xa4ec');
+    const prepared = await prepareEvmTransfer(
+      fixture.reader,
+      { ...input, tokenAddress: undefined, amount: '0.1' },
+      celo,
+    );
+    expect(prepared).toMatchObject({
+      symbol: 'CELO',
+      chain: expect.objectContaining({ id: 42220, name: 'Celo' }),
+    });
+    await expect(submitEvmTransfer({ ...fixture, prepared })).resolves.toBe(
+      hash,
+    );
+    expect(fixture.request).toHaveBeenLastCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          from: address,
+          to: recipient,
+          chainId: '0xa4ec',
+        }),
+      ],
+    });
+  });
+
+  it('uses the requested chain in balance and gas errors', async () => {
+    const { reader } = setup();
+    reader.tokenDetails.mockResolvedValue({
+      symbol: 'TOKEN',
+      decimals: 6,
+      balance: 0n,
+    });
+    await expect(prepareEvmTransfer(reader, input, bsc)).rejects.toThrow(
+      'TOKEN on BNB Smart Chain',
+    );
+    reader.tokenDetails.mockResolvedValue({
+      symbol: 'TOKEN',
+      decimals: 6,
+      balance: 5_000_000n,
+    });
+    reader.nativeBalance.mockResolvedValue(0n);
+    await expect(prepareEvmTransfer(reader, input, bsc)).rejects.toThrow(
+      'Not enough BNB on BNB Smart Chain',
+    );
+  });
+});
+
 describe('live RPC simulation adapter', () => {
   it('rejects a client configured for another chain', () => {
     expect(() =>
@@ -309,5 +390,47 @@ describe('live RPC simulation adapter', () => {
     await expect(
       reader.simulateToken({ account: address, to: tokenAddress, value: 0n }),
     ).rejects.toThrow('returned false');
+  });
+});
+
+describe('standard EVM fee adapter', () => {
+  it('multiplies the exact gas estimate by the current gas price', async () => {
+    const estimateGas = vi.fn().mockResolvedValue(21_000n);
+    const getGasPrice = vi.fn().mockResolvedValue(3_000_000_000n);
+    const reader = createStandardEvmTransferReader(
+      {
+        chain: bsc,
+        estimateGas,
+        getGasPrice,
+      } as unknown as PublicClient,
+      bsc,
+    );
+    const call = { account: address, to: recipient, value: 1n } as const;
+    await expect(reader.estimateFee(call)).resolves.toBe(63_000_000_000_000n);
+    expect(estimateGas).toHaveBeenCalledWith(call);
+    expect(getGasPrice).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an RPC client for a different chain', () => {
+    expect(() =>
+      createStandardEvmTransferReader(
+        { chain: { id: 1 } } as PublicClient,
+        bsc,
+      ),
+    ).toThrow('BNB Smart Chain RPC');
+  });
+
+  it('does not fabricate a fee when estimation fails', async () => {
+    const reader = createStandardEvmTransferReader(
+      {
+        chain: bsc,
+        estimateGas: vi.fn().mockRejectedValue(new Error('RPC unavailable')),
+        getGasPrice: vi.fn().mockResolvedValue(1n),
+      } as unknown as PublicClient,
+      bsc,
+    );
+    await expect(
+      reader.estimateFee({ account: address, to: recipient, value: 1n }),
+    ).rejects.toThrow('RPC unavailable');
   });
 });

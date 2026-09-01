@@ -1,5 +1,5 @@
 import { Provider } from 'ox';
-import { Address, toHex } from 'viem';
+import { Address, Chain, toHex } from 'viem';
 import { base } from 'viem/chains';
 
 // Only dashboard sends use this guard. Miniapps keep their existing provider
@@ -15,7 +15,29 @@ export async function sendBaseNativeToken({
   recipient: Address;
   value: bigint;
 }) {
-  await ensureBaseWalletAccount(provider, address);
+  return sendEvmNativeToken({
+    provider,
+    address,
+    recipient,
+    value,
+    chain: base,
+  });
+}
+
+export async function sendEvmNativeToken({
+  provider,
+  address,
+  recipient,
+  value,
+  chain,
+}: {
+  provider: Pick<Provider.Provider, 'request'>;
+  address: Address;
+  recipient: Address;
+  value: bigint;
+  chain: Pick<Chain, 'id' | 'name'>;
+}) {
+  await ensureEvmWalletAccount(provider, address, chain);
   return provider.request({
     method: 'eth_sendTransaction',
     params: [
@@ -23,7 +45,7 @@ export async function sendBaseNativeToken({
         from: address,
         to: recipient,
         value: toHex(value),
-        chainId: toHex(base.id),
+        chainId: toHex(chain.id),
       },
     ],
   });
@@ -34,9 +56,18 @@ export async function ensureBaseWalletAccount(
   address: Address,
   allowSwitch = true,
 ) {
-  const chainId = toHex(base.id);
+  return ensureEvmWalletAccount(provider, address, base, allowSwitch);
+}
+
+export async function ensureEvmWalletAccount(
+  provider: Pick<Provider.Provider, 'request'>,
+  address: Address,
+  chain: Pick<Chain, 'id' | 'name'>,
+  allowSwitch = true,
+) {
+  const chainId = toHex(chain.id);
   const currentChainId = await provider.request({ method: 'eth_chainId' });
-  if (Number(currentChainId) !== base.id && allowSwitch) {
+  if (Number(currentChainId) !== chain.id && allowSwitch) {
     await provider.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId }],
@@ -50,7 +81,9 @@ export async function ensureBaseWalletAccount(
     throw new Error('Wallet account changed. Review the send again.');
   }
   const verifiedChainId = await provider.request({ method: 'eth_chainId' });
-  if (Number(verifiedChainId) !== base.id) {
-    throw new Error('Wallet is not on Base. No transaction was submitted.');
+  if (Number(verifiedChainId) !== chain.id) {
+    throw new Error(
+      `Wallet is not on ${chain.name}. No transaction was submitted.`,
+    );
   }
 }
