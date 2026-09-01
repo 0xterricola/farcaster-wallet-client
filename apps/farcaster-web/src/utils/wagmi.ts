@@ -1,6 +1,6 @@
 import { walletConnect } from '@wagmi/connectors';
 import { robinhood } from 'farcaster-client-data';
-import { bsc, degen, monadTestnet, unichain } from 'viem/chains';
+import { bsc, degen, monad, monadTestnet, unichain } from 'viem/chains';
 import { Config, createConfig, http, Transport } from 'wagmi';
 import {
   arbitrum,
@@ -29,6 +29,7 @@ const chains = [
   polygon,
   zora,
   unichain,
+  monad,
   monadTestnet,
   celo,
   sepolia,
@@ -59,6 +60,11 @@ const bscRpcUrl =
 const celoRpcUrl =
   import.meta.env.VITE_CELO_RPC_URL || 'https://forno.celo.org';
 
+// Monad's mainnet endpoint accepts browser requests. Keep an override for
+// deployments that need a dedicated provider or higher limits.
+const monadRpcUrl =
+  import.meta.env.VITE_MONAD_RPC_URL || 'https://rpc.monad.xyz';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -70,7 +76,9 @@ const transports = chains.reduce(
             ? bscRpcUrl
             : chain.id === celo.id
               ? celoRpcUrl
-              : undefined;
+              : chain.id === monad.id
+                ? monadRpcUrl
+                : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

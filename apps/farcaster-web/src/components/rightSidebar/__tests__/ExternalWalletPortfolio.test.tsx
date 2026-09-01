@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { zeroAddress } from 'viem';
-import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
@@ -295,6 +295,21 @@ describe('LI.FI portfolio', () => {
     expect(screen.getByText(/Native CELO is shown above/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
     expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, celo.id);
+  });
+  it('uses Monad for MON and token portfolio reads and explorer links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={monad} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, monad);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], monad);
+    expect(
+      screen.getByRole('region', { name: 'Monad token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Monad')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${monad.blockExplorers.default.url}/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native MON is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, monad.id);
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({

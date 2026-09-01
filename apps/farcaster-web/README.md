@@ -54,6 +54,13 @@ optional override is also available:
 VITE_CELO_RPC_URL=https://your-celo-rpc.example
 ```
 
+Monad reads use its browser-compatible mainnet RPC by default. An optional
+override is also available:
+
+```env
+VITE_MONAD_RPC_URL=https://your-monad-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -226,6 +233,8 @@ or assume every miniapp will work on a fork's domain.
   tokens, and swap through LI.FI using Circle-issued Celo USDC
   (`0xcebA9300f2b948710d2653dD7B07f33A8B32118C`, 6 decimals) as the default
   stablecoin.
+- View Monad MON and token balances and receive guidance. Send and Trade remain
+  disabled until their Monad transaction paths are enabled.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
@@ -281,6 +290,8 @@ confirmation. This patch does not add multichain transfers or portfolio history.
 - If BNB Smart Chain balances are unavailable, confirm that `VITE_BSC_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If Celo balances are unavailable, confirm that `VITE_CELO_RPC_URL` accepts
+  JSON-RPC requests from the deployed site's browser origin.
+- If Monad balances are unavailable, confirm that `VITE_MONAD_RPC_URL` accepts
   JSON-RPC requests from the deployed site's browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
