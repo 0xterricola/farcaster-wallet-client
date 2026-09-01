@@ -233,10 +233,16 @@ or assume every miniapp will work on a fork's domain.
 
 ## Built-in wallet actions
 
-- View the connected address, native ETH, and Base ERC-20 balances
+- View the connected address, native balance, and token portfolio on the
+  selected supported network
 - Receive with an address QR code
-- Send ETH and ERC-20 tokens on Base with exact integer amounts and live checks
-- Swap ETH and arbitrary ERC-20 tokens on Base
+- Send native assets and ERC-20 tokens with exact integer amounts and live
+  checks
+- Swap native assets and arbitrary ERC-20 tokens on the same network
+- Base remains the default network and uses Circle-issued Base USDC as its
+  default stablecoin.
+- View Ethereum balances, receive guidance, send ETH or ERC-20 tokens, and swap
+  through LI.FI using Circle-issued Ethereum USDC as the default stablecoin.
 - View Arbitrum One balances, receive guidance, send ETH or ERC-20 tokens, and
   swap through LI.FI using Circle-issued Arbitrum USDC as the default stablecoin.
 - View BNB Smart Chain BNB and BEP-20 balances, receive guidance, send BNB or
@@ -261,23 +267,27 @@ or assume every miniapp will work on a fork's domain.
   stablecoin. LI.FI currently reports the token as unverified, so the client
   identifies it only by Robinhood's published canonical contract.
 
-Base swap quotes and transaction requests use LI.FI's public quote API. Token
+Swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
 
 ## Wallet data sources
 
-The built-in Base wallet uses LI.FI, not Farcaster's wallet positions API:
+The built-in multichain wallet uses LI.FI, not Farcaster's wallet positions
+API:
 
 - `GET https://li.quest/v1/wallets/{address}/balances?extended=true` discovers
-  token contracts and estimated USD prices. Only Base entries are displayed.
-- `GET https://li.quest/v1/token?chain=8453&token={contract}` resolves tokens
-  entered manually in Send or Trade. Unsupported tokens produce an error, not
-  a fabricated zero balance. LI.FI native ETH is the zero-address marker.
-- LI.FI indexed quantities are **not** used as spendable balances. Base RPC
-  reads verify native balances, ERC-20 `balanceOf`, and token decimals.
-- Portfolio, the ETH header, Send, and Trade use the same React Query balance
-  cache keyed by chain ID, wallet address, and contract. Fresh preflight checks
-  publish into this cache. Confirmed sends/swaps invalidate the wallet cache.
+  token contracts and estimated USD prices. The selected network's entries are
+  displayed.
+- `GET https://li.quest/v1/token?chain={chainId}&token={contract}` resolves
+  tokens entered manually in Send or Trade. Unsupported tokens produce an
+  error, not a fabricated zero balance. Native assets use the zero-address
+  marker in the wallet UI; Celo's LI.FI boundary uses its native-token alias.
+- LI.FI indexed quantities are **not** used as spendable balances. The selected
+  network's RPC verifies native balances, ERC-20 `balanceOf`, and token decimals.
+- Portfolio, the native-balance header, Send, and Trade use the same React Query
+  balance cache keyed by chain ID, wallet address, and contract. Fresh preflight
+  checks publish into this cache. Confirmed sends/swaps invalidate the wallet
+  cache.
 - Balance reads refresh every 30 seconds while observed; discovery every 60
   seconds. The portfolio checks 20 token rows at a time, with Show more.
 - USD values are live quantities multiplied by LI.FI's estimated token prices.
@@ -302,7 +312,8 @@ fees can change, and tokens can impose restrictions. Signing remains external.
 Swap approvals are exact-amount; approval receipts must succeed before a swap.
 If a refreshed quote worsens the reviewed minimum or changes spender, the user
 must obtain and review a new quote. Submission is distinguished from receipt
-confirmation. This patch does not add multichain transfers or portfolio history.
+confirmation. Swaps are same-chain; this patch does not add cross-chain swaps
+or portfolio history.
 
 ## Troubleshooting
 
@@ -336,5 +347,5 @@ confirmation. This patch does not add multichain transfers or portfolio history.
   set the build variable in Cloudflare and redeploy.
 - If only a miniapp is blank, inspect its embedding/trusted-origin errors; see
   [Miniapp domain compatibility](#miniapp-domain-compatibility).
-- When testing arbitrary tokens, confirm the contract is on Base and has a
-  viable route and sufficient liquidity.
+- When testing arbitrary tokens, confirm the contract is on the selected
+  network and has a viable route and sufficient liquidity.

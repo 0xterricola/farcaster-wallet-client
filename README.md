@@ -14,10 +14,10 @@ in their own wallet.
 - Automatic discovery of modern EIP-6963 browser wallets
 - One persistent wallet across the dashboard and Farcaster miniapps
 - EIP-1193 provider support for miniapp signatures and transactions
-- Connected address, native ETH balance, and Base token portfolio
+- Connected address, native balance, and token portfolio on eight EVM networks
 - Receive address with QR code and copy action
-- ETH and ERC-20 sending on Base, with live balance checks
-- Base swaps between ETH and arbitrary Base ERC-20 contract addresses
+- Native-asset and ERC-20 sending with live balance checks
+- Same-chain swaps between native assets and arbitrary ERC-20 contracts
 - Quote, route, minimum received, allowance, approval, and transaction handling
 - Explicit disconnect and reconnect flow
 
@@ -31,15 +31,18 @@ WalletConnect is the universal fallback. Compatible browser extensions are
 discovered through EIP-6963 and displayed as direct connection options. No seed
 phrase or private key is created, requested, or stored by this client.
 
-Base swap quotes and transaction requests come from the public LI.FI quote API.
+Swap quotes and transaction requests come from the public LI.FI quote API.
 The connected wallet remains responsible for approvals and transaction signing.
 
 LI.FI also supplies wallet token discovery, token metadata, and estimated prices.
-Portfolio, Send, and Trade share one cache keyed by Base + wallet + token contract.
+Portfolio, Send, and Trade share one cache keyed by chain + wallet + token contract.
 Displayed quantities are checked onchain rather than trusting indexed holdings;
 preflight reads update that same cache before sending or swapping. Farcaster's
 wallet positions API is not used by these screens. See the web README for
 [wallet data sources and limitations](apps/farcaster-web/README.md#wallet-data-sources).
+
+The wallet currently supports Base, Ethereum, Arbitrum One, BNB Smart Chain,
+Celo, Monad, HyperEVM, and Robinhood Chain. Base remains the default network.
 
 ## Requirements
 
