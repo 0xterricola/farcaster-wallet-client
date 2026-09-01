@@ -9,7 +9,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
-import { base, mainnet } from 'viem/chains';
+import { arbitrum, base, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -343,5 +343,35 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on Etherscan' })
         .getAttribute('href'),
     ).toBe(`https://etherscan.io/tx/${hash}`);
+  });
+
+  it('uses Arbitrum data, receipts, review text, and explorer links', async () => {
+    render(<ExternalWalletSend address={address} chain={arbitrum} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(arbitrum);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      arbitrum,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: arbitrum.id }),
+    );
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Arbitrum One transfer' })
+        .textContent,
+    ).toContain('Estimated fee:');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Arbiscan' })
+        .getAttribute('href'),
+    ).toBe(`https://arbiscan.io/tx/${hash}`);
   });
 });

@@ -20,7 +20,7 @@ describe('wallet network configuration', () => {
     expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1, 42161]);
   });
 
-  it('keeps Ethereum transactions locked behind explicit capabilities', () => {
+  it('keeps each network action behind explicit capabilities', () => {
     expect(walletChainCapabilities(base.id)).toEqual({
       read: true,
       send: true,
@@ -33,7 +33,7 @@ describe('wallet network configuration', () => {
     });
     expect(walletChainCapabilities(arbitrum.id)).toEqual({
       read: true,
-      send: false,
+      send: true,
       swap: false,
     });
     expect(walletChainCapabilities(123456)).toEqual({
