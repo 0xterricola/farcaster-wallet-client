@@ -14,7 +14,9 @@ function isMissingBlock(error: unknown): boolean {
       [details.message, details.details].some(
         (value) =>
           typeof value === 'string' &&
-          /block not found|unknown block|header not found/i.test(value),
+          /block not found|unknown block|header not found|block is out of range/i.test(
+            value,
+          ),
       )
     ) {
       return true;

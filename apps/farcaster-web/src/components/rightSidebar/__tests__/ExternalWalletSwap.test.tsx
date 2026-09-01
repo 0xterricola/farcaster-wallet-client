@@ -68,7 +68,10 @@ vi.mock('~/hooks/useLifiWallet', () => ({
   refreshLifiWallet: mocks.refresh,
   useLifiWalletTokens: mocks.tokens,
 }));
-vi.mock('~/utils/lifiSwap', () => ({ fetchLifiQuote: mocks.quote }));
+vi.mock('~/utils/lifiSwap', async (importOriginal) => {
+  const original = await importOriginal<typeof import('~/utils/lifiSwap')>();
+  return { ...original, fetchLifiQuote: mocks.quote };
+});
 vi.mock('~/utils/sendBaseNativeToken', () => ({
   ensureEvmWalletAccount: mocks.guard,
 }));
@@ -354,6 +357,9 @@ describe('WETH approval sequencing', () => {
     );
     await screen.findByRole('button', { name: 'Review swap' });
     expect(mocks.request).toHaveBeenCalledOnce();
+    // Approval confirmation must not depend on LI.FI returning another route.
+    // The separate Review swap click refreshes the quote before submission.
+    expect(mocks.quote).toHaveBeenCalledTimes(2);
     expect(screen.getByLabelText('Token approval').textContent).toContain(
       'Approved: 0.25 WETH',
     );
@@ -367,6 +373,7 @@ describe('WETH approval sequencing', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
     await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    expect(mocks.quote).toHaveBeenCalledTimes(3);
     expect(mocks.request.mock.calls[1][0].params[0]).toMatchObject({
       chainId: '0x2105',
       from: wallet,
@@ -429,8 +436,12 @@ describe('WETH approval sequencing', () => {
     );
     expect(mocks.request).toHaveBeenCalledOnce();
   });
-  it('requires a new review if the spender changes after approval', async () => {
+  it('blocks the swap if the spender changes after approval', async () => {
     setupWeth();
+    mocks.readContract
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValue(wethUnits);
     render(<ExternalWalletSwap />);
     await quoteWeth();
     mocks.quote.mockResolvedValueOnce(wethRoute).mockResolvedValueOnce({
@@ -438,6 +449,8 @@ describe('WETH approval sequencing', () => {
       estimate: { ...wethRoute.estimate, approvalAddress: contract },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Approve WETH' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Quote changed',
     );
@@ -647,6 +660,7 @@ describe('trade selector regressions', () => {
     ]);
     expect(choices('Choose buy asset').map((option) => option.value)).toEqual([
       'CELO',
+      '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
       'custom',
     ]);
   });
@@ -1322,6 +1336,116 @@ describe('BNB Smart Chain swap integration', () => {
       mocks.queryClient,
       wallet,
       bsc.id,
+    );
+  });
+});
+
+describe('Celo swap integration', () => {
+  const celoUsdc = '0xcebA9300f2b948710d2653dD7B07f33A8B32118C';
+  const celoNative = {
+    ...from,
+    chainId: celo.id,
+    symbol: 'CELO',
+    name: 'CELO',
+  };
+  const celoSwapAsset = {
+    ...celoNative,
+    address: CELO_NATIVE_TOKEN_ADDRESS,
+  };
+  const celoUsdcAsset = {
+    ...to,
+    chainId: celo.id,
+    address: celoUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses Circle-native Celo USDC, Celo transaction fields, and Celoscan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? celoNative : celoUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) => {
+      if (token === zeroAddress) {
+        return Promise.resolve(celoNative);
+      }
+      return Promise.resolve(
+        token.toLowerCase() === CELO_NATIVE_TOKEN_ADDRESS.toLowerCase()
+          ? celoSwapAsset
+          : celoUsdcAsset,
+      );
+    });
+    mocks.readContract.mockResolvedValue(1000000000000n);
+    mocks.quote.mockResolvedValue({
+      tool: 'celo-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '1000',
+        toAmountMin: '990',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x0',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={celo} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'CELO',
+      celoUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Celo');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: celoUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      celoSwapAsset,
+      celoUsdcAsset,
+      1000000000000n,
+      celo,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Celo swap' }),
+    ).toBeTruthy();
+    expect(mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: CELO_NATIVE_TOKEN_ADDRESS,
+        args: [wallet, spender],
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Celo Explorer/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, celo);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0xa4ec',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://celoscan.io/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      celo.id,
     );
   });
 });

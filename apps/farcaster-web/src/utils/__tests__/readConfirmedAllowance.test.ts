@@ -38,6 +38,23 @@ describe('confirmed allowance RPC catch-up', () => {
     expect(await result).toBe(25n);
     expect(input.onRetry).toHaveBeenCalledTimes(2);
   });
+  it('retries Celo block-out-of-range responses', async () => {
+    const input = options(
+      vi
+        .fn()
+        .mockRejectedValueOnce({
+          cause: {
+            details: '{"code":-32019,"message":"block is out of range"}',
+          },
+        })
+        .mockResolvedValue(25n),
+    );
+    const result = readConfirmedAllowance(input);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(await result).toBe(25n);
+    expect(input.read).toHaveBeenCalledTimes(2);
+    expect(input.onRetry).toHaveBeenCalledOnce();
+  });
   it('stops after eight attempts with a clear message', async () => {
     const input = options(
       vi.fn().mockRejectedValue(new Error('unknown block')),

@@ -1,7 +1,24 @@
 import { Address, Chain, isAddress, zeroAddress } from 'viem';
 import { base } from 'viem/chains';
 
-import { LifiAsset, requestLifi } from '~/utils/lifiWallet';
+import {
+  CELO_NATIVE_TOKEN_ADDRESS,
+  LifiAsset,
+  requestLifi,
+} from '~/utils/lifiWallet';
+
+// LI.FI models Celo's native asset through the CeloToken address. Celo token
+// duality keeps this ERC-20 representation and the native CELO balance in sync.
+// Keep the wallet UI on zeroAddress, but translate the asset at the quote and
+// approval boundary where LI.FI requires the contract address.
+export function toLifiSwapAsset(
+  asset: LifiAsset,
+  chain: Pick<Chain, 'id'>,
+): LifiAsset {
+  return chain.id === 42220 && asset.address === zeroAddress
+    ? { ...asset, address: CELO_NATIVE_TOKEN_ADDRESS }
+    : asset;
+}
 
 export type LifiQuote = {
   tool: string;

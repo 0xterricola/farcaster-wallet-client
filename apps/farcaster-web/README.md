@@ -222,8 +222,10 @@ or assume every miniapp will work on a fork's domain.
   BEP-20 tokens, and swap through LI.FI. The default stablecoin is verified
   Binance-Peg USDC (`0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d`, 18
   decimals), not Circle-issued native USDC.
-- View Celo CELO and token balances, receive guidance, and send CELO or ERC-20
-  tokens. Trade remains disabled until its Celo transaction path is enabled.
+- View Celo CELO and token balances, receive guidance, send CELO or ERC-20
+  tokens, and swap through LI.FI using Circle-issued Celo USDC
+  (`0xcebA9300f2b948710d2653dD7B07f33A8B32118C`, 6 decimals) as the default
+  stablecoin.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.

@@ -10,7 +10,7 @@ import {
   toHex,
   zeroAddress,
 } from 'viem';
-import { arbitrum, base, bsc } from 'viem/chains';
+import { arbitrum, base, bsc, celo } from 'viem/chains';
 import { usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -23,7 +23,7 @@ import {
 } from '~/hooks/useLifiWallet';
 import { parseTransferAmount } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
-import { fetchLifiQuote, LifiQuote } from '~/utils/lifiSwap';
+import { fetchLifiQuote, LifiQuote, toLifiSwapAsset } from '~/utils/lifiSwap';
 import {
   isNativeWalletAsset,
   LifiAsset,
@@ -41,10 +41,10 @@ type Review = {
   allowance?: bigint;
 };
 
-// Default USDC contracts for the token picker. Base, Ethereum and Arbitrum use
-// Circle-issued native USDC. BNB Smart Chain uses verified Binance-Peg USDC,
-// because Circle does not issue native USDC on BSC. Balances, metadata and
-// quotes still use the shared LI.FI/RPC path.
+// Default USDC contracts for the token picker. Base, Ethereum, Arbitrum and
+// Celo use Circle-issued native USDC. BNB Smart Chain uses verified
+// Binance-Peg USDC because Circle does not issue native USDC on BSC. Balances,
+// metadata and quotes still use the shared LI.FI/RPC path.
 // https://developers.circle.com/stablecoins/usdc-contract-addresses
 // https://bscscan.com/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
 const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
@@ -86,6 +86,16 @@ const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
       symbol: 'USDC',
       name: 'USD Coin',
       decimals: 18,
+    },
+  ],
+  [
+    celo.id,
+    {
+      chainId: celo.id,
+      address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
     },
   ],
 ]);
@@ -222,10 +232,12 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
       if (fromAddress === toAddress) {
         throw new Error('Choose two different tokens.');
       }
-      const [from, to] = await Promise.all([
+      const [loadedFrom, loadedTo] = await Promise.all([
         load(fromAddress),
         load(toAddress),
       ]);
+      const from = toLifiSwapAsset(loadedFrom, chain);
+      const to = toLifiSwapAsset(loadedTo, chain);
       const units = parseTransferAmount(amount, from.decimals);
       checkBalance(from, units);
       const quote = await fetchLifiQuote(address, from, to, units, chain);
@@ -288,13 +300,13 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
     try {
       await ensureEvmWalletAccount(provider, address, chain);
       assertCurrent();
-      const from = await load(review.from.address);
+      const from = toLifiSwapAsset(await load(review.from.address), chain);
       assertCurrent();
       if (from.decimals !== review.from.decimals) {
         throw new Error('Token decimals changed. Get a new quote.');
       }
       checkBalance(from, review.units);
-      let quote = await fetchLifiQuote(
+      const quote = await fetchLifiQuote(
         address,
         from,
         review.to,
@@ -365,18 +377,7 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
           if (approvalReceipt.status !== 'success') {
             throw new Error('Token approval reverted. Swap was not sent.');
           }
-          setStatus(
-            'Approval confirmed. Checking allowance and refreshing the swap…',
-          );
-          quote = await fetchLifiQuote(
-            address,
-            from,
-            review.to,
-            review.units,
-            chain,
-          );
-          assertCurrent();
-          checkChanges(quote);
+          setStatus('Approval confirmed. Checking token allowance…');
           const approved = await readConfirmedAllowance({
             read: () =>
               client.readContract({

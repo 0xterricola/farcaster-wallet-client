@@ -1,9 +1,16 @@
 import { zeroAddress } from 'viem';
-import { arbitrum, bsc, mainnet } from 'viem/chains';
+import { arbitrum, bsc, celo, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
-import { LifiQuote, validateLifiQuote } from '~/utils/lifiSwap';
-import { BASE_NATIVE_TOKEN } from '~/utils/lifiWallet';
+import {
+  LifiQuote,
+  toLifiSwapAsset,
+  validateLifiQuote,
+} from '~/utils/lifiSwap';
+import {
+  BASE_NATIVE_TOKEN,
+  CELO_NATIVE_TOKEN_ADDRESS,
+} from '~/utils/lifiWallet';
 const wallet = '0x1111111111111111111111111111111111111111';
 const from = { ...BASE_NATIVE_TOKEN, balance: 1000n };
 const to = {
@@ -32,6 +39,18 @@ const makeQuote = (): LifiQuote => ({
   },
 });
 describe('LI.FI quote validation', () => {
+  it('translates only native Celo to LI.FI CeloToken', () => {
+    const nativeCelo = { ...from, chainId: celo.id, symbol: 'CELO' };
+    expect(toLifiSwapAsset(nativeCelo, celo)).toEqual({
+      ...nativeCelo,
+      address: CELO_NATIVE_TOKEN_ADDRESS,
+    });
+    expect(toLifiSwapAsset(from, mainnet)).toBe(from);
+    expect(
+      toLifiSwapAsset({ ...nativeCelo, address: to.address }, celo).address,
+    ).toBe(to.address);
+  });
+
   it('accepts a matching same-chain swap', () =>
     expect(() =>
       validateLifiQuote(makeQuote(), wallet, from, to, 100n),
@@ -148,6 +167,29 @@ describe('LI.FI quote validation', () => {
     quote.transactionRequest.chainId = bsc.id;
     expect(() =>
       validateLifiQuote(quote, wallet, bscFrom, bscTo, 100n, bsc),
+    ).not.toThrow();
+    expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
+      'Base swap',
+    );
+  });
+
+  it('accepts a matching Celo same-chain swap and rejects Base metadata', () => {
+    const celoFrom = toLifiSwapAsset(
+      { ...from, chainId: celo.id, symbol: 'CELO' },
+      celo,
+    );
+    const celoTo = { ...to, chainId: celo.id };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: celo.id,
+      toChainId: celo.id,
+      fromToken: celoFrom,
+      toToken: celoTo,
+    };
+    quote.transactionRequest.chainId = celo.id;
+    expect(() =>
+      validateLifiQuote(quote, wallet, celoFrom, celoTo, 100n, celo),
     ).not.toThrow();
     expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
       'Base swap',
