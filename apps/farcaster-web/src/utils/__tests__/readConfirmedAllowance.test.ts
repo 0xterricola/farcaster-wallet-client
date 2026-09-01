@@ -50,6 +50,17 @@ describe('confirmed allowance RPC catch-up', () => {
     expect(input.read).toHaveBeenCalledTimes(8);
     expect(input.onRetry).toHaveBeenCalledTimes(7);
   });
+  it('names the active chain when its confirmed block stays unavailable', async () => {
+    const input = {
+      ...options(vi.fn().mockRejectedValue(new Error('unknown block'))),
+      chainName: 'Ethereum',
+    };
+    const result = expect(readConfirmedAllowance(input)).rejects.toThrow(
+      'Ethereum RPC could not read its block yet',
+    );
+    await vi.runAllTimersAsync();
+    await result;
+  });
   it.each(['execution reverted', 'HTTP 403', 'invalid address'])(
     'does not retry an unrelated failure: %s',
     async (message) => {

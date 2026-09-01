@@ -1,4 +1,5 @@
 import { zeroAddress } from 'viem';
+import { mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import { LifiQuote, validateLifiQuote } from '~/utils/lifiSwap';
@@ -72,9 +73,37 @@ describe('LI.FI quote validation', () => {
     (q: LifiQuote) => {
       q.transactionRequest.value = '0x01';
     },
+    (q: LifiQuote) => {
+      q.transactionRequest.gasPrice = '0x1';
+      q.transactionRequest.maxFeePerGas = '0x2';
+      q.transactionRequest.maxPriorityFeePerGas = '0x1';
+    },
+    (q: LifiQuote) => {
+      q.transactionRequest.maxFeePerGas = '0x2';
+    },
   ])('rejects mismatched or malformed quotes %#', (change) => {
     const q = makeQuote();
     change(q);
     expect(() => validateLifiQuote(q, wallet, from, to, 100n)).toThrow();
+  });
+
+  it('accepts a matching Ethereum same-chain swap and rejects Base metadata', () => {
+    const ethereumFrom = { ...from, chainId: mainnet.id };
+    const ethereumTo = { ...to, chainId: mainnet.id };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: mainnet.id,
+      toChainId: mainnet.id,
+      fromToken: ethereumFrom,
+      toToken: ethereumTo,
+    };
+    quote.transactionRequest.chainId = mainnet.id;
+    expect(() =>
+      validateLifiQuote(quote, wallet, ethereumFrom, ethereumTo, 100n, mainnet),
+    ).not.toThrow();
+    expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
+      'Base swap',
+    );
   });
 });

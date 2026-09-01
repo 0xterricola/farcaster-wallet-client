@@ -292,10 +292,13 @@ function ExternalWalletPanel() {
 
         {view === 'trade' && capabilities.swap && (
           <WalletSubscreen
-            title="Trade on Base"
+            title={`Trade on ${chain.name}`}
             onBack={() => setView('overview')}
           >
-            <ExternalWalletSwap key={address.toLowerCase()} />
+            <ExternalWalletSwap
+              key={`${chain.id}:${address.toLowerCase()}`}
+              chain={chain}
+            />
           </WalletSubscreen>
         )}
       </ExternalWalletNetworkBoundary>

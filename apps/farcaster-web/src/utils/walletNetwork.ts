@@ -13,7 +13,7 @@ export type WalletChainCapabilities = {
 const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
   new Map([
     [base.id, { read: true, send: true, swap: true }],
-    [mainnet.id, { read: true, send: true, swap: false }],
+    [mainnet.id, { read: true, send: true, swap: true }],
   ]);
 
 export function walletChainCapabilities(chainId: number) {
