@@ -40,6 +40,13 @@ optional override is also available:
 VITE_ARBITRUM_RPC_URL=https://your-arbitrum-rpc.example
 ```
 
+BNB Smart Chain reads use a browser-compatible official RPC by default. An
+optional override is also available:
+
+```env
+VITE_BSC_RPC_URL=https://your-bsc-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -204,6 +211,8 @@ or assume every miniapp will work on a fork's domain.
 - Swap ETH and arbitrary ERC-20 tokens on Base
 - View Arbitrum One balances, receive guidance, send ETH or ERC-20 tokens, and
   swap through LI.FI using Circle-issued Arbitrum USDC as the default stablecoin.
+- View BNB Smart Chain BNB and BEP-20 balances and receive guidance. Send and
+  Trade remain disabled until their BSC transaction paths are enabled.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
@@ -255,6 +264,8 @@ confirmation. This patch does not add multichain transfers or portfolio history.
 - If Ethereum balances are unavailable, confirm that `VITE_ETHEREUM_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If Arbitrum balances are unavailable, confirm that `VITE_ARBITRUM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If BNB Smart Chain balances are unavailable, confirm that `VITE_BSC_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.

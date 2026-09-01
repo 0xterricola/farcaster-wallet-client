@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { zeroAddress } from 'viem';
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
@@ -248,6 +248,21 @@ describe('LI.FI portfolio', () => {
       wallet,
       arbitrum.id,
     );
+  });
+  it('uses BSC for BNB and BEP-20 portfolio reads and BscScan links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={bsc} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, bsc);
+    expect(mocks.assets).toHaveBeenCalledWith(wallet, [token.address], bsc);
+    expect(
+      screen.getByRole('region', { name: 'BNB Smart Chain token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on BNB Smart Chain')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://bscscan.com/token/${token.address}`,
+    );
+    expect(screen.getByText(/Native BNB is shown above/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(mocks.client, wallet, bsc.id);
   });
   it('warns when discovery is partial', () => {
     mocks.tokens.mockReturnValue({

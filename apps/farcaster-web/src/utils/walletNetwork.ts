@@ -1,6 +1,6 @@
 import { Provider } from 'ox';
 import { Chain, toHex } from 'viem';
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 
 export const DEFAULT_WALLET_CHAIN_ID = base.id;
 
@@ -15,6 +15,7 @@ const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
     [base.id, { read: true, send: true, swap: true }],
     [mainnet.id, { read: true, send: true, swap: true }],
     [arbitrum.id, { read: true, send: true, swap: true }],
+    [bsc.id, { read: true, send: false, swap: false }],
   ]);
 
 export function walletChainCapabilities(chainId: number) {
@@ -36,6 +37,7 @@ export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map<
   [base.id, base],
   [mainnet.id, mainnet],
   [arbitrum.id, arbitrum],
+  [bsc.id, bsc],
 ]);
 
 // Networks that the shared provider can intentionally follow. A network is
@@ -47,6 +49,7 @@ export const SELECTABLE_WALLET_CHAINS: ReadonlyMap<number, Chain> = new Map<
   [base.id, base],
   [mainnet.id, mainnet],
   [arbitrum.id, arbitrum],
+  [bsc.id, bsc],
 ]);
 
 const KNOWN_WALLET_NETWORK_NAMES: ReadonlyMap<number, string> = new Map([

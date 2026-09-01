@@ -49,6 +49,11 @@ const ethereumRpcUrl =
 const arbitrumRpcUrl =
   import.meta.env.VITE_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
 
+// Use BNB Chain's browser-tested official endpoint rather than the package's
+// third-party default. Deployments can replace it with their own public RPC.
+const bscRpcUrl =
+  import.meta.env.VITE_BSC_RPC_URL || 'https://bsc-dataseed.bnbchain.org';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -56,7 +61,9 @@ const transports = chains.reduce(
         ? ethereumRpcUrl
         : chain.id === arbitrum.id
           ? arbitrumRpcUrl
-          : undefined;
+          : chain.id === bsc.id
+            ? bscRpcUrl
+            : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

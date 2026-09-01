@@ -72,6 +72,19 @@ describe('shared wallet network controller', () => {
     });
   });
 
+  it('follows confirmed BNB Smart Chain once its dashboard is enabled', async () => {
+    const provider = walletProvider('0x38');
+    const { result } = renderHook(() =>
+      useWalletNetworkController(provider as never),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current).toMatchObject({
+      actualChainId: 56,
+      selectedChainId: 56,
+      previousWorkingChainId: 56,
+    });
+  });
+
   it('switches from Base to Ethereum and adopts it only after confirmation', async () => {
     const provider = walletProvider();
     const { result } = renderHook(() =>
@@ -125,9 +138,9 @@ describe('shared wallet network controller', () => {
       useWalletNetworkController(provider as never),
     );
     await waitFor(() => expect(result.current.status).toBe('ready'));
-    act(() => provider.emit('0x38'));
+    act(() => provider.emit('0x8f'));
     expect(result.current).toMatchObject({
-      actualChainId: 56,
+      actualChainId: 143,
       selectedChainId: 8453,
       previousWorkingChainId: 8453,
       status: 'mismatch',
@@ -135,7 +148,7 @@ describe('shared wallet network controller', () => {
   });
 
   it('checks the wallet network again without requesting a switch', async () => {
-    const provider = walletProvider('0x38');
+    const provider = walletProvider('0x8f');
     const { result } = renderHook(() =>
       useWalletNetworkController(provider as never),
     );
@@ -151,7 +164,7 @@ describe('shared wallet network controller', () => {
   });
 
   it('reports a failed wallet network check', async () => {
-    const provider = walletProvider('0x38');
+    const provider = walletProvider('0x8f');
     const { result } = renderHook(() =>
       useWalletNetworkController(provider as never),
     );
@@ -167,7 +180,7 @@ describe('shared wallet network controller', () => {
   });
 
   it('switches back to Base and verifies the wallet result', async () => {
-    const provider = walletProvider('0x38');
+    const provider = walletProvider('0x8f');
     const { result } = renderHook(() =>
       useWalletNetworkController(provider as never),
     );
@@ -273,7 +286,7 @@ describe('shared wallet network controller', () => {
     );
     await waitFor(() => expect(result.current.status).toBe('ready'));
     await act(async () => {
-      await expect(result.current.switchNetwork(56)).resolves.toBe(false);
+      await expect(result.current.switchNetwork(143)).resolves.toBe(false);
     });
     expect(provider.request).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: 'wallet_switchEthereumChain' }),
@@ -322,15 +335,15 @@ describe('shared wallet network controller', () => {
           resolve = done;
         }),
     );
-    const current = walletProvider('0x38');
+    const current = walletProvider('0x8f');
     const view = renderHook(
       ({ provider }) => useWalletNetworkController(provider as never),
       { initialProps: { provider: old } },
     );
     view.rerender({ provider: current });
-    await waitFor(() => expect(view.result.current.actualChainId).toBe(56));
+    await waitFor(() => expect(view.result.current.actualChainId).toBe(143));
     await act(async () => resolve('0x2105'));
-    expect(view.result.current.actualChainId).toBe(56);
+    expect(view.result.current.actualChainId).toBe(143);
     expect(old.removeListener).toHaveBeenCalled();
   });
 
@@ -345,7 +358,7 @@ describe('shared wallet network controller', () => {
         finish = () => resolve(null);
       });
     });
-    const current = walletProvider('0x38');
+    const current = walletProvider('0x8f');
     const view = renderHook(
       ({ provider }) => useWalletNetworkController(provider as never),
       { initialProps: { provider: old } },
@@ -362,7 +375,7 @@ describe('shared wallet network controller', () => {
       finish();
       await switching;
     });
-    expect(view.result.current.actualChainId).toBe(56);
+    expect(view.result.current.actualChainId).toBe(143);
     expect(view.result.current.error).toBeUndefined();
   });
 });

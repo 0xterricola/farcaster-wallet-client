@@ -1,4 +1,4 @@
-import { arbitrum, base, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,10 +14,10 @@ import {
 } from '~/utils/walletNetwork';
 
 describe('wallet network configuration', () => {
-  it('enables dashboard data for Base, Ethereum, and Arbitrum', () => {
+  it('enables dashboard data only for completed read integrations', () => {
     expect(DEFAULT_WALLET_CHAIN_ID).toBe(8453);
-    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453, 1, 42161]);
-    expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1, 42161]);
+    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453, 1, 42161, 56]);
+    expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1, 42161, 56]);
   });
 
   it('keeps each network action behind explicit capabilities', () => {
@@ -35,6 +35,11 @@ describe('wallet network configuration', () => {
       read: true,
       send: true,
       swap: true,
+    });
+    expect(walletChainCapabilities(bsc.id)).toEqual({
+      read: true,
+      send: false,
+      swap: false,
     });
     expect(walletChainCapabilities(123456)).toEqual({
       read: false,
