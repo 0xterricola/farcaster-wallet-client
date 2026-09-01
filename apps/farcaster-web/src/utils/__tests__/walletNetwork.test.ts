@@ -64,7 +64,7 @@ describe('wallet network configuration', () => {
     expect(walletChainCapabilities(robinhood.id)).toEqual({
       read: true,
       send: true,
-      swap: false,
+      swap: true,
     });
     expect(walletChainCapabilities(123456)).toEqual({
       read: false,

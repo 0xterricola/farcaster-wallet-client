@@ -1,4 +1,4 @@
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import { zeroAddress } from 'viem';
 import { arbitrum, bsc, celo, mainnet, monad } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
@@ -228,6 +228,30 @@ describe('LI.FI quote validation', () => {
     quote.transactionRequest.chainId = hyperevm.id;
     expect(() =>
       validateLifiQuote(quote, wallet, hypeFrom, hyperEvmTo, 100n, hyperevm),
+    ).not.toThrow();
+  });
+
+  it('accepts a matching Robinhood Chain native same-chain swap', () => {
+    const robinhoodFrom = { ...from, chainId: robinhood.id, symbol: 'ETH' };
+    const robinhoodTo = { ...to, chainId: robinhood.id, symbol: 'USDG' };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: robinhood.id,
+      toChainId: robinhood.id,
+      fromToken: robinhoodFrom,
+      toToken: robinhoodTo,
+    };
+    quote.transactionRequest.chainId = robinhood.id;
+    expect(() =>
+      validateLifiQuote(
+        quote,
+        wallet,
+        robinhoodFrom,
+        robinhoodTo,
+        100n,
+        robinhood,
+      ),
     ).not.toThrow();
   });
 });

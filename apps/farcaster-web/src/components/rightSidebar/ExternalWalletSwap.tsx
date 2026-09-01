@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Address,
@@ -42,14 +42,16 @@ type Review = {
   allowance?: bigint;
 };
 
-// Default USDC contracts for the token picker. Base, Ethereum, Arbitrum and
+// Default stablecoin contracts for the token picker. Base, Ethereum, Arbitrum,
 // Celo and HyperEVM use Circle-issued native USDC. BNB Smart Chain uses verified
-// Binance-Peg USDC because Circle does not issue native USDC on BSC. Monad
-// uses the verified USDC configured by the Farcaster client. Balances, metadata
-// and quotes still use the shared LI.FI/RPC path.
+// Binance-Peg USDC because Circle does not issue native USDC on BSC. Monad uses
+// the verified USDC configured by the Farcaster client. Robinhood Chain uses
+// the canonical USDG contract published in its official documentation.
+// Balances, metadata and quotes still use the shared LI.FI/RPC path.
 // https://developers.circle.com/stablecoins/usdc-contract-addresses
 // https://bscscan.com/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
-const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
+// https://docs.robinhood.com/chain/contracts/
+const DEFAULT_STABLECOIN: ReadonlyMap<number, LifiToken> = new Map([
   [
     base.id,
     {
@@ -120,27 +122,41 @@ const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
       decimals: 6,
     },
   ],
+  [
+    robinhood.id,
+    {
+      chainId: robinhood.id,
+      address: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
+      symbol: 'USDG',
+      name: 'USDG',
+      decimals: 6,
+    },
+  ],
 ]);
 
-function isDefaultUsdc(token: LifiToken, defaultUsdc?: LifiToken) {
+function isDefaultStablecoin(token: LifiToken, defaultStablecoin?: LifiToken) {
   return (
-    defaultUsdc !== undefined &&
-    token.chainId === defaultUsdc.chainId &&
-    token.address.toLowerCase() === defaultUsdc.address.toLowerCase()
+    defaultStablecoin !== undefined &&
+    token.chainId === defaultStablecoin.chainId &&
+    token.address.toLowerCase() === defaultStablecoin.address.toLowerCase()
   );
 }
 
-function defaultUsdcLabel(chain: Chain) {
-  return chain.id === bsc.id
-    ? `Binance-Peg USDC on ${chain.name}`
-    : `native USDC on ${chain.name}`;
+function defaultStablecoinLabel(chain: Chain) {
+  if (chain.id === bsc.id) {
+    return `Binance-Peg USDC on ${chain.name}`;
+  }
+  if (chain.id === robinhood.id) {
+    return `canonical USDG on ${chain.name}`;
+  }
+  return `native USDC on ${chain.name}`;
 }
 
 export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
   const { address, provider } = useWallet();
   const queryClient = useQueryClient();
   const client = usePublicClient({ chainId: chain.id });
-  const defaultUsdc = DEFAULT_USDC.get(chain.id);
+  const defaultStablecoin = DEFAULT_STABLECOIN.get(chain.id);
   const [fromInput, setFromInput] = useState(chain.nativeCurrency.symbol);
   const [toInput, setToInput] = useState('');
   const [amount, setAmount] = useState('');
@@ -166,21 +182,27 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
         token.chainId === chain.id &&
         !isNativeWalletAsset(token.address, chain.id),
     )
-    .map((token) => (isDefaultUsdc(token, defaultUsdc) ? defaultUsdc! : token));
+    .map((token) =>
+      isDefaultStablecoin(token, defaultStablecoin)
+        ? defaultStablecoin!
+        : token,
+    );
   const unverifiedCount = allTokens.filter(
     (token) =>
-      !isDefaultUsdc(token, defaultUsdc) &&
+      !isDefaultStablecoin(token, defaultStablecoin) &&
       token.verificationStatus !== 'verified',
   ).length;
   const tokenOptions = allTokens.filter(
     (token) =>
-      isDefaultUsdc(token, defaultUsdc) ||
+      isDefaultStablecoin(token, defaultStablecoin) ||
       showUnverified ||
       token.verificationStatus === 'verified',
   );
   const buyTokenOptions = [
-    ...(defaultUsdc ? [defaultUsdc] : []),
-    ...tokenOptions.filter((token) => !isDefaultUsdc(token, defaultUsdc)),
+    ...(defaultStablecoin ? [defaultStablecoin] : []),
+    ...tokenOptions.filter(
+      (token) => !isDefaultStablecoin(token, defaultStablecoin),
+    ),
   ];
   const fromBalance = useLifiAsset(
     address,
@@ -568,7 +590,7 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
               setFromInput(value);
             }}
             chain={chain}
-            defaultUsdc={defaultUsdc}
+            defaultStablecoin={defaultStablecoin}
           />
           <label className="flex flex-col gap-2 text-sm text-default">
             Amount
@@ -595,7 +617,7 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
               setToInput(value);
             }}
             chain={chain}
-            defaultUsdc={defaultUsdc}
+            defaultStablecoin={defaultStablecoin}
           />
           <DefaultButton type="submit" disabled={busy || !address || !client}>
             {busy ? 'Checking wallet…' : review ? 'Refresh quote' : 'Get quote'}
@@ -710,7 +732,7 @@ function TokenInput({
   error,
   onChange,
   chain,
-  defaultUsdc,
+  defaultStablecoin,
 }: {
   label: string;
   tokens: LifiToken[];
@@ -719,7 +741,7 @@ function TokenInput({
   error: boolean;
   onChange: (value: string) => void;
   chain: Chain;
-  defaultUsdc?: LifiToken;
+  defaultStablecoin?: LifiToken;
 }) {
   const address = inputAddress(value, chain);
   const selected =
@@ -745,10 +767,10 @@ function TokenInput({
           {tokens.map((token) => (
             <option key={token.address} value={token.address}>
               {token.symbol} —{' '}
-              {isDefaultUsdc(token, defaultUsdc)
-                ? defaultUsdcLabel(chain)
+              {isDefaultStablecoin(token, defaultStablecoin)
+                ? defaultStablecoinLabel(chain)
                 : truncateAddress(token.address, 4)}
-              {!isDefaultUsdc(token, defaultUsdc) &&
+              {!isDefaultStablecoin(token, defaultStablecoin) &&
               token.verificationStatus !== 'verified'
                 ? ' (unverified)'
                 : ''}

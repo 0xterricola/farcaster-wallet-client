@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
@@ -1685,6 +1685,113 @@ describe('HyperEVM swap integration', () => {
       mocks.queryClient,
       wallet,
       hyperevm.id,
+    );
+  });
+});
+
+describe('Robinhood Chain swap integration', () => {
+  const robinhoodUsdg = '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168';
+  const robinhoodNative = {
+    ...from,
+    chainId: robinhood.id,
+    symbol: 'ETH',
+    name: 'ETH',
+  };
+  const robinhoodUsdgAsset = {
+    ...to,
+    chainId: robinhood.id,
+    address: robinhoodUsdg,
+    symbol: 'USDG',
+    name: 'USDG',
+    decimals: 6,
+  };
+
+  it('uses canonical USDG without native approval and submits on Robinhood Chain', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? robinhoodNative : robinhoodUsdgAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(
+        token === zeroAddress ? robinhoodNative : robinhoodUsdgAsset,
+      ),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'nordstern',
+      action: { fromAmount: '100000000000000' },
+      estimate: {
+        approvalAddress: spender,
+        toAmount: '239652',
+        toAmountMin: '238454',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x5af3107a4000',
+        gasPrice: '0x13f44350',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={robinhood} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'ETH',
+      robinhoodUsdg,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain(
+      'canonical USDG on Robinhood Chain',
+    );
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: robinhoodUsdg },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.0001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      robinhoodNative,
+      robinhoodUsdgAsset,
+      100000000000000n,
+      robinhood,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review Robinhood Chain swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Blockscout/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, robinhood);
+    expect(mocks.call).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: wallet,
+        to: contract,
+        data: '0xabcd',
+        value: 100000000000000n,
+        type: 'legacy',
+      }),
+    );
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x1237',
+          from: wallet,
+          gasPrice: '0x13f44350',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${robinhood.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      robinhood.id,
     );
   });
 });

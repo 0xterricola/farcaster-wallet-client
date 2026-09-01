@@ -255,11 +255,11 @@ or assume every miniapp will work on a fork's domain.
   tokens, and swap through LI.FI using Circle-issued native USDC
   (`0xb88339CB7199b77E23DB6E890353E22632Ba630f`, 6 decimals) as the default
   stablecoin.
-- View Robinhood Chain ETH and token balances, receive guidance, and send ETH
-  or ERC-20 tokens. Trade remains disabled until its Robinhood Chain
-  transaction path is enabled. Robinhood's canonical USDG contract is
-  `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`; it remains behind the unverified
-  token toggle until LI.FI marks it verified.
+- View Robinhood Chain ETH and token balances, receive guidance, send ETH or
+  ERC-20 tokens, and swap through LI.FI using Robinhood's canonical USDG
+  (`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, 6 decimals) as the default
+  stablecoin. LI.FI currently reports the token as unverified, so the client
+  identifies it only by Robinhood's published canonical contract.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
