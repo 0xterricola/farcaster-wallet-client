@@ -202,8 +202,8 @@ or assume every miniapp will work on a fork's domain.
 - Receive with an address QR code
 - Send ETH and ERC-20 tokens on Base with exact integer amounts and live checks
 - Swap ETH and arbitrary ERC-20 tokens on Base
-- View Arbitrum One balances, receive guidance, and send ETH or ERC-20 tokens.
-  Trade remains disabled until its Arbitrum transaction path is enabled.
+- View Arbitrum One balances, receive guidance, send ETH or ERC-20 tokens, and
+  swap through LI.FI using Circle-issued Arbitrum USDC as the default stablecoin.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.

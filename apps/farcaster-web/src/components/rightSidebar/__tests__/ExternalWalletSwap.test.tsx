@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
-import { base, mainnet } from 'viem/chains';
+import { arbitrum, base, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
@@ -1117,6 +1117,93 @@ describe('Ethereum swap integration', () => {
     );
     expect(screen.getByRole('status').textContent).toContain(
       'Approval confirmed',
+    );
+  });
+});
+
+describe('Arbitrum swap integration', () => {
+  const arbitrumUsdc = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+  const arbitrumNative = { ...from, chainId: arbitrum.id };
+  const arbitrumUsdcAsset = {
+    ...to,
+    chainId: arbitrum.id,
+    address: arbitrumUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses Arbitrum USDC, transaction fields, and Arbiscan', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? arbitrumNative : arbitrumUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(
+        token === zeroAddress ? arbitrumNative : arbitrumUsdcAsset,
+      ),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'arbitrum-test',
+      action: { fromAmount: '1000000000000' },
+      estimate: { toAmount: '1000', toAmountMin: '990' },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0xe8d4a51000',
+        maxFeePerGas: '0x64',
+        maxPriorityFeePerGas: '0x2',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={arbitrum} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'ETH',
+      arbitrumUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Arbitrum One');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: arbitrumUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      arbitrumNative,
+      arbitrumUsdcAsset,
+      1000000000000n,
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Arbitrum One swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Arbiscan/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, arbitrum);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0xa4b1',
+          from: wallet,
+          maxFeePerGas: '0x64',
+          maxPriorityFeePerGas: '0x2',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://arbiscan.io/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      arbitrum.id,
     );
   });
 });

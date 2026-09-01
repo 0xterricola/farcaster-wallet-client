@@ -1,5 +1,5 @@
 import { zeroAddress } from 'viem';
-import { mainnet } from 'viem/chains';
+import { arbitrum, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import { LifiQuote, validateLifiQuote } from '~/utils/lifiSwap';
@@ -101,6 +101,33 @@ describe('LI.FI quote validation', () => {
     quote.transactionRequest.chainId = mainnet.id;
     expect(() =>
       validateLifiQuote(quote, wallet, ethereumFrom, ethereumTo, 100n, mainnet),
+    ).not.toThrow();
+    expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
+      'Base swap',
+    );
+  });
+
+  it('accepts a matching Arbitrum same-chain swap and rejects Base metadata', () => {
+    const arbitrumFrom = { ...from, chainId: arbitrum.id };
+    const arbitrumTo = { ...to, chainId: arbitrum.id };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: arbitrum.id,
+      toChainId: arbitrum.id,
+      fromToken: arbitrumFrom,
+      toToken: arbitrumTo,
+    };
+    quote.transactionRequest.chainId = arbitrum.id;
+    expect(() =>
+      validateLifiQuote(
+        quote,
+        wallet,
+        arbitrumFrom,
+        arbitrumTo,
+        100n,
+        arbitrum,
+      ),
     ).not.toThrow();
     expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
       'Base swap',
