@@ -10,7 +10,7 @@ import {
   toHex,
   zeroAddress,
 } from 'viem';
-import { arbitrum, base, bsc, celo } from 'viem/chains';
+import { arbitrum, base, bsc, celo, monad } from 'viem/chains';
 import { usePublicClient, useWaitForTransactionReceipt } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -43,8 +43,9 @@ type Review = {
 
 // Default USDC contracts for the token picker. Base, Ethereum, Arbitrum and
 // Celo use Circle-issued native USDC. BNB Smart Chain uses verified
-// Binance-Peg USDC because Circle does not issue native USDC on BSC. Balances,
-// metadata and quotes still use the shared LI.FI/RPC path.
+// Binance-Peg USDC because Circle does not issue native USDC on BSC. Monad
+// uses the verified USDC configured by the Farcaster client. Balances, metadata
+// and quotes still use the shared LI.FI/RPC path.
 // https://developers.circle.com/stablecoins/usdc-contract-addresses
 // https://bscscan.com/token/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d
 const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
@@ -93,6 +94,16 @@ const DEFAULT_USDC: ReadonlyMap<number, LifiToken> = new Map([
     {
       chainId: celo.id,
       address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+    },
+  ],
+  [
+    monad.id,
+    {
+      chainId: monad.id,
+      address: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
       symbol: 'USDC',
       name: 'USD Coin',
       decimals: 6,

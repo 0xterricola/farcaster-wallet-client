@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
-import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
@@ -1446,6 +1446,99 @@ describe('Celo swap integration', () => {
       mocks.queryClient,
       wallet,
       celo.id,
+    );
+  });
+});
+
+describe('Monad swap integration', () => {
+  const monadUsdc = '0x754704Bc059F8C67012fEd69BC8A327a5aafb603';
+  const monadNative = {
+    ...from,
+    chainId: monad.id,
+    symbol: 'MON',
+    name: 'Monad',
+  };
+  const monadUsdcAsset = {
+    ...to,
+    chainId: monad.id,
+    address: monadUsdc,
+    symbol: 'USDC',
+    decimals: 6,
+  };
+
+  it('uses verified Monad USDC without native approval and submits on Monad', async () => {
+    mocks.asset.mockImplementation((_wallet, token) => ({
+      data: token === zeroAddress ? monadNative : monadUsdcAsset,
+      isError: false,
+    }));
+    mocks.fresh.mockImplementation((_cache, _client, _wallet, token) =>
+      Promise.resolve(token === zeroAddress ? monadNative : monadUsdcAsset),
+    );
+    mocks.quote.mockResolvedValue({
+      tool: 'monad-test',
+      action: { fromAmount: '100000000000000000' },
+      estimate: {
+        approvalAddress: contract,
+        toAmount: '2649',
+        toAmountMin: '2636',
+      },
+      transactionRequest: {
+        to: contract,
+        data: '0xabcd',
+        value: '0x16345785d8a0000',
+        gasPrice: '0x64',
+      },
+    });
+
+    render(<ExternalWalletSwap chain={monad} />);
+    const buyOptions = Array.from(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).options,
+    );
+    expect(buyOptions.map((option) => option.value)).toEqual([
+      'MON',
+      monadUsdc,
+      'custom',
+    ]);
+    expect(buyOptions[1].textContent).toContain('native USDC on Monad');
+    fireEvent.change(screen.getByLabelText('Choose buy asset'), {
+      target: { value: monadUsdc },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Review swap' });
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      monadNative,
+      monadUsdcAsset,
+      100000000000000000n,
+      monad,
+    );
+    expect(mocks.readContract).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('region', { name: 'Review Monad swap' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
+    await screen.findByRole('link', { name: /Monvision/ });
+    expect(mocks.guard).toHaveBeenCalledWith(provider, wallet, monad);
+    expect(mocks.request).toHaveBeenCalledWith({
+      method: 'eth_sendTransaction',
+      params: [
+        expect.objectContaining({
+          chainId: '0x8f',
+          from: wallet,
+          gasPrice: '0x64',
+        }),
+      ],
+    });
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `${monad.blockExplorers.default.url}/tx/${hash}`,
+    );
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.queryClient,
+      wallet,
+      monad.id,
     );
   });
 });

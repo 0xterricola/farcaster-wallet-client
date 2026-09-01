@@ -1,5 +1,5 @@
 import { zeroAddress } from 'viem';
-import { arbitrum, bsc, celo, mainnet } from 'viem/chains';
+import { arbitrum, bsc, celo, mainnet, monad } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -194,5 +194,22 @@ describe('LI.FI quote validation', () => {
     expect(() => validateLifiQuote(quote, wallet, from, to, 100n)).toThrow(
       'Base swap',
     );
+  });
+
+  it('accepts a matching Monad native same-chain swap', () => {
+    const monadFrom = { ...from, chainId: monad.id, symbol: 'MON' };
+    const monadTo = { ...to, chainId: monad.id };
+    const quote = makeQuote();
+    quote.action = {
+      ...quote.action,
+      fromChainId: monad.id,
+      toChainId: monad.id,
+      fromToken: monadFrom,
+      toToken: monadTo,
+    };
+    quote.transactionRequest.chainId = monad.id;
+    expect(() =>
+      validateLifiQuote(quote, wallet, monadFrom, monadTo, 100n, monad),
+    ).not.toThrow();
   });
 });
