@@ -12,6 +12,8 @@ import { base } from 'viem/chains';
 
 export const LIFI_API_URL = 'https://li.quest/v1';
 export const LIFI_NATIVE_ADDRESS = zeroAddress;
+export const CELO_NATIVE_TOKEN_ADDRESS =
+  '0x471EcE3750Da237f93B8E339c536989b8978a438' as Address;
 export type LifiToken = {
   chainId: number;
   address: Address;
@@ -29,6 +31,17 @@ export const BASE_NATIVE_TOKEN: LifiToken = {
   name: 'Ether',
   decimals: 18,
 };
+
+// Celo's native CELO and CeloToken ERC-20 representation share one balance.
+// Treat both addresses as the same native asset so wallet surfaces do not
+// display or submit the balance twice.
+export function isNativeWalletAsset(address: Address, chainId: number) {
+  return (
+    address.toLowerCase() === zeroAddress ||
+    (chainId === 42220 &&
+      address.toLowerCase() === CELO_NATIVE_TOKEN_ADDRESS.toLowerCase())
+  );
+}
 
 export function createLifiNativeToken(
   chain: Pick<Chain, 'id' | 'nativeCurrency'>,

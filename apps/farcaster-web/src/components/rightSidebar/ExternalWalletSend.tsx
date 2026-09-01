@@ -26,6 +26,7 @@ import {
   submitEvmTransfer,
 } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
+import { isNativeWalletAsset } from '~/utils/lifiWallet';
 
 export function ExternalWalletSend({
   address,
@@ -96,7 +97,7 @@ export function ExternalWalletSend({
 
   const tokens = (data?.tokens ?? []).filter(
     (position) =>
-      position.address !== zeroAddress &&
+      !isNativeWalletAsset(position.address, chain.id) &&
       (showHidden || position.verificationStatus === 'verified'),
   );
   const edit = () => {

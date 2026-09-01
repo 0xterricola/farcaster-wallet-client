@@ -9,10 +9,11 @@ import {
 } from '@testing-library/react';
 import React from 'react';
 import { decodeFunctionData, erc20Abi, zeroAddress } from 'viem';
-import { arbitrum, base, bsc, mainnet } from 'viem/chains';
+import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
+import { CELO_NATIVE_TOKEN_ADDRESS } from '~/utils/lifiWallet';
 
 const mocks = vi.hoisted(() => ({
   fresh: vi.fn(),
@@ -624,6 +625,30 @@ describe('trade selector regressions', () => {
     );
     expect(lookalike?.textContent).toContain('(unverified)');
     expect(lookalike?.textContent).not.toContain('native USDC');
+  });
+  it('does not offer CeloToken separately from native CELO', () => {
+    mocks.tokens.mockReturnValue({
+      data: {
+        tokens: [
+          {
+            ...to,
+            chainId: celo.id,
+            address: CELO_NATIVE_TOKEN_ADDRESS,
+            symbol: 'CELO',
+            verificationStatus: 'verified',
+          },
+        ],
+      },
+    });
+    render(<ExternalWalletSwap chain={celo} />);
+    expect(choices('Choose sell asset').map((option) => option.value)).toEqual([
+      'CELO',
+      'custom',
+    ]);
+    expect(choices('Choose buy asset').map((option) => option.value)).toEqual([
+      'CELO',
+      'custom',
+    ]);
   });
   it('selects buy and sell contracts independently without opening the wallet', () => {
     setupWeth();

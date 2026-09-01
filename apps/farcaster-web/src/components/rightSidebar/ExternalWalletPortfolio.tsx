@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { LoaderCircleIcon, RefreshCwIcon } from 'lucide-react';
 import React, { useState } from 'react';
-import { Address, Chain, zeroAddress } from 'viem';
+import { Address, Chain } from 'viem';
 import { base } from 'viem/chains';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -12,7 +12,11 @@ import {
 } from '~/hooks/useLifiWallet';
 import { formatPortfolioUsd } from '~/utils/baseWalletPortfolio';
 import { truncateAddress } from '~/utils/ethereumUtils';
-import { formatLifiBalance, lifiAssetUsd } from '~/utils/lifiWallet';
+import {
+  formatLifiBalance,
+  isNativeWalletAsset,
+  lifiAssetUsd,
+} from '~/utils/lifiWallet';
 
 const PAGE_SIZE = 20;
 
@@ -31,7 +35,7 @@ export function ExternalWalletPortfolio({
     chain,
   );
   const allTokens = (data?.tokens ?? []).filter(
-    (token) => token.address !== zeroAddress,
+    (token) => !isNativeWalletAsset(token.address, chain.id),
   );
   const unverifiedCount = allTokens.filter(
     (token) => token.verificationStatus !== 'verified',

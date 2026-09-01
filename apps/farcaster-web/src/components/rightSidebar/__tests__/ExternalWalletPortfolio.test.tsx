@@ -6,6 +6,7 @@ import { arbitrum, base, bsc, celo, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
+import { CELO_NATIVE_TOKEN_ADDRESS } from '~/utils/lifiWallet';
 
 const mocks = vi.hoisted(() => ({
   tokens: vi.fn(),
@@ -163,6 +164,22 @@ describe('LI.FI portfolio', () => {
     );
     render(<ExternalWalletPortfolio address={wallet} />);
     expect(screen.queryByText('ETH', { exact: true })).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+  it('does not duplicate CeloToken because it shares the native CELO balance', () => {
+    mocks.tokens.mockReturnValue(
+      result([
+        {
+          ...token,
+          chainId: celo.id,
+          address: CELO_NATIVE_TOKEN_ADDRESS,
+          symbol: 'CELO',
+        },
+        { ...token, chainId: celo.id },
+      ]),
+    );
+    render(<ExternalWalletPortfolio address={wallet} chain={celo} />);
+    expect(screen.queryByText('CELO', { exact: true })).toBeNull();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
   it('hides verified zero balances even if the indexed API listed the token', () => {

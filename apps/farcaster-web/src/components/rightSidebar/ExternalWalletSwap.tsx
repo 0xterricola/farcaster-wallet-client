@@ -24,7 +24,12 @@ import {
 import { parseTransferAmount } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
 import { fetchLifiQuote, LifiQuote } from '~/utils/lifiSwap';
-import { LifiAsset, LifiToken, normalizeLifiAddress } from '~/utils/lifiWallet';
+import {
+  isNativeWalletAsset,
+  LifiAsset,
+  LifiToken,
+  normalizeLifiAddress,
+} from '~/utils/lifiWallet';
 import { readConfirmedAllowance } from '~/utils/readConfirmedAllowance';
 import { ensureEvmWalletAccount } from '~/utils/sendBaseNativeToken';
 
@@ -125,7 +130,9 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
   } = useLifiWalletTokens(address, chain);
   const allTokens = (walletTokens?.tokens ?? [])
     .filter(
-      (token) => token.chainId === chain.id && token.address !== zeroAddress,
+      (token) =>
+        token.chainId === chain.id &&
+        !isNativeWalletAsset(token.address, chain.id),
     )
     .map((token) => (isDefaultUsdc(token, defaultUsdc) ? defaultUsdc! : token));
   const unverifiedCount = allTokens.filter(

@@ -1,13 +1,15 @@
 import { PublicClient, zeroAddress } from 'viem';
-import { base, bsc } from 'viem/chains';
+import { base, bsc, celo } from 'viem/chains';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   BASE_NATIVE_TOKEN,
+  CELO_NATIVE_TOKEN_ADDRESS,
   createLifiNativeToken,
   fetchLifiToken,
   fetchLifiWalletTokens,
   formatLifiBalance,
+  isNativeWalletAsset,
   lifiAssetUsd,
   lifiBalanceKey,
   normalizeLifiAddress,
@@ -26,6 +28,18 @@ const token = {
   priceUSD: '2',
   amount: '999999999999',
 };
+
+describe('native wallet asset aliases', () => {
+  it('treats zero address as native on every EVM chain', () => {
+    expect(isNativeWalletAsset(zeroAddress, base.id)).toBe(true);
+    expect(isNativeWalletAsset(zeroAddress, celo.id)).toBe(true);
+  });
+
+  it('treats CeloToken as native only on Celo', () => {
+    expect(isNativeWalletAsset(CELO_NATIVE_TOKEN_ADDRESS, celo.id)).toBe(true);
+    expect(isNativeWalletAsset(CELO_NATIVE_TOKEN_ADDRESS, base.id)).toBe(false);
+  });
+});
 const respond = (body: unknown, status = 200) => {
   const mock = vi
     .fn()
