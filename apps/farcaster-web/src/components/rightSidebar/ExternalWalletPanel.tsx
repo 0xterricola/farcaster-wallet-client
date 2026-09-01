@@ -227,8 +227,10 @@ function ExternalWalletPanel() {
 
             {(!capabilities.send || !capabilities.swap) && (
               <div className="mt-3 rounded-xl p-3 text-xs leading-relaxed text-muted bg-elevated-nohover">
-                {chain.name} balances and Receive are available. Send and Trade
-                stay disabled until their {chain.name} transaction paths are
+                {chain.name} balances, Receive
+                {capabilities.send ? ', and Send are' : ' are'} available.{' '}
+                {capabilities.send ? 'Trade stays' : 'Send and Trade stay'}{' '}
+                disabled until the remaining {chain.name} transaction paths are
                 ready.
               </div>
             )}
@@ -277,10 +279,14 @@ function ExternalWalletPanel() {
 
         {view === 'send' && capabilities.send && (
           <WalletSubscreen
-            title="Send on Base"
+            title={`Send on ${chain.name}`}
             onBack={() => setView('overview')}
           >
-            <ExternalWalletSend key={address.toLowerCase()} address={address} />
+            <ExternalWalletSend
+              key={`${chain.id}:${address.toLowerCase()}`}
+              address={address}
+              chain={chain}
+            />
           </WalletSubscreen>
         )}
 

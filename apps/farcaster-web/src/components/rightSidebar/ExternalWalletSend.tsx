@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Address,
+  Chain,
   formatEther,
   formatUnits,
   Hash,
@@ -20,21 +21,27 @@ import {
   useLifiWalletTokens,
 } from '~/hooks/useLifiWallet';
 import {
-  prepareBaseTransfer,
   PreparedBaseTransfer,
-  submitBaseTransfer,
+  prepareEvmTransfer,
+  submitEvmTransfer,
 } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
 
-export function ExternalWalletSend({ address }: { address: Address }) {
+export function ExternalWalletSend({
+  address,
+  chain = base,
+}: {
+  address: Address;
+  chain?: Chain;
+}) {
   const { provider } = useWallet();
-  const reader = useLifiTransferReader();
+  const reader = useLifiTransferReader(chain);
   const queryClient = useQueryClient();
   const {
     data,
     isError: tokensError,
     isPending: tokensPending,
-  } = useLifiWalletTokens(address);
+  } = useLifiWalletTokens(address, chain);
   const [showHidden, setShowHidden] = useState(false);
   const [token, setToken] = useState('native');
   const [customToken, setCustomToken] = useState('');
@@ -43,6 +50,7 @@ export function ExternalWalletSend({ address }: { address: Address }) {
   const tokenBalance = useLifiAsset(
     address,
     isAddress(selectedAddress) ? selectedAddress : undefined,
+    chain,
   );
   const [recipient, setRecipient] = useState('');
   const [amount, setAmount] = useState('');
@@ -53,8 +61,8 @@ export function ExternalWalletSend({ address }: { address: Address }) {
   const [replacementReason, setReplacementReason] = useState<string>();
   const operation = useRef(0);
   const locked = useRef(false);
-  const identity = useRef({ address, provider });
-  identity.current = { address, provider };
+  const identity = useRef({ address, provider, chainId: chain.id });
+  identity.current = { address, provider, chainId: chain.id };
 
   useEffect(() => {
     operation.current += 1;
@@ -62,29 +70,29 @@ export function ExternalWalletSend({ address }: { address: Address }) {
     return () => {
       operation.current += 1;
     };
-  }, [address, provider]);
+  }, [address, provider, chain.id]);
 
   const { data: receipt, isError: receiptError } = useWaitForTransactionReceipt(
     {
       hash,
-      chainId: base.id,
+      chainId: chain.id,
       timeout: 60_000,
       onReplaced: (replacement) => setReplacementReason(replacement.reason),
     },
   );
   const balanceText = !isAddress(selectedAddress)
-    ? 'Enter a Base contract to load its balance.'
+    ? `Enter a ${chain.name} contract to load its balance.`
     : tokenBalance.isError
-      ? 'Could not load balance on Base. Try refreshing.'
+      ? `Could not load balance on ${chain.name}. Try refreshing.`
       : tokenBalance.data
-        ? `Available on Base: ${formatUnits(tokenBalance.data.balance, tokenBalance.data.decimals)} ${tokenBalance.data.symbol}`
-        : 'Loading balance on Base…';
+        ? `Available on ${chain.name}: ${formatUnits(tokenBalance.data.balance, tokenBalance.data.decimals)} ${tokenBalance.data.symbol}`
+        : `Loading balance on ${chain.name}…`;
   const receiptHash = receipt?.transactionHash;
   useEffect(() => {
     if (receiptHash) {
-      void refreshLifiWallet(queryClient, address);
+      void refreshLifiWallet(queryClient, address, chain.id);
     }
-  }, [receiptHash, queryClient, address]);
+  }, [receiptHash, queryClient, address, chain.id]);
 
   const tokens = (data?.tokens ?? []).filter(
     (position) =>
@@ -113,13 +121,17 @@ export function ExternalWalletSend({ address }: { address: Address }) {
       if (!isAddress(selectedAddress)) {
         throw new Error('Choose a valid token.');
       }
-      const next = await prepareBaseTransfer(reader, {
-        address,
-        recipient,
-        amount,
-        tokenAddress:
-          selectedAddress === zeroAddress ? undefined : selectedAddress,
-      });
+      const next = await prepareEvmTransfer(
+        reader,
+        {
+          address,
+          recipient,
+          amount,
+          tokenAddress:
+            selectedAddress === zeroAddress ? undefined : selectedAddress,
+        },
+        chain,
+      );
       if (version === operation.current) {
         setPrepared(next);
       }
@@ -146,11 +158,12 @@ export function ExternalWalletSend({ address }: { address: Address }) {
     const isCurrent = () =>
       version === operation.current &&
       identity.current.address === address &&
-      identity.current.provider === provider;
+      identity.current.provider === provider &&
+      identity.current.chainId === chain.id;
     setBusy(true);
     setError(undefined);
     try {
-      const transactionHash = await submitBaseTransfer({
+      const transactionHash = await submitEvmTransfer({
         provider,
         reader,
         prepared,
@@ -158,7 +171,10 @@ export function ExternalWalletSend({ address }: { address: Address }) {
       });
       // A wallet may already have broadcast the transaction even if the view
       // changed while its prompt was open. Never retry a submitted request.
-      if (identity.current.address === address) {
+      if (
+        identity.current.address === address &&
+        identity.current.chainId === chain.id
+      ) {
         setHash(transactionHash);
       }
       setPrepared(undefined);
@@ -181,20 +197,21 @@ export function ExternalWalletSend({ address }: { address: Address }) {
     replacementReason === 'cancelled'
       ? 'Transaction cancelled.'
       : replacementReason === 'replaced'
-        ? 'Transaction replaced. Check BaseScan for the replacement details.'
+        ? `Transaction replaced. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'} for the replacement details.`
         : receipt
           ? receipt.status === 'success'
-            ? 'Transaction confirmed on Base.'
-            : 'Transaction reverted on Base.'
+            ? `Transaction confirmed on ${chain.name}.`
+            : `Transaction reverted on ${chain.name}.`
           : receiptError
-            ? 'Confirmation unavailable. Check BaseScan before sending again.'
+            ? `Confirmation unavailable. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'} before sending again.`
             : 'Transaction submitted. Waiting for confirmation…';
+  const explorer = chain.blockExplorers?.default;
 
   return (
     <div className="flex flex-col gap-4 pt-4">
       <p className="text-sm text-muted">
-        Send ETH or an ERC-20 token on Base. Token transfers do not require an
-        allowance approval.
+        Send {chain.nativeCurrency.symbol} or an ERC-20 token on {chain.name}.
+        Token transfers do not require an allowance approval.
       </p>
       <form className="flex flex-col gap-4" onSubmit={review}>
         <fieldset disabled={busy} className="flex min-w-0 flex-col gap-4">
@@ -208,7 +225,9 @@ export function ExternalWalletSend({ address }: { address: Address }) {
                 setToken(event.target.value);
               }}
             >
-              <option value="native">ETH — native asset</option>
+              <option value="native">
+                {chain.nativeCurrency.symbol} — native asset
+              </option>
               {tokens.map((position) => (
                 <option key={position.address} value={position.address}>
                   {position.symbol ?? position.name ?? 'Unknown token'} —{' '}
@@ -220,7 +239,7 @@ export function ExternalWalletSend({ address }: { address: Address }) {
           </label>
           {token === 'custom' && (
             <label className="flex flex-col gap-2 text-sm text-default">
-              Base token contract
+              {chain.name} token contract
               <input
                 className="rounded-xl border px-3 py-2 bg-app border-default"
                 placeholder="0x…"
@@ -252,12 +271,14 @@ export function ExternalWalletSend({ address }: { address: Address }) {
           )}
           {tokensPending && (
             <p className="text-xs text-muted">
-              Loading token choices… ETH is available now.
+              Loading token choices… {chain.nativeCurrency.symbol} is available
+              now.
             </p>
           )}
           {tokensError && (
             <p className="text-xs text-muted">
-              LI.FI token list unavailable. ETH sends remain available.
+              LI.FI token list unavailable. {chain.nativeCurrency.symbol} sends
+              remain available.
             </p>
           )}
           <div className="flex flex-col gap-2 text-sm text-muted">
@@ -277,8 +298,8 @@ export function ExternalWalletSend({ address }: { address: Address }) {
               Refresh balance
             </button>
             <p className="text-xs">
-              Keep ETH on Base for network fees. Balance is checked again before
-              sending.
+              Keep {chain.nativeCurrency.symbol} on {chain.name} for network
+              fees. Balance is checked again before sending.
             </p>
           </div>
           <label className="flex flex-col gap-2 text-sm text-default">
@@ -318,10 +339,10 @@ export function ExternalWalletSend({ address }: { address: Address }) {
       </form>
       {prepared && (
         <section
-          aria-label="Review Base transfer"
+          aria-label={`Review ${chain.name} transfer`}
           className="flex flex-col gap-3 rounded-xl p-4 text-sm bg-elevated-nohover text-default"
         >
-          <div className="font-semibold">Review send on Base</div>
+          <div className="font-semibold">Review send on {chain.name}</div>
           <div className="break-all">
             Amount: {formatUnits(prepared.units, prepared.decimals)}{' '}
             {prepared.symbol}
@@ -338,12 +359,13 @@ export function ExternalWalletSend({ address }: { address: Address }) {
             {prepared.symbol}
           </div>
           <div>
-            Estimated fee (L1 + L2): {formatEther(prepared.estimatedFee)} ETH
+            {chain.id === base.id ? 'Estimated fee (L1 + L2)' : 'Estimated fee'}
+            : {formatEther(prepared.estimatedFee)} {chain.nativeCurrency.symbol}
           </div>
           <p className="text-xs text-muted">
             We check a 20% fee buffer, but this is not a fee cap. Final fees may
             differ. Review expires after 60 seconds. Your wallet may request a
-            switch to Base.
+            switch to {chain.name}.
           </p>
           <p className="text-xs text-muted">
             For unusual tokens, transfer taxes or restrictions may change what
@@ -369,14 +391,16 @@ export function ExternalWalletSend({ address }: { address: Address }) {
       {hash && (
         <div role="status" className="flex flex-col gap-2 text-sm text-default">
           <p>{receiptStatus}</p>
-          <a
-            className="text-accent-primary hover:underline"
-            href={`https://basescan.org/tx/${receipt?.transactionHash ?? hash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View transaction on BaseScan
-          </a>
+          {explorer && (
+            <a
+              className="text-accent-primary hover:underline"
+              href={`${explorer.url}/tx/${receipt?.transactionHash ?? hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View transaction on {explorer.name}
+            </a>
+          )}
         </div>
       )}
     </div>

@@ -9,7 +9,10 @@ import { Address, Chain, PublicClient, zeroAddress } from 'viem';
 import { base } from 'viem/chains';
 import { usePublicClient } from 'wagmi';
 
-import { createBaseTransferReader } from '~/utils/baseWalletTransfer';
+import {
+  createBaseTransferReader,
+  createStandardEvmTransferReader,
+} from '~/utils/baseWalletTransfer';
 import {
   createLifiNativeToken,
   fetchLifiToken,
@@ -158,14 +161,16 @@ export function useLifiAssets(
   });
 }
 
-export function useLifiTransferReader() {
-  const client = usePublicClient({ chainId: base.id });
+export function useLifiTransferReader(chain: Chain = base) {
+  const client = usePublicClient({ chainId: chain.id });
   const queryClient = useQueryClient();
   return useMemo(
     () =>
       client
         ? {
-            ...createBaseTransferReader(client),
+            ...(chain.id === base.id
+              ? createBaseTransferReader(client)
+              : createStandardEvmTransferReader(client, chain)),
             nativeBalance: async (wallet: Address) =>
               (
                 await fetchFreshLifiAsset(
@@ -173,14 +178,14 @@ export function useLifiTransferReader() {
                   client,
                   wallet,
                   zeroAddress,
-                  base,
+                  chain,
                 )
               ).balance,
             tokenDetails: (token: Address, wallet: Address) =>
-              fetchFreshLifiAsset(queryClient, client, wallet, token, base),
+              fetchFreshLifiAsset(queryClient, client, wallet, token, chain),
           }
         : undefined,
-    [client, queryClient],
+    [chain, client, queryClient],
   );
 }
 

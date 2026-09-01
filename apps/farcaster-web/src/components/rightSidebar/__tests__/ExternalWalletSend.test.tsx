@@ -9,6 +9,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
+import { base, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   receipt: vi.fn(),
   invalidate: vi.fn(),
   asset: vi.fn(),
+  transferReader: vi.fn(),
   refetch: vi.fn(),
   reader: { nativeBalance: vi.fn(), tokenDetails: vi.fn() },
   client: {},
@@ -50,7 +52,7 @@ vi.mock('wagmi', () => ({
   useWaitForTransactionReceipt: mocks.receipt,
 }));
 vi.mock('~/hooks/useLifiWallet', () => ({
-  useLifiTransferReader: () => mocks.reader,
+  useLifiTransferReader: mocks.transferReader,
   useLifiAsset: mocks.asset,
   refreshLifiWallet: mocks.invalidate,
   useLifiWalletTokens: () => ({
@@ -70,8 +72,8 @@ vi.mock('~/hooks/useLifiWallet', () => ({
 }));
 vi.mock('~/utils/baseWalletTransfer', () => ({
   createBaseTransferReader: () => mocks.reader,
-  prepareBaseTransfer: mocks.prepare,
-  submitBaseTransfer: mocks.submit,
+  prepareEvmTransfer: mocks.prepare,
+  submitEvmTransfer: mocks.submit,
 }));
 vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   DefaultButton: ({
@@ -103,6 +105,7 @@ beforeEach(() => {
   mocks.reader.tokenDetails
     .mockReset()
     .mockResolvedValue({ symbol: 'TOKEN', decimals: 6, balance: 5000001n });
+  mocks.transferReader.mockReturnValue(mocks.reader);
   mocks.prepare.mockResolvedValue(prepared);
   mocks.submit.mockResolvedValue(hash);
   mocks.receipt.mockReturnValue({ data: undefined, isError: false });
@@ -130,6 +133,7 @@ describe('ExternalWalletSend', () => {
     expect(mocks.asset).toHaveBeenCalledWith(
       address,
       '0x0000000000000000000000000000000000000000',
+      base,
     );
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.submit).not.toHaveBeenCalled();
@@ -142,7 +146,7 @@ describe('ExternalWalletSend', () => {
     });
     expect(screen.queryByText('Available on Base: 1.23 ETH')).toBeNull();
     await screen.findByText('Available on Base: 5.000001 TOKEN');
-    expect(mocks.asset).toHaveBeenCalledWith(address, tokenAddress);
+    expect(mocks.asset).toHaveBeenCalledWith(address, tokenAddress, base);
   });
   it('shows balance errors as unavailable and offers a shared refresh', async () => {
     mocks.asset.mockReturnValue({ isError: true, refetch: mocks.refetch });
@@ -168,6 +172,7 @@ describe('ExternalWalletSend', () => {
     expect(mocks.asset).toHaveBeenLastCalledWith(
       recipient,
       '0x0000000000000000000000000000000000000000',
+      base,
     );
   });
   it('prepares the selected token read-only before offering wallet confirmation', async () => {
@@ -176,12 +181,16 @@ describe('ExternalWalletSend', () => {
       screen.queryByRole('button', { name: 'Confirm in wallet' }),
     ).toBeNull();
     await review();
-    expect(mocks.prepare).toHaveBeenCalledWith(mocks.reader, {
-      address,
-      recipient,
-      amount: '1.25',
-      tokenAddress,
-    });
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      {
+        address,
+        recipient,
+        amount: '1.25',
+        tokenAddress,
+      },
+      base,
+    );
     expect(mocks.submit).not.toHaveBeenCalled();
     expect(
       screen.getByRole('region', { name: 'Review Base transfer' }).textContent,
@@ -304,5 +313,35 @@ describe('ExternalWalletSend', () => {
     expect(
       screen.queryByRole('button', { name: 'Confirm in wallet' }),
     ).toBeNull();
+  });
+
+  it('uses Ethereum data, receipts, review text, and explorer links', async () => {
+    render(<ExternalWalletSend address={address} chain={mainnet} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(mainnet);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      mainnet,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: mainnet.id }),
+    );
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      mainnet,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Review Ethereum transfer' })
+        .textContent,
+    ).toContain('Estimated fee:');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Etherscan' })
+        .getAttribute('href'),
+    ).toBe(`https://etherscan.io/tx/${hash}`);
   });
 });
