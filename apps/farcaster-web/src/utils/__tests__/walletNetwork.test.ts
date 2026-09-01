@@ -1,4 +1,4 @@
-import { base, mainnet } from 'viem/chains';
+import { arbitrum, base, mainnet } from 'viem/chains';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,10 +14,10 @@ import {
 } from '~/utils/walletNetwork';
 
 describe('wallet network configuration', () => {
-  it('enables read-only dashboard data for Base and Ethereum', () => {
+  it('enables dashboard data for Base, Ethereum, and Arbitrum', () => {
     expect(DEFAULT_WALLET_CHAIN_ID).toBe(8453);
-    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453, 1]);
-    expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1]);
+    expect([...DASHBOARD_CHAINS.keys()]).toEqual([8453, 1, 42161]);
+    expect([...SELECTABLE_WALLET_CHAINS.keys()]).toEqual([8453, 1, 42161]);
   });
 
   it('keeps Ethereum transactions locked behind explicit capabilities', () => {
@@ -30,6 +30,11 @@ describe('wallet network configuration', () => {
       read: true,
       send: true,
       swap: true,
+    });
+    expect(walletChainCapabilities(arbitrum.id)).toEqual({
+      read: true,
+      send: false,
+      swap: false,
     });
     expect(walletChainCapabilities(123456)).toEqual({
       read: false,

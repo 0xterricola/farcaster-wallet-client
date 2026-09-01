@@ -33,6 +33,13 @@ override it with their own endpoint:
 VITE_ETHEREUM_RPC_URL=https://your-ethereum-rpc.example
 ```
 
+Arbitrum One reads use its browser-compatible official RPC by default. An
+optional override is also available:
+
+```env
+VITE_ARBITRUM_RPC_URL=https://your-arbitrum-rpc.example
+```
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -195,6 +202,8 @@ or assume every miniapp will work on a fork's domain.
 - Receive with an address QR code
 - Send ETH and ERC-20 tokens on Base with exact integer amounts and live checks
 - Swap ETH and arbitrary ERC-20 tokens on Base
+- View Arbitrum One balances and receive guidance. Send and Trade remain
+  disabled until their Arbitrum transaction paths are enabled.
 
 Base swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
@@ -244,6 +253,8 @@ confirmation. This patch does not add multichain transfers or portfolio history.
 - If WalletConnect is unavailable, verify
   `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
 - If Ethereum balances are unavailable, confirm that `VITE_ETHEREUM_RPC_URL`
+  accepts JSON-RPC requests from the deployed site's browser origin.
+- If Arbitrum balances are unavailable, confirm that `VITE_ARBITRUM_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.

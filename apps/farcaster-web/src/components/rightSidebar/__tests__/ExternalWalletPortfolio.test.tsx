@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { zeroAddress } from 'viem';
-import { base, mainnet } from 'viem/chains';
+import { arbitrum, base, mainnet } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
@@ -225,6 +225,28 @@ describe('LI.FI portfolio', () => {
       mocks.client,
       wallet,
       mainnet.id,
+    );
+  });
+  it('uses the selected chain for Arbitrum discovery, reads, labels, and links', () => {
+    render(<ExternalWalletPortfolio address={wallet} chain={arbitrum} />);
+    expect(mocks.tokens).toHaveBeenCalledWith(wallet, arbitrum);
+    expect(mocks.assets).toHaveBeenCalledWith(
+      wallet,
+      [token.address],
+      arbitrum,
+    );
+    expect(
+      screen.getByRole('region', { name: 'Arbitrum One token portfolio' }),
+    ).toBeTruthy();
+    expect(screen.getByText('Tokens on Arbitrum One')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `https://arbiscan.io/token/${token.address}`,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh tokens' }));
+    expect(mocks.refresh).toHaveBeenCalledWith(
+      mocks.client,
+      wallet,
+      arbitrum.id,
     );
   });
   it('warns when discovery is partial', () => {

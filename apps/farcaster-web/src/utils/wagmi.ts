@@ -44,9 +44,20 @@ const ethereumRpcUrl =
   import.meta.env.VITE_ETHEREUM_RPC_URL ||
   'https://ethereum-rpc.publicnode.com';
 
+// Arbitrum's official RPC allows browser requests. Keep it explicit so the
+// wallet dashboard does not silently inherit a changing viem default.
+const arbitrumRpcUrl =
+  import.meta.env.VITE_ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc';
+
 const transports = chains.reduce(
   (acc, chain) => {
-    acc[chain.id] = http(chain.id === mainnet.id ? ethereumRpcUrl : undefined);
+    const rpcUrl =
+      chain.id === mainnet.id
+        ? ethereumRpcUrl
+        : chain.id === arbitrum.id
+          ? arbitrumRpcUrl
+          : undefined;
+    acc[chain.id] = http(rpcUrl);
     return acc;
   },
   {} as Record<number, Transport>,
