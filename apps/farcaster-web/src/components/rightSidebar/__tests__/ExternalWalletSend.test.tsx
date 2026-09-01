@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { hyperevm } from 'farcaster-client-data';
+import { hyperevm, robinhood } from 'farcaster-client-data';
 import React from 'react';
 import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -528,5 +528,45 @@ describe('ExternalWalletSend', () => {
         .getByRole('link', { name: 'View transaction on HyperScan' })
         .getAttribute('href'),
     ).toBe(`${hyperevm.blockExplorers.default.url}/tx/${hash}`);
+  });
+
+  it('uses Robinhood Chain data, ETH fees, receipts, and explorer links', async () => {
+    mocks.asset.mockReturnValue({
+      data: { symbol: 'ETH', decimals: 18, balance: 1230000000000000000n },
+      isError: false,
+      isFetching: false,
+      refetch: mocks.refetch,
+    });
+    render(<ExternalWalletSend address={address} chain={robinhood} />);
+    expect(mocks.transferReader).toHaveBeenCalledWith(robinhood);
+    expect(mocks.asset).toHaveBeenCalledWith(
+      address,
+      '0x0000000000000000000000000000000000000000',
+      robinhood,
+    );
+    expect(mocks.receipt).toHaveBeenCalledWith(
+      expect.objectContaining({ chainId: robinhood.id }),
+    );
+    expect(
+      screen.getByText('Available on Robinhood Chain: 1.23 ETH'),
+    ).toBeTruthy();
+    await review();
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      mocks.reader,
+      expect.objectContaining({ address, recipient, tokenAddress }),
+      robinhood,
+    );
+    const reviewPanel = screen.getByRole('region', {
+      name: 'Review Robinhood Chain transfer',
+    });
+    expect(reviewPanel.textContent).toContain('Estimated fee:');
+    expect(reviewPanel.textContent).toContain('ETH');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm in wallet' }));
+    expect(await screen.findByRole('status')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('link', { name: 'View transaction on Blockscout' })
+        .getAttribute('href'),
+    ).toBe(`${robinhood.blockExplorers.default.url}/tx/${hash}`);
   });
 });

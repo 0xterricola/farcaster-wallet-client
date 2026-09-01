@@ -20,7 +20,7 @@ const WALLET_CHAIN_CAPABILITIES: ReadonlyMap<number, WalletChainCapabilities> =
     [celo.id, { read: true, send: true, swap: true }],
     [monad.id, { read: true, send: true, swap: true }],
     [hyperevm.id, { read: true, send: true, swap: true }],
-    [robinhood.id, { read: true, send: false, swap: false }],
+    [robinhood.id, { read: true, send: true, swap: false }],
   ]);
 
 export function walletChainCapabilities(chainId: number) {
