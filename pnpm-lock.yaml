@@ -880,6 +880,9 @@ importers:
       '@sinclair/typebox':
         specifier: 0.27.8
         version: 0.27.8
+      '@solana/spl-token':
+        specifier: 0.4.14
+        version: 0.4.14(@solana/web3.js@1.98.4(@typescript/typescript6@6.0.2)(bufferutil@4.1.0)(encoding@0.1.13)(utf-8-validate@5.0.10))(@typescript/typescript6@6.0.2)(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(utf-8-validate@5.0.10)
       '@solana/wallet-adapter-base':
         specifier: '=0.9.23'
         version: 0.9.23(@solana/web3.js@1.98.4(@typescript/typescript6@6.0.2)(bufferutil@4.1.0)(encoding@0.1.13)(utf-8-validate@5.0.10))
@@ -901,15 +904,15 @@ importers:
       '@vidstack/react':
         specifier: ^1.12.13
         version: 1.12.13(@types/react@19.2.14)(react@19.0.0)
-      '@wallet-standard/app':
-        specifier: 1.1.0
-        version: 1.1.0
       '@wagmi/connectors':
         specifier: ^7.0.2
         version: 7.0.2(5e784667501b93a178c06660b19d6b22)
       '@wagmi/core':
         specifier: ^3.0.0
         version: 3.4.4(@tanstack/query-core@5.99.2)(@types/react@19.2.14)(@typescript/typescript6@6.0.2)(ox@0.6.12(@typescript/typescript6@6.0.2)(zod@4.3.6))(react@19.0.0)(use-sync-external-store@1.6.0(react@19.0.0))(viem@2.39.3(@typescript/typescript6@6.0.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(zod@4.3.6))
+      '@wallet-standard/app':
+        specifier: 1.1.0
+        version: 1.1.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

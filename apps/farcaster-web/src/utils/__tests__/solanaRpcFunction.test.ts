@@ -71,6 +71,51 @@ describe('Solana RPC Pages Function', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('allows only constrained transfer preparation and submission calls', async () => {
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: 1, result: 'ok' }), { status: 200 }),
+      );
+    const message = btoa('safe message');
+    const signature = '1'.repeat(64);
+    const calls: [string, unknown[]][] = [
+      ['getLatestBlockhash', [{ commitment: 'confirmed' }]],
+      ['getFeeForMessage', [message, { commitment: 'confirmed' }]],
+      [
+        'getAccountInfo',
+        [wallet, { commitment: 'confirmed', encoding: 'base64' }],
+      ],
+      ['getMinimumBalanceForRentExemption', [0, { commitment: 'confirmed' }]],
+      ['getMinimumBalanceForRentExemption', [165, { commitment: 'confirmed' }]],
+      [
+        'sendTransaction',
+        [
+          message,
+          {
+            encoding: 'base64',
+            maxRetries: 3,
+            preflightCommitment: 'confirmed',
+            skipPreflight: false,
+          },
+        ],
+      ],
+      [
+        'getSignatureStatuses',
+        [[signature], { searchTransactionHistory: true }],
+      ],
+    ];
+    for (const [method, params] of calls) {
+      expect((await request(method, params)).status).toBe(200);
+    }
+    expect(fetch).toHaveBeenCalledTimes(calls.length);
+
+    expect(
+      (await request('sendTransaction', [message, { skipPreflight: true }]))
+        .status,
+    ).toBe(400);
+  });
+
   it('rejects an insecure configured upstream', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch');
     const response = await request(

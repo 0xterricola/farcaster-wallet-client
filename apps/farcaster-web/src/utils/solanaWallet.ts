@@ -21,14 +21,18 @@ export type SolanaTokenAsset = {
   mint: string;
   name: string;
   priceUSD?: number;
+  programId: string;
   recognized: boolean;
   symbol: string;
+  tokenAccounts: readonly { address: string; amount: string }[];
 };
 
 type ParsedTokenAccount = {
   amount: string;
   decimals: number;
   mint: string;
+  programId: string;
+  tokenAccounts: readonly { address: string; amount: string }[];
 };
 
 type SolanaTokenAccountsResponse = {
@@ -120,7 +124,9 @@ async function requestSolanaTokenProgram(
 
   return payload.result.value.flatMap((entry) => {
     try {
-      const account = record(entry).account;
+      const entryRecord = record(entry);
+      const tokenAccountAddress = entryRecord.pubkey;
+      const account = entryRecord.account;
       const data = record(record(account).data);
       const parsed = record(data.parsed);
       const info = record(parsed.info);
@@ -131,6 +137,7 @@ async function requestSolanaTokenProgram(
       if (
         typeof mint !== 'string' ||
         !mint ||
+        typeof tokenAccountAddress !== 'string' ||
         typeof amount !== 'string' ||
         !/^\d+$/.test(amount) ||
         typeof decimals !== 'number' ||
@@ -140,7 +147,15 @@ async function requestSolanaTokenProgram(
       ) {
         return [];
       }
-      return [{ amount, decimals, mint }];
+      return [
+        {
+          amount,
+          decimals,
+          mint,
+          programId,
+          tokenAccounts: [{ address: tokenAccountAddress, amount }],
+        },
+      ];
     } catch {
       return [];
     }
@@ -165,12 +180,16 @@ export async function fetchSolanaTokenAccounts(
       continue;
     }
     const current = aggregated.get(row.mint);
-    if (current && current.decimals !== row.decimals) {
+    if (
+      current &&
+      (current.decimals !== row.decimals || current.programId !== row.programId)
+    ) {
       continue;
     }
     aggregated.set(row.mint, {
       ...row,
       amount: (BigInt(current?.amount ?? '0') + BigInt(row.amount)).toString(),
+      tokenAccounts: [...(current?.tokenAccounts ?? []), ...row.tokenAccounts],
     });
   }
   return [...aggregated.values()];

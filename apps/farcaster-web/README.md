@@ -75,9 +75,10 @@ optional override is also available:
 VITE_ROBINHOOD_RPC_URL=https://your-robinhood-rpc.example
 ```
 
-Solana Mainnet reads use the same-origin `/~wallet/solana-rpc` relay by default.
-During local Vite development that path proxies to Solana's public Mainnet RPC.
-Cloudflare Pages serves the path with a narrowly scoped read-only Function.
+Solana Mainnet data and transaction submission use the same-origin
+`/~wallet/solana-rpc` relay by default. During local Vite development that path
+proxies to the configured Mainnet RPC. Cloudflare Pages serves the path with a
+narrowly scoped Function that allows only the wallet's required methods.
 Hosted deployments should set a private runtime secret because public Solana
 endpoints are shared and rate-limited:
 
@@ -256,11 +257,13 @@ or assume every miniapp will work on a fork's domain.
 - Base/EVM remains the default dashboard when both wallet families are
   connected; the family selector switches between the EVM and Solana views.
 - Installed EIP-6963 wallets appear as direct choices.
-- Installed Wallet Standard wallets appear as Solana choices. This initial
-  Solana slice supports browser-wallet connection, SOL and SPL token balances,
-  address copy, and Receive QR; Solana Send, Trade, and Activity remain
-  disabled. Solana RPC is the balance source of truth while LI.FI supplies
-  recognized token metadata and estimated prices.
+- Installed Wallet Standard wallets appear as Solana choices. Solana supports
+  browser-wallet connection, SOL and SPL token balances, address copy, Receive
+  QR, and exact SOL or recognized SPL token sends. Every send shows the RPC fee
+  and any recipient token-account rent before signing, uses RPC preflight, and
+  waits for confirmed status. Trade and Activity remain disabled. Solana RPC
+  is the balance source of truth while LI.FI supplies recognized token metadata
+  and estimated prices.
 - WalletConnect remains available for QR, mobile, browser, and hardware-wallet
   workflows on EVM. Solana WalletConnect is not implemented yet.
 - Disconnecting returns the dashboard to the connection choices.

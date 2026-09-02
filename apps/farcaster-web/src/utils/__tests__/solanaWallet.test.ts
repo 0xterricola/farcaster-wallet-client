@@ -8,11 +8,13 @@ import {
   formatSolanaTokenAmount,
   formatSolBalance,
   LIFI_SOLANA_CHAIN_ID,
+  SOLANA_TOKEN_PROGRAM_ID,
   solanaAddressUrl,
   solanaTokenUsd,
 } from '~/utils/solanaWallet';
 
 const tokenAccount = (mint: string, amount: string, decimals: number) => ({
+  pubkey: `${mint}TokenAccount`,
   account: {
     data: {
       parsed: { info: { mint, tokenAmount: { amount, decimals } } },
@@ -115,6 +117,7 @@ describe('Solana wallet data', () => {
             result: {
               value: [
                 tokenAccount('UsdcMint', '1200000', 6),
+                tokenAccount('UsdcMint', '300000', 6),
                 tokenAccount('EmptyMint', '0', 6),
               ],
             },
@@ -125,7 +128,7 @@ describe('Solana wallet data', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            result: { value: [tokenAccount('UsdcMint', '300000', 6)] },
+            result: { value: [] },
           }),
           { status: 200 },
         ),
@@ -133,7 +136,16 @@ describe('Solana wallet data', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(fetchSolanaTokenAccounts('SolanaAddress')).resolves.toEqual([
-      { amount: '1500000', decimals: 6, mint: 'UsdcMint' },
+      {
+        amount: '1500000',
+        decimals: 6,
+        mint: 'UsdcMint',
+        programId: expect.any(String),
+        tokenAccounts: [
+          { address: 'UsdcMintTokenAccount', amount: '1200000' },
+          { address: 'UsdcMintTokenAccount', amount: '300000' },
+        ],
+      },
     ]);
     const bodies = fetchMock.mock.calls.map(([, init]) =>
       JSON.parse(init.body as string),
@@ -208,8 +220,10 @@ describe('Solana wallet data', () => {
       mint: 'UsdcMint',
       name: 'USD Coin',
       priceUSD: 1,
+      programId: SOLANA_TOKEN_PROGRAM_ID,
       recognized: true,
       symbol: 'USDC',
+      tokenAccounts: [],
     };
     expect(formatSolanaTokenAmount(asset)).toBe('1.234567');
     expect(solanaTokenUsd(asset)).toBe(1.234567);

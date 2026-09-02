@@ -47,7 +47,8 @@ type WalletView =
 
 function ExternalWalletPanel() {
   const { address, clearPreferredWallet, network } = useWallet();
-  const { address: solanaAddress } = useSolanaWallet();
+  const { address: solanaAddress, signTransaction: signSolanaTransaction } =
+    useSolanaWallet();
   const { disconnect } = useDisconnect();
   const chain = DASHBOARD_CHAINS.get(network.selectedChainId) ?? base;
   const capabilities = walletChainCapabilities(chain.id);
@@ -146,6 +147,7 @@ function ExternalWalletPanel() {
         <ExternalSolanaWalletPanel
           address={solanaAddress}
           onManageWallets={() => setView('connections')}
+          signTransaction={signSolanaTransaction}
         />
       </div>
     );

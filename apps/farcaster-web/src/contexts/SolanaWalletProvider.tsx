@@ -15,6 +15,7 @@ import {
   SOLANA_DISCONNECT_FEATURE,
   SOLANA_EVENTS_FEATURE,
   SOLANA_MAINNET_CHAIN,
+  SOLANA_SIGN_TRANSACTION_FEATURE,
   useDetectedSolanaWallets,
 } from '~/hooks/useDetectedSolanaWallets';
 
@@ -41,12 +42,23 @@ type EventsFeature = {
   ) => () => void;
 };
 
+type SignTransactionFeature = {
+  signTransaction: (
+    ...inputs: readonly {
+      account: DetectedSolanaAccount;
+      chain: typeof SOLANA_MAINNET_CHAIN;
+      transaction: Uint8Array;
+    }[]
+  ) => Promise<readonly { signedTransaction: Uint8Array }[]>;
+};
+
 type SolanaWalletContextValue = {
   address: string | undefined;
   connect: (wallet: DetectedSolanaWallet) => Promise<boolean>;
   detectedWallets: readonly DetectedSolanaWallet[];
   disconnect: () => Promise<void>;
   error: string | undefined;
+  signTransaction: (transaction: Uint8Array) => Promise<Uint8Array>;
   status: SolanaWalletStatus;
   wallet: DetectedSolanaWallet | undefined;
 };
@@ -75,6 +87,7 @@ function connectionError(error: unknown): string {
 function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const detectedWallets = useDetectedSolanaWallets();
   const [wallet, setWallet] = useState<DetectedSolanaWallet>();
+  const [account, setAccount] = useState<DetectedSolanaAccount>();
   const [address, setAddress] = useState<string>();
   const [status, setStatus] = useState<SolanaWalletStatus>('disconnected');
   const [error, setError] = useState<string>();
@@ -86,6 +99,7 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
     ) => {
       const account = mainnetAccount(accounts);
       setWallet(nextWallet);
+      setAccount(account);
       setAddress(account?.address);
       setStatus(account ? 'connected' : 'disconnected');
       setError(undefined);
@@ -136,11 +150,37 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
     } finally {
       localStorage.removeItem(SOLANA_WALLET_KEY);
       setWallet(undefined);
+      setAccount(undefined);
       setAddress(undefined);
       setStatus('disconnected');
       setError(undefined);
     }
   }, [wallet]);
+
+  const signTransaction = useCallback(
+    async (transaction: Uint8Array) => {
+      if (!wallet || !account || status !== 'connected') {
+        throw new Error('Connect a Solana wallet before signing.');
+      }
+      const signing = feature<SignTransactionFeature>(
+        wallet,
+        SOLANA_SIGN_TRANSACTION_FEATURE,
+      );
+      if (!signing?.signTransaction) {
+        throw new Error('This wallet cannot sign Solana transactions.');
+      }
+      const [result] = await signing.signTransaction({
+        account,
+        chain: SOLANA_MAINNET_CHAIN,
+        transaction,
+      });
+      if (!result?.signedTransaction?.length) {
+        throw new Error('The wallet did not return a signed transaction.');
+      }
+      return result.signedTransaction;
+    },
+    [account, status, wallet],
+  );
 
   useEffect(() => {
     if (wallet || !detectedWallets.length) {
@@ -182,10 +222,20 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       detectedWallets,
       disconnect,
       error,
+      signTransaction,
       status,
       wallet,
     }),
-    [address, connect, detectedWallets, disconnect, error, status, wallet],
+    [
+      address,
+      connect,
+      detectedWallets,
+      disconnect,
+      error,
+      signTransaction,
+      status,
+      wallet,
+    ],
   );
 
   return (

@@ -31,6 +31,60 @@ function validRequest(body: unknown): body is Record<string, unknown> {
     return false;
   }
   const [address, filter, config] = request.params;
+  const confirmed = (value: unknown) =>
+    record(value)?.commitment === 'confirmed';
+  const base58 = (value: unknown) =>
+    typeof value === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,88}$/.test(value);
+  const base64 = (value: unknown, maximum = 4_000) =>
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= maximum &&
+    /^[A-Za-z0-9+/]+={0,2}$/.test(value);
+
+  if (request.method === 'getLatestBlockhash') {
+    return request.params.length === 1 && confirmed(address);
+  }
+  if (request.method === 'getFeeForMessage') {
+    return request.params.length === 2 && base64(address) && confirmed(filter);
+  }
+  if (request.method === 'getAccountInfo') {
+    const options = record(filter);
+    return (
+      request.params.length === 2 &&
+      base58(address) &&
+      options?.commitment === 'confirmed' &&
+      options.encoding === 'base64'
+    );
+  }
+  if (request.method === 'getMinimumBalanceForRentExemption') {
+    return (
+      request.params.length === 2 &&
+      (address === 0 || address === 165) &&
+      confirmed(filter)
+    );
+  }
+  if (request.method === 'sendTransaction') {
+    const options = record(filter);
+    return (
+      request.params.length === 2 &&
+      base64(address, 3_000) &&
+      options?.encoding === 'base64' &&
+      options.maxRetries === 3 &&
+      options.preflightCommitment === 'confirmed' &&
+      options.skipPreflight === false
+    );
+  }
+  if (request.method === 'getSignatureStatuses') {
+    const signatures = address;
+    const options = record(filter);
+    return (
+      request.params.length === 2 &&
+      Array.isArray(signatures) &&
+      signatures.length === 1 &&
+      base58(signatures[0]) &&
+      options?.searchTransactionHistory === true
+    );
+  }
   if (
     typeof address !== 'string' ||
     !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
@@ -39,9 +93,7 @@ function validRequest(body: unknown): body is Record<string, unknown> {
   }
   if (request.method === 'getBalance') {
     const options = record(filter);
-    return (
-      request.params.length === 2 && options?.commitment === 'confirmed'
-    );
+    return request.params.length === 2 && options?.commitment === 'confirmed';
   }
   if (request.method === 'getTokenAccountsByOwner') {
     const ownerFilter = record(filter);

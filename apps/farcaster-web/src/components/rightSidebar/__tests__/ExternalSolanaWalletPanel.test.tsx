@@ -39,12 +39,22 @@ vi.mock('~/components/rightSidebar/ExternalSolanaWalletPortfolio', () => ({
   ),
 }));
 
+vi.mock('~/components/rightSidebar/ExternalSolanaWalletSend', () => ({
+  ExternalSolanaWalletSend: ({ onBack }: { onBack: () => void }) => (
+    <div>
+      <span>Solana send screen</span>
+      <button onClick={onBack}>Back from send</button>
+    </div>
+  ),
+}));
+
 describe('ExternalSolanaWalletPanel', () => {
   it('shows the Solana Mainnet address and SOL balance', () => {
     render(
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
         onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
       />,
     );
 
@@ -58,18 +68,22 @@ describe('ExternalSolanaWalletPanel', () => {
     );
   });
 
-  it('keeps signing-dependent actions disabled in the read-only phase', () => {
+  it('enables Send while keeping unfinished actions disabled', () => {
     render(
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
         onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
       />,
     );
 
     expect(
       screen.getByRole('button', { name: 'Receive' }).hasAttribute('disabled'),
     ).toBe(false);
-    for (const name of ['Send', 'Trade', 'Activity']) {
+    expect(
+      screen.getByRole('button', { name: 'Send' }).hasAttribute('disabled'),
+    ).toBe(false);
+    for (const name of ['Trade', 'Activity']) {
       expect(
         screen.getByRole('button', { name }).hasAttribute('disabled'),
       ).toBe(true);
@@ -81,6 +95,7 @@ describe('ExternalSolanaWalletPanel', () => {
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
         onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
@@ -91,12 +106,27 @@ describe('ExternalSolanaWalletPanel', () => {
     );
   });
 
+  it('opens the Send screen and can return to the overview', () => {
+    render(
+      <ExternalSolanaWalletPanel
+        address="SolanaAddress123456"
+        onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(screen.getByText('Solana send screen')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Back from send' }));
+    expect(screen.getByText('Solana Mainnet')).toBeTruthy();
+  });
+
   it('opens the shared wallet-connections screen', () => {
     const onManageWallets = vi.fn();
     render(
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
         onManageWallets={onManageWallets}
+        signTransaction={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Wallets' }));
