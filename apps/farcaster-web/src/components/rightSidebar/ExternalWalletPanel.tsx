@@ -6,15 +6,16 @@ import {
   CheckIcon,
   CopyIcon,
   HistoryIcon,
+  WalletIcon,
 } from 'lucide-react';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import { formatUnits } from 'viem';
 import { base } from 'viem/chains';
-import { useConnect, useDisconnect } from 'wagmi';
+import { useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
-import { Image } from '~/components/images/Image';
+import { ExternalSolanaWalletPanel } from '~/components/rightSidebar/ExternalSolanaWalletPanel';
 import { ExternalWalletActivity } from '~/components/rightSidebar/ExternalWalletActivity';
 import {
   ExternalWalletNetworkBoundary,
@@ -23,26 +24,30 @@ import {
 import { ExternalWalletPortfolio } from '~/components/rightSidebar/ExternalWalletPortfolio';
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
+import { PreferredWalletSelector } from '~/components/wallet/PreferredWalletDialog';
+import { WalletFamilySelector } from '~/components/wallet/WalletFamilySelector';
+import { useSolanaWallet } from '~/contexts/SolanaWalletProvider';
 import { useWallet } from '~/contexts/WalletProvider';
 import { useLifiAsset } from '~/hooks/useLifiWallet';
 import { truncateAddress } from '~/utils/ethereumUtils';
 import { LIFI_NATIVE_ADDRESS } from '~/utils/lifiWallet';
+import { WalletFamily } from '~/utils/walletFamily';
 import {
   DASHBOARD_CHAINS,
   walletChainCapabilities,
 } from '~/utils/walletNetwork';
 
-type WalletView = 'overview' | 'receive' | 'send' | 'trade' | 'activity';
+type WalletView =
+  | 'overview'
+  | 'receive'
+  | 'send'
+  | 'trade'
+  | 'activity'
+  | 'connections';
 
 function ExternalWalletPanel() {
-  const {
-    address,
-    clearPreferredWallet,
-    connectors,
-    network,
-    setPreferredWallet,
-  } = useWallet();
-  const { connectAsync } = useConnect();
+  const { address, clearPreferredWallet, network } = useWallet();
+  const { address: solanaAddress } = useSolanaWallet();
   const { disconnect } = useDisconnect();
   const chain = DASHBOARD_CHAINS.get(network.selectedChainId) ?? base;
   const capabilities = walletChainCapabilities(chain.id);
@@ -56,9 +61,16 @@ function ExternalWalletPanel() {
     chain,
   );
   const [view, setView] = useState<WalletView>('overview');
+  const [dashboardFamily, setDashboardFamily] = useState<WalletFamily>(() =>
+    !address && solanaAddress ? 'solana' : 'evm',
+  );
+  const visibleDashboardFamily: WalletFamily =
+    dashboardFamily === 'evm' && !address && solanaAddress
+      ? 'solana'
+      : dashboardFamily === 'solana' && !solanaAddress && address
+        ? 'evm'
+        : dashboardFamily;
   const [copied, setCopied] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string>();
 
   useEffect(() => {
     setView('overview');
@@ -77,92 +89,70 @@ function ExternalWalletPanel() {
     return `${value} ${balance.symbol}`;
   }, [balance, isBalanceLoading, balanceError]);
 
-  const browserWallets = connectors.filter(
-    (connector) => connector.type === 'injected',
-  );
-
-  if (!address) {
-    const connectWallet = async (connectorId: string) => {
-      const selectedConnector = connectors.find(
-        (connector) => connector.id === connectorId,
-      );
-
-      if (!selectedConnector) {
-        setConnectError(
-          connectorId === 'walletConnect'
-            ? 'WalletConnect is not configured. Add a Reown project ID and reload.'
-            : 'That browser wallet is no longer available. Reload and try again.',
-        );
-        return;
-      }
-
-      setConnectError(undefined);
-      setIsConnecting(true);
-      try {
-        await connectAsync({
-          connector: selectedConnector,
-          chainId: base.id,
-        });
-        setPreferredWallet(selectedConnector.id);
-      } catch (error) {
-        setConnectError(
-          error instanceof Error ? error.message : 'Wallet connection failed.',
-        );
-      } finally {
-        setIsConnecting(false);
-      }
-    };
-
+  if (!address && !solanaAddress) {
     return (
       <div
-        className="flex h-full flex-col items-center justify-center border-t p-6 text-center bg-app border-default"
+        className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-elevated-nohover">
-          <ArrowDownToLineIcon className="size-7 text-default" />
-        </div>
-        <div className="mt-4 text-xl font-semibold text-default">
-          Connect a wallet
-        </div>
-        <div className="mt-2 max-w-72 text-sm text-muted">
-          Connect once to use the same wallet here and in miniapps.
-        </div>
-        {connectError && (
-          <div className="mt-4 w-full rounded-xl bg-red-50 p-3 text-sm text-red-600">
-            {connectError}
+        <div className="mb-4">
+          <div className="text-lg font-semibold text-default">
+            Wallet connections
           </div>
-        )}
-        <div className="mt-6 flex w-full flex-col gap-2">
-          {browserWallets.map((connector) => (
-            <DefaultButton
-              key={connector.uid}
-              className="w-full"
-              variant="secondary"
-              isLoading={isConnecting}
-              onClick={() => void connectWallet(connector.id)}
-            >
-              <span className="flex items-center justify-center gap-2">
-                {connector.icon && (
-                  <Image
-                    src={connector.icon}
-                    alt=""
-                    className="size-5 rounded"
-                  />
-                )}
-                {connector.name}
-              </span>
-            </DefaultButton>
-          ))}
-          <DefaultButton
-            className="w-full"
-            isLoading={isConnecting}
-            onClick={() => void connectWallet('walletConnect')}
-          >
-            Connect with WalletConnect
-          </DefaultButton>
+          <div className="mt-1 text-sm text-muted">
+            EVM and Solana wallets connect independently.
+          </div>
         </div>
+        <PreferredWalletSelector hideHeader />
       </div>
     );
+  }
+
+  if (view === 'connections') {
+    return (
+      <div
+        className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <WalletSubscreen
+          title="Wallet connections"
+          onBack={() => setView('overview')}
+        >
+          <div className="mt-4">
+            <PreferredWalletSelector
+              defaultFamily={visibleDashboardFamily}
+              hideHeader
+            />
+          </div>
+        </WalletSubscreen>
+      </div>
+    );
+  }
+
+  if (visibleDashboardFamily === 'solana' && solanaAddress) {
+    return (
+      <div
+        className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {address && (
+          <div className="mb-4">
+            <WalletFamilySelector
+              value={visibleDashboardFamily}
+              onChange={setDashboardFamily}
+            />
+          </div>
+        )}
+        <ExternalSolanaWalletPanel
+          address={solanaAddress}
+          onManageWallets={() => setView('connections')}
+        />
+      </div>
+    );
+  }
+
+  if (!address) {
+    return null;
   }
 
   const copyAddress = async () => {
@@ -181,6 +171,14 @@ function ExternalWalletPanel() {
       className="flex h-full flex-col overflow-y-auto border-t p-4 bg-app border-default"
       onClick={(event) => event.stopPropagation()}
     >
+      {solanaAddress && (
+        <div className="mb-4">
+          <WalletFamilySelector
+            value={visibleDashboardFamily}
+            onChange={setDashboardFamily}
+          />
+        </div>
+      )}
       <ExternalWalletNetworkHeader network={network} />
       <ExternalWalletNetworkBoundary
         network={network}
@@ -207,7 +205,7 @@ function ExternalWalletPanel() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-4 gap-2">
+            <div className="mt-4 grid grid-cols-5 gap-2">
               <WalletAction
                 label="Receive"
                 icon={<ArrowDownToLineIcon className="size-5" />}
@@ -230,6 +228,11 @@ function ExternalWalletPanel() {
                 icon={<HistoryIcon className="size-5" />}
                 onClick={() => setView('activity')}
               />
+              <WalletAction
+                label="Wallets"
+                icon={<WalletIcon className="size-5" />}
+                onClick={() => setView('connections')}
+              />
             </div>
 
             {(!capabilities.send || !capabilities.swap) && (
@@ -247,16 +250,6 @@ function ExternalWalletPanel() {
               address={address}
               chain={chain}
             />
-
-            <div className="mt-auto pt-6">
-              <DefaultButton
-                className="w-full"
-                variant="danger"
-                onClick={handleDisconnect}
-              >
-                Disconnect
-              </DefaultButton>
-            </div>
           </>
         )}
 

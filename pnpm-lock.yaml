@@ -901,6 +901,9 @@ importers:
       '@vidstack/react':
         specifier: ^1.12.13
         version: 1.12.13(@types/react@19.2.14)(react@19.0.0)
+      '@wallet-standard/app':
+        specifier: 1.1.0
+        version: 1.1.0
       '@wagmi/connectors':
         specifier: ^7.0.2
         version: 7.0.2(5e784667501b93a178c06660b19d6b22)

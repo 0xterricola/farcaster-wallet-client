@@ -75,6 +75,25 @@ optional override is also available:
 VITE_ROBINHOOD_RPC_URL=https://your-robinhood-rpc.example
 ```
 
+Solana Mainnet reads use the same-origin `/~wallet/solana-rpc` relay by default.
+During local Vite development that path proxies to Solana's public Mainnet RPC.
+Cloudflare Pages serves the path with a narrowly scoped read-only Function.
+Hosted deployments should set a private runtime secret because public Solana
+endpoints are shared and rate-limited:
+
+```env
+SOLANA_RPC_URL=https://your-private-solana-rpc.example
+```
+
+`VITE_SOLANA_RPC_URL` remains available for a browser-compatible direct
+endpoint, but its full value is exposed in the built app and must not contain a
+secret credential.
+
+For local development, add `SOLANA_RPC_URL` to
+`apps/farcaster-web/.env.local`. Vite reads it only while configuring the local
+same-origin proxy; the value is not included in the browser bundle. Restart the
+development server after changing it.
+
 The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
@@ -230,11 +249,20 @@ or assume every miniapp will work on a fork's domain.
 
 ## Wallet behavior
 
-- The active external wallet is persisted as the preferred wallet.
-- The same provider and address are used by the wallet dashboard and miniapps.
+- EVM and Solana browser wallets connect independently and can remain connected
+  at the same time. Disconnecting one family does not disconnect the other.
+- The active EVM wallet is persisted as the preferred wallet. Its provider and
+  address are shared by the EVM dashboard and EVM miniapps.
+- Base/EVM remains the default dashboard when both wallet families are
+  connected; the family selector switches between the EVM and Solana views.
 - Installed EIP-6963 wallets appear as direct choices.
+- Installed Wallet Standard wallets appear as Solana choices. This initial
+  Solana slice supports browser-wallet connection, SOL and SPL token balances,
+  address copy, and Receive QR; Solana Send, Trade, and Activity remain
+  disabled. Solana RPC is the balance source of truth while LI.FI supplies
+  recognized token metadata and estimated prices.
 - WalletConnect remains available for QR, mobile, browser, and hardware-wallet
-  workflows.
+  workflows on EVM. Solana WalletConnect is not implemented yet.
 - Disconnecting returns the dashboard to the connection choices.
 - Private keys and seed phrases never enter the Farcaster client.
 
@@ -363,6 +391,10 @@ confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
 - If Robinhood Chain balances are unavailable, confirm that
   `VITE_ROBINHOOD_RPC_URL` accepts JSON-RPC requests from the deployed site's
   browser origin.
+- If the SOL balance is unavailable, confirm that `VITE_SOLANA_RPC_URL` accepts
+  Solana JSON-RPC requests from the deployed site's browser origin, or confirm
+  the Pages deployment includes `/~wallet/solana-rpc` and its server-side
+  `SOLANA_RPC_URL` has sufficient rate-limit capacity.
 - If complete Activity history is unavailable, add both server-side
   `ETHERSCAN_API_KEY` and `ALCHEMY_API_KEY` secrets to Cloudflare Pages and
   redeploy. Preview and Production secrets are configured separately. Never
