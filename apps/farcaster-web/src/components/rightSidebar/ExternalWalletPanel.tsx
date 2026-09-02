@@ -5,6 +5,7 @@ import {
   ArrowUpFromLineIcon,
   CheckIcon,
   CopyIcon,
+  HistoryIcon,
 } from 'lucide-react';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
@@ -14,6 +15,7 @@ import { useConnect, useDisconnect } from 'wagmi';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
+import { ExternalWalletActivity } from '~/components/rightSidebar/ExternalWalletActivity';
 import {
   ExternalWalletNetworkBoundary,
   ExternalWalletNetworkHeader,
@@ -30,7 +32,7 @@ import {
   walletChainCapabilities,
 } from '~/utils/walletNetwork';
 
-type WalletView = 'overview' | 'receive' | 'send' | 'trade';
+type WalletView = 'overview' | 'receive' | 'send' | 'trade' | 'activity';
 
 function ExternalWalletPanel() {
   const {
@@ -205,7 +207,7 @@ function ExternalWalletPanel() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               <WalletAction
                 label="Receive"
                 icon={<ArrowDownToLineIcon className="size-5" />}
@@ -222,6 +224,11 @@ function ExternalWalletPanel() {
                 icon={<ArrowLeftRightIcon className="size-5" />}
                 onClick={() => setView('trade')}
                 disabled={!capabilities.swap}
+              />
+              <WalletAction
+                label="Activity"
+                icon={<HistoryIcon className="size-5" />}
+                onClick={() => setView('activity')}
               />
             </div>
 
@@ -297,6 +304,19 @@ function ExternalWalletPanel() {
           >
             <ExternalWalletSwap
               key={`${chain.id}:${address.toLowerCase()}`}
+              chain={chain}
+            />
+          </WalletSubscreen>
+        )}
+
+        {view === 'activity' && (
+          <WalletSubscreen
+            title={`Activity on ${chain.name}`}
+            onBack={() => setView('overview')}
+          >
+            <ExternalWalletActivity
+              key={`${chain.id}:${address.toLowerCase()}`}
+              address={address}
               chain={chain}
             />
           </WalletSubscreen>

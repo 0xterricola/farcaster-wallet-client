@@ -27,6 +27,10 @@ import {
 } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
 import { isNativeWalletAsset } from '~/utils/lifiWallet';
+import {
+  recordPendingWalletActivity,
+  settleLocalWalletActivity,
+} from '~/utils/walletActivity';
 
 export function ExternalWalletSend({
   address,
@@ -90,10 +94,17 @@ export function ExternalWalletSend({
         : `Loading balance on ${chain.name}…`;
   const receiptHash = receipt?.transactionHash;
   useEffect(() => {
-    if (receiptHash) {
+    if (receiptHash && hash && receipt) {
+      settleLocalWalletActivity(
+        address,
+        chain.id,
+        hash,
+        receipt.status === 'success' ? 'confirmed' : 'failed',
+        receiptHash,
+      );
       void refreshLifiWallet(queryClient, address, chain.id);
     }
-  }, [receiptHash, queryClient, address, chain.id]);
+  }, [receiptHash, receipt, hash, queryClient, address, chain.id]);
 
   const tokens = (data?.tokens ?? []).filter(
     (position) =>
@@ -169,6 +180,20 @@ export function ExternalWalletSend({
         reader,
         prepared,
         isCurrent,
+      });
+      recordPendingWalletActivity({
+        chainId: chain.id,
+        address,
+        hash: transactionHash,
+        type: 'send',
+        fromAsset: {
+          symbol: prepared.symbol,
+          value: prepared.units.toString(),
+          decimals: prepared.decimals,
+          ...(prepared.input.tokenAddress
+            ? { address: prepared.input.tokenAddress }
+            : {}),
+        },
       });
       // A wallet may already have broadcast the transaction even if the view
       // changed while its prompt was open. Never retry a submitted request.

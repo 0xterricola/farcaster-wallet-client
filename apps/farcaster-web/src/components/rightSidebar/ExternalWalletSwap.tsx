@@ -33,6 +33,10 @@ import {
 } from '~/utils/lifiWallet';
 import { readConfirmedAllowance } from '~/utils/readConfirmedAllowance';
 import { ensureEvmWalletAccount } from '~/utils/sendBaseNativeToken';
+import {
+  recordPendingWalletActivity,
+  settleLocalWalletActivity,
+} from '~/utils/walletActivity';
 
 type Review = {
   quote: LifiQuote;
@@ -228,10 +232,17 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
   }, [address, provider, chain.id]);
   const receiptHash = receipt?.transactionHash;
   useEffect(() => {
-    if (address && receiptHash) {
+    if (address && receiptHash && hash && receipt) {
+      settleLocalWalletActivity(
+        address,
+        chain.id,
+        hash,
+        receipt.status === 'success' ? 'confirmed' : 'failed',
+        receiptHash,
+      );
       void refreshLifiWallet(queryClient, address, chain.id);
     }
-  }, [receiptHash, address, queryClient, chain.id]);
+  }, [receiptHash, receipt, hash, address, queryClient, chain.id]);
 
   const edit = () => {
     generation.current += 1;
@@ -396,6 +407,18 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
               },
             ],
           })) as Hash;
+          recordPendingWalletActivity({
+            chainId: chain.id,
+            address,
+            hash: approvalHash,
+            type: 'approval',
+            fromAsset: {
+              symbol: from.symbol,
+              value: review.units.toString(),
+              decimals: from.decimals,
+              address: from.address,
+            },
+          });
           assertCurrent();
           setStatus('Waiting for token approval…');
           const approvalReceipt = await client.waitForTransactionReceipt({
@@ -403,8 +426,22 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
           });
           assertCurrent();
           if (approvalReceipt.status !== 'success') {
+            settleLocalWalletActivity(
+              address,
+              chain.id,
+              approvalHash,
+              'failed',
+              approvalReceipt.transactionHash,
+            );
             throw new Error('Token approval reverted. Swap was not sent.');
           }
+          settleLocalWalletActivity(
+            address,
+            chain.id,
+            approvalHash,
+            'confirmed',
+            approvalReceipt.transactionHash,
+          );
           setStatus('Approval confirmed. Checking token allowance…');
           const approved = await readConfirmedAllowance({
             read: () =>
@@ -503,6 +540,28 @@ export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
           },
         ],
       })) as Hash;
+      recordPendingWalletActivity({
+        chainId: chain.id,
+        address,
+        hash: transactionHash,
+        type: 'swap',
+        fromAsset: {
+          symbol: review.from.symbol,
+          value: review.units.toString(),
+          decimals: review.from.decimals,
+          ...(review.from.address !== zeroAddress
+            ? { address: review.from.address }
+            : {}),
+        },
+        toAsset: {
+          symbol: review.to.symbol,
+          value: quote.estimate.toAmount,
+          decimals: review.to.decimals,
+          ...(review.to.address !== zeroAddress
+            ? { address: review.to.address }
+            : {}),
+        },
+      });
       setHash(transactionHash);
       setStatus('Swap submitted. Waiting for confirmation…');
       setReview(undefined);
