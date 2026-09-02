@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { CELO_NATIVE_TOKEN_ADDRESS } from '~/utils/lifiWallet';
+import { readLocalWalletActivity } from '~/utils/walletActivity';
 
 const mocks = vi.hoisted(() => ({
   fresh: vi.fn(),
@@ -91,6 +92,7 @@ vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   ),
 }));
 beforeEach(() => {
+  localStorage.clear();
   vi.resetAllMocks();
   mocks.walletAddress = wallet;
   mocks.tokens.mockReturnValue({
@@ -885,6 +887,13 @@ describe('LI.FI swap balance integration', () => {
     await getQuote();
     fireEvent.click(screen.getByRole('button', { name: 'Review swap' }));
     await screen.findByRole('link');
+    expect(readLocalWalletActivity(wallet, base.id)[0]).toMatchObject({
+      hash,
+      type: 'swap',
+      status: 'pending',
+      fromAsset: { symbol: 'ETH', value: '1000000000000' },
+      toAsset: { symbol: 'TOKEN', value: '1000' },
+    });
     mocks.receipt.mockReturnValue({
       data: { transactionHash: hash, status: 'success' },
       isError: false,
@@ -897,6 +906,9 @@ describe('LI.FI swap balance integration', () => {
       mocks.queryClient,
       wallet,
       base.id,
+    );
+    expect(readLocalWalletActivity(wallet, base.id)[0].status).toBe(
+      'confirmed',
     );
   });
   it('blocks duplicate execution clicks', async () => {

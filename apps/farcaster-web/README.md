@@ -145,6 +145,12 @@ Set these in Cloudflare before deploying:
 | `PNPM_VERSION`                  | `10.8.1`                  |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Your own Reown project ID |
 
+Add `ETHERSCAN_API_KEY` as a Cloudflare Pages runtime secret. The activity
+Function uses Etherscan API V2 for Ethereum, Base, Arbitrum One, BNB Smart
+Chain, Celo, Monad, and HyperEVM. Do not prefix this secret with `VITE_`: it
+must remain server-side. Robinhood Chain activity uses its public Blockscout
+API and does not require this key.
+
 `VITE_ETHEREUM_RPC_URL` is optional. Set it to a browser-compatible Ethereum
 RPC if you do not want to use the public default. Because it is exposed to the
 browser, do not place a secret RPC credential in this variable unless the
@@ -239,6 +245,8 @@ or assume every miniapp will work on a fork's domain.
 - Send native assets and ERC-20 tokens with exact integer amounts and live
   checks
 - Swap native assets and arbitrary ERC-20 tokens on the same network
+- Open Activity to see the five most recent transactions on the selected
+  network, with status, asset amounts, time, shortened hash, and explorer links
 - Base remains the default network and uses Circle-issued Base USDC as its
   default stablecoin.
 - View Ethereum balances, receive guidance, send ETH or ERC-20 tokens, and swap
@@ -269,6 +277,26 @@ or assume every miniapp will work on a fork's domain.
 
 Swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
+
+## Recent activity
+
+Activity is scoped to the network selected in the wallet header. It loads
+complete address history from an explorer indexer and shows at most five recent
+transactions. Etherscan API V2 covers the supported Etherscan networks;
+Robinhood Chain uses its Blockscout explorer. “View all” opens the selected
+network's address page on its explorer.
+
+Sends, approvals, and swaps submitted through this client are also recorded
+locally as pending so they appear before an indexer catches up. Once explorer
+data contains the same chain ID and transaction hash, the indexed result is the
+source of truth. The local journal is a short-lived display aid, not permanent
+transaction storage, and never contains private keys or signing material.
+
+Cloudflare Pages serves the explorer adapter at `/~wallet/activity`. Complete
+history is therefore available in a deployed Pages environment. Vite alone
+does not run Pages Functions; during ordinary local development, Activity can
+still show locally submitted transactions but may report that complete history
+is unavailable.
 
 ## Wallet data sources
 
@@ -312,8 +340,7 @@ fees can change, and tokens can impose restrictions. Signing remains external.
 Swap approvals are exact-amount; approval receipts must succeed before a swap.
 If a refreshed quote worsens the reviewed minimum or changes spender, the user
 must obtain and review a new quote. Submission is distinguished from receipt
-confirmation. Swaps are same-chain; this patch does not add cross-chain swaps
-or portfolio history.
+confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
 
 ## Troubleshooting
 
@@ -334,6 +361,9 @@ or portfolio history.
 - If Robinhood Chain balances are unavailable, confirm that
   `VITE_ROBINHOOD_RPC_URL` accepts JSON-RPC requests from the deployed site's
   browser origin.
+- If complete Activity history is unavailable on an Etherscan network, add the
+  server-side `ETHERSCAN_API_KEY` secret to Cloudflare Pages and redeploy. Never
+  expose it as a `VITE_` variable.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear

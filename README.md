@@ -19,6 +19,7 @@ in their own wallet.
 - Native-asset and ERC-20 sending with live balance checks
 - Same-chain swaps between native assets and arbitrary ERC-20 contracts
 - Quote, route, minimum received, allowance, approval, and transaction handling
+- Five-item network activity page with transaction and explorer links
 - Explicit disconnect and reconnect flow
 
 ## How it works
@@ -49,6 +50,7 @@ Celo, Monad, HyperEVM, and Robinhood Chain. Base remains the default network.
 - Node.js 20.19.5 (see `.node-version`)
 - pnpm 10.8.1 (declared in `package.json`)
 - A Reown project ID for WalletConnect
+- An Etherscan API key for complete activity on supported Etherscan networks
 
 ## Web quick start
 
@@ -126,11 +128,12 @@ miniapp transactions, sends, swaps, and rejected approvals.
 
 - Wallet additions currently target the web client; the mobile client remains
   the upstream snapshot implementation.
-- Built-in swaps currently target Base.
-- Portfolio, receive guidance, sends, and swaps currently target Base. Miniapps
-  continue to use the shared wallet provider for their own supported networks.
+- Portfolio, receive guidance, sends, same-chain swaps, and recent activity
+  target the eight documented EVM networks. Miniapps continue to use the shared
+  wallet provider for their own supported networks.
 - Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
-  be unavailable. Transfer history is not implemented in this dashboard yet.
+  be unavailable. Complete recent history depends on Etherscan or Blockscout;
+  locally submitted transactions remain visible while an indexer catches up.
 - Swap execution depends on LI.FI route availability and downstream liquidity.
 - Local development uses the production Farcaster API directly by default;
   hosted builds use it through the same-origin relay. This is not a sandbox.

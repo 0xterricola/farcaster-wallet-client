@@ -14,6 +14,7 @@ import { arbitrum, base, bsc, celo, mainnet, monad } from 'viem/chains';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend';
+import { readLocalWalletActivity } from '~/utils/walletActivity';
 
 const mocks = vi.hoisted(() => ({
   prepare: vi.fn(),
@@ -90,6 +91,7 @@ vi.mock('~/components/forms/buttons/DefaultButton', () => ({
 }));
 
 beforeEach(() => {
+  localStorage.clear();
   vi.clearAllMocks();
   mocks.asset.mockImplementation((_wallet: string, token: string) => ({
     data:
@@ -256,6 +258,12 @@ describe('ExternalWalletSend', () => {
     expect(screen.getByRole('link').getAttribute('href')).toBe(
       `https://basescan.org/tx/${hash}`,
     );
+    expect(readLocalWalletActivity(address, base.id)[0]).toMatchObject({
+      hash,
+      type: 'send',
+      status: 'pending',
+      fromAsset: { symbol: 'TOKEN', value: '1250000', decimals: 6 },
+    });
   });
   it.each([
     ['success', 'Transaction confirmed on Base.'],
