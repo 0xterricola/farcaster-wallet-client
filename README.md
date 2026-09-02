@@ -50,7 +50,7 @@ Celo, Monad, HyperEVM, and Robinhood Chain. Base remains the default network.
 - Node.js 20.19.5 (see `.node-version`)
 - pnpm 10.8.1 (declared in `package.json`)
 - A Reown project ID for WalletConnect
-- An Etherscan API key for complete activity on supported Etherscan networks
+- Etherscan and Alchemy API keys for complete multichain activity
 
 ## Web quick start
 
@@ -132,7 +132,7 @@ miniapp transactions, sends, swaps, and rejected approvals.
   target the eight documented EVM networks. Miniapps continue to use the shared
   wallet provider for their own supported networks.
 - Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
-  be unavailable. Complete recent history depends on Etherscan or Blockscout;
+  be unavailable. Complete recent history depends on Etherscan or Alchemy;
   locally submitted transactions remain visible while an indexer catches up.
 - Swap execution depends on LI.FI route availability and downstream liquidity.
 - Local development uses the production Farcaster API directly by default;

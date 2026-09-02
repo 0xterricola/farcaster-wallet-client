@@ -167,28 +167,69 @@ describe('wallet activity parsing', () => {
     });
   });
 
-  it('parses Blockscout token receipts', () => {
+  it('parses exact Alchemy native and token quantities and deduplicates overlap', () => {
     const activity = parseWalletActivity(
       {
-        source: 'blockscout',
-        normalTransactions: [],
-        tokenTransfers: [
+        source: 'alchemy',
+        outgoingTransfers: [
           {
-            transaction_hash: receiveHash,
-            timestamp: '2026-09-01T12:00:00.000Z',
-            from: { hash: other },
-            to: { hash: wallet },
-            total: { value: '2500000', decimals: '6' },
-            token: { symbol: 'USDG', decimals: '6', address_hash: token },
+            uniqueId: 'native-send',
+            hash: sendHash,
+            from: wallet,
+            to: other,
+            asset: 'ETH',
+            category: 'external',
+            rawContract: { value: '0x38d7ea4c68000', decimal: '0x12' },
+            metadata: { blockTimestamp: '2026-09-01T12:00:00.000Z' },
+          },
+        ],
+        incomingTransfers: [
+          {
+            uniqueId: 'token-receive',
+            hash: receiveHash,
+            from: other,
+            to: wallet,
+            asset: 'USDC',
+            category: 'erc20',
+            rawContract: {
+              value: '0x2625a0',
+              decimal: '0x6',
+              address: token,
+            },
+            metadata: { blockTimestamp: '2026-09-01T12:00:01.000Z' },
+          },
+          {
+            uniqueId: 'native-send',
+            hash: sendHash,
+            from: wallet,
+            to: other,
+            asset: 'ETH',
+            category: 'external',
+            rawContract: { value: '0x38d7ea4c68000', decimal: '0x12' },
+            metadata: { blockTimestamp: '2026-09-01T12:00:00.000Z' },
           },
         ],
       },
       wallet,
       base,
     );
+    expect(activity).toHaveLength(2);
     expect(activity[0]).toMatchObject({
       type: 'receive',
-      toAsset: { symbol: 'USDG', value: '2500000', decimals: 6 },
+      toAsset: {
+        symbol: 'USDC',
+        value: '2500000',
+        decimals: 6,
+        address: token,
+      },
+    });
+    expect(activity[1]).toMatchObject({
+      type: 'send',
+      fromAsset: {
+        symbol: 'ETH',
+        value: '1000000000000000',
+        decimals: 18,
+      },
     });
   });
 });

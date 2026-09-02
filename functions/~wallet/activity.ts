@@ -1,10 +1,13 @@
-const etherscanChainIds = new Set([1, 56, 143, 8453, 999, 42161, 42220]);
-const robinhoodChainId = 4663;
-const robinhoodExplorerOrigin = 'https://robinhoodchain.blockscout.com';
+const etherscanChainIds = new Set([1, 143, 999, 42161, 42220]);
+const alchemyOrigins = new Map([
+  [56, 'https://bnb-mainnet.g.alchemy.com'],
+  [4663, 'https://robinhood-mainnet.g.alchemy.com'],
+  [8453, 'https://base-mainnet.g.alchemy.com'],
+]);
 
 type PagesFunctionContext = {
   request: Request;
-  env: { ETHERSCAN_API_KEY?: string };
+  env: { ALCHEMY_API_KEY?: string; ETHERSCAN_API_KEY?: string };
 };
 
 function json(body: unknown, status = 200) {
@@ -76,27 +79,65 @@ async function etherscanActivity(
   };
 }
 
-async function blockscoutActivity(address: string) {
-  const endpoint = (path: string) =>
-    new URL(`/api/v2/addresses/${address}/${path}`, robinhoodExplorerOrigin);
-  const [normal, tokens] = await Promise.all([
-    fetchJson(endpoint('transactions')),
-    fetchJson(endpoint('token-transfers?type=ERC-20')),
+function alchemyRows(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('History provider returned invalid data.');
+  }
+  const result = (payload as { result?: unknown }).result;
+  const transfers =
+    result && typeof result === 'object'
+      ? (result as { transfers?: unknown }).transfers
+      : undefined;
+  if (!Array.isArray(transfers)) {
+    throw new Error('History provider rejected the request.');
+  }
+  return transfers;
+}
+
+async function alchemyActivity(
+  address: string,
+  origin: string,
+  apiKey: string,
+) {
+  const endpoint = new URL(`/v2/${encodeURIComponent(apiKey)}`, origin);
+  const request = (direction: 'fromAddress' | 'toAddress') =>
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: direction,
+        method: 'alchemy_getAssetTransfers',
+        params: [
+          {
+            fromBlock: '0x0',
+            toBlock: 'latest',
+            [direction]: address,
+            category: ['external', 'erc20'],
+            withMetadata: true,
+            excludeZeroValue: false,
+            maxCount: '0x14',
+            order: 'desc',
+          },
+        ],
+      }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`History provider returned ${response.status}.`);
+      }
+      return response.json() as Promise<unknown>;
+    });
+  const [outgoing, incoming] = await Promise.all([
+    request('fromAddress'),
+    request('toAddress'),
   ]);
-  const rows = (payload: unknown) => {
-    const items =
-      payload && typeof payload === 'object'
-        ? (payload as { items?: unknown }).items
-        : undefined;
-    if (!Array.isArray(items)) {
-      throw new Error('History provider returned invalid data.');
-    }
-    return items.slice(0, 20);
-  };
   return {
-    source: 'blockscout',
-    normalTransactions: rows(normal),
-    tokenTransfers: rows(tokens),
+    source: 'alchemy',
+    outgoingTransfers: alchemyRows(outgoing),
+    incomingTransfers: alchemyRows(incoming),
   };
 }
 
@@ -116,12 +157,17 @@ const onRequest = async ({
   if (!/^0x[\da-f]{40}$/i.test(address)) {
     return json({ error: 'Invalid wallet address.' }, 400);
   }
-  if (!etherscanChainIds.has(chainId) && chainId !== robinhoodChainId) {
+  const alchemyOrigin = alchemyOrigins.get(chainId);
+  if (!etherscanChainIds.has(chainId) && !alchemyOrigin) {
     return json({ error: 'Unsupported wallet network.' }, 400);
   }
   try {
-    if (chainId === robinhoodChainId) {
-      return json(await blockscoutActivity(address));
+    if (alchemyOrigin) {
+      const apiKey = env.ALCHEMY_API_KEY?.trim();
+      if (!apiKey) {
+        return json({ error: 'Wallet history is not configured.' }, 503);
+      }
+      return json(await alchemyActivity(address, alchemyOrigin, apiKey));
     }
     const apiKey = env.ETHERSCAN_API_KEY?.trim();
     if (!apiKey) {

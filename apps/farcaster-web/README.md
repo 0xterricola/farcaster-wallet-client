@@ -145,11 +145,12 @@ Set these in Cloudflare before deploying:
 | `PNPM_VERSION`                  | `10.8.1`                  |
 | `VITE_WALLETCONNECT_PROJECT_ID` | Your own Reown project ID |
 
-Add `ETHERSCAN_API_KEY` as a Cloudflare Pages runtime secret. The activity
-Function uses Etherscan API V2 for Ethereum, Base, Arbitrum One, BNB Smart
-Chain, Celo, Monad, and HyperEVM. Do not prefix this secret with `VITE_`: it
-must remain server-side. Robinhood Chain activity uses its public Blockscout
-API and does not require this key.
+Add `ETHERSCAN_API_KEY` and `ALCHEMY_API_KEY` as Cloudflare Pages runtime
+secrets. The activity Function uses Etherscan API V2 for Ethereum, Arbitrum
+One, Celo, Monad, and HyperEVM. It uses Alchemy's Transfers API for Base, BNB
+Smart Chain, and Robinhood Chain, whose complete history is not available from
+Etherscan's free plan. Do not prefix either secret with `VITE_`: both must
+remain server-side.
 
 `VITE_ETHEREUM_RPC_URL` is optional. Set it to a browser-compatible Ethereum
 RPC if you do not want to use the public default. Because it is exposed to the
@@ -282,9 +283,9 @@ approval and swap signing always occur in the connected wallet.
 
 Activity is scoped to the network selected in the wallet header. It loads
 complete address history from an explorer indexer and shows at most five recent
-transactions. Etherscan API V2 covers the supported Etherscan networks;
-Robinhood Chain uses its Blockscout explorer. “View all” opens the selected
-network's address page on its explorer.
+transactions. Etherscan API V2 covers Ethereum, Arbitrum One, Celo, Monad, and
+HyperEVM. Alchemy's Transfers API covers Base, BNB Smart Chain, and Robinhood
+Chain. “View all” opens the selected network's address page on its explorer.
 
 Sends, approvals, and swaps submitted through this client are also recorded
 locally as pending so they appear before an indexer catches up. Once explorer
@@ -361,9 +362,10 @@ confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
 - If Robinhood Chain balances are unavailable, confirm that
   `VITE_ROBINHOOD_RPC_URL` accepts JSON-RPC requests from the deployed site's
   browser origin.
-- If complete Activity history is unavailable on an Etherscan network, add the
-  server-side `ETHERSCAN_API_KEY` secret to Cloudflare Pages and redeploy. Never
-  expose it as a `VITE_` variable.
+- If complete Activity history is unavailable, add both server-side
+  `ETHERSCAN_API_KEY` and `ALCHEMY_API_KEY` secrets to Cloudflare Pages and
+  redeploy. Preview and Production secrets are configured separately. Never
+  expose either key as a `VITE_` variable.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear

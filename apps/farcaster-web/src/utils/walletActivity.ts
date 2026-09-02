@@ -49,23 +49,19 @@ type EtherscanTokenTransfer = EtherscanTransaction & {
   tokenDecimal?: unknown;
 };
 
-type BlockscoutTransaction = {
+type AlchemyTransfer = {
+  uniqueId?: unknown;
   hash?: unknown;
-  timestamp?: unknown;
-  from?: { hash?: unknown } | unknown;
-  to?: { hash?: unknown } | unknown;
-  value?: unknown;
-  status?: unknown;
-  method?: unknown;
-};
-
-type BlockscoutTokenTransfer = {
-  transaction_hash?: unknown;
-  timestamp?: unknown;
-  from?: { hash?: unknown } | unknown;
-  to?: { hash?: unknown } | unknown;
-  total?: { value?: unknown; decimals?: unknown } | unknown;
-  token?: { symbol?: unknown; decimals?: unknown; address_hash?: unknown };
+  from?: unknown;
+  to?: unknown;
+  asset?: unknown;
+  category?: unknown;
+  rawContract?: {
+    value?: unknown;
+    address?: unknown;
+    decimal?: unknown;
+  };
+  metadata?: { blockTimestamp?: unknown };
 };
 
 export type WalletActivityResponse =
@@ -75,9 +71,9 @@ export type WalletActivityResponse =
       tokenTransfers: EtherscanTokenTransfer[];
     }
   | {
-      source: 'blockscout';
-      normalTransactions: BlockscoutTransaction[];
-      tokenTransfers: BlockscoutTokenTransfer[];
+      source: 'alchemy';
+      outgoingTransfers: AlchemyTransfer[];
+      incomingTransfers: AlchemyTransfer[];
     };
 
 type ActivityGroup = {
@@ -109,7 +105,16 @@ function address(value: unknown): Address | undefined {
 }
 
 function units(value: unknown): string | undefined {
-  return typeof value === 'string' && /^\d+$/.test(value) ? value : undefined;
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  if (/^\d+$/.test(value)) {
+    return value;
+  }
+  if (/^0x[\da-f]+$/i.test(value)) {
+    return BigInt(value).toString();
+  }
+  return undefined;
 }
 
 function decimals(value: unknown): number | undefined {
@@ -118,7 +123,9 @@ function decimals(value: unknown): number | undefined {
       ? value
       : typeof value === 'string' && /^\d+$/.test(value)
         ? Number(value)
-        : NaN;
+        : typeof value === 'string' && /^0x[\da-f]+$/i.test(value)
+          ? Number(BigInt(value))
+          : NaN;
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 255
     ? parsed
     : undefined;
@@ -292,53 +299,48 @@ export function parseWalletActivity(
       }
     }
   } else {
-    for (const transaction of payload.normalTransactions) {
-      const transactionHash = hash(transaction.hash);
-      const transactionTimestamp = timestamp(transaction.timestamp);
-      if (!transactionHash || !transactionTimestamp) {
-        continue;
-      }
-      const group = groupFor(groups, transactionHash, transactionTimestamp);
-      group.from = address(transaction.from);
-      group.to = address(transaction.to);
-      group.nativeValue = units(transaction.value);
-      group.method =
-        typeof transaction.method === 'string' ? transaction.method : undefined;
-      if (transaction.status === 'error') {
-        group.status = 'failed';
-      }
-    }
-    for (const transfer of payload.tokenTransfers) {
-      const transactionHash = hash(transfer.transaction_hash);
-      const transactionTimestamp = timestamp(transfer.timestamp);
-      const total =
-        typeof transfer.total === 'object' && transfer.total
-          ? (transfer.total as { value?: unknown; decimals?: unknown })
-          : undefined;
-      const value = units(total?.value);
-      const tokenDecimals = decimals(
-        total?.decimals ?? transfer.token?.decimals,
-      );
+    const seen = new Set<string>();
+    for (const transfer of [
+      ...payload.outgoingTransfers,
+      ...payload.incomingTransfers,
+    ]) {
+      const transactionHash = hash(transfer.hash);
+      const transactionTimestamp = timestamp(transfer.metadata?.blockTimestamp);
+      const value = units(transfer.rawContract?.value);
+      const isNative = transfer.category === 'external';
+      const tokenDecimals = isNative
+        ? chain.nativeCurrency.decimals
+        : decimals(transfer.rawContract?.decimal);
       const symbol =
-        typeof transfer.token?.symbol === 'string'
-          ? transfer.token.symbol.trim()
-          : '';
+        typeof transfer.asset === 'string' ? transfer.asset.trim() : '';
+      const identity =
+        typeof transfer.uniqueId === 'string'
+          ? transfer.uniqueId
+          : `${String(transfer.hash)}:${String(transfer.from)}:${String(transfer.to)}:${String(transfer.rawContract?.address)}:${String(transfer.rawContract?.value)}`;
       if (
         !transactionHash ||
         !transactionTimestamp ||
         !value ||
         tokenDecimals === undefined ||
-        !symbol
+        !symbol ||
+        seen.has(identity)
       ) {
         continue;
       }
+      seen.add(identity);
       const group = groupFor(groups, transactionHash, transactionTimestamp);
+      group.from = address(transfer.from);
+      group.to = address(transfer.to);
+      if (isNative) {
+        group.nativeValue = value;
+        continue;
+      }
       const asset: WalletActivityAsset = {
         symbol,
         value,
         decimals: tokenDecimals,
-        ...(address(transfer.token?.address_hash)
-          ? { address: address(transfer.token?.address_hash) }
+        ...(address(transfer.rawContract?.address)
+          ? { address: address(transfer.rawContract?.address) }
           : {}),
       };
       if (address(transfer.from)?.toLowerCase() === wallet.toLowerCase()) {
@@ -540,12 +542,15 @@ export async function fetchWalletActivity(
     );
   }
   const payload = (await response.json()) as WalletActivityResponse;
-  if (
-    !payload ||
-    !['etherscan', 'blockscout'].includes(payload.source) ||
-    !Array.isArray(payload.normalTransactions) ||
-    !Array.isArray(payload.tokenTransfers)
-  ) {
+  const validPayload =
+    payload?.source === 'etherscan'
+      ? Array.isArray(payload.normalTransactions) &&
+        Array.isArray(payload.tokenTransfers)
+      : payload?.source === 'alchemy'
+        ? Array.isArray(payload.outgoingTransfers) &&
+          Array.isArray(payload.incomingTransfers)
+        : false;
+  if (!validPayload) {
     throw new Error('Explorer returned invalid activity data.');
   }
   return parseWalletActivity(payload, wallet, chain);
