@@ -1,8 +1,9 @@
-const etherscanChainIds = new Set([1, 143, 999, 42161, 42220]);
+const etherscanChainIds = new Set([1, 143, 999, 42161]);
 const alchemyOrigins = new Map([
   [56, 'https://bnb-mainnet.g.alchemy.com'],
   [4663, 'https://robinhood-mainnet.g.alchemy.com'],
   [8453, 'https://base-mainnet.g.alchemy.com'],
+  [42220, 'https://celo-mainnet.g.alchemy.com'],
 ]);
 
 type PagesFunctionContext = {

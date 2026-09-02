@@ -147,10 +147,10 @@ Set these in Cloudflare before deploying:
 
 Add `ETHERSCAN_API_KEY` and `ALCHEMY_API_KEY` as Cloudflare Pages runtime
 secrets. The activity Function uses Etherscan API V2 for Ethereum, Arbitrum
-One, Celo, Monad, and HyperEVM. It uses Alchemy's Transfers API for Base, BNB
-Smart Chain, and Robinhood Chain, whose complete history is not available from
-Etherscan's free plan. Do not prefix either secret with `VITE_`: both must
-remain server-side.
+One, Monad, and HyperEVM. It uses Alchemy's Transfers API for Base, BNB Smart
+Chain, Celo, and Robinhood Chain, whose complete history is not consistently
+available from Etherscan's free plan. Do not prefix either secret with `VITE_`:
+both must remain server-side.
 
 `VITE_ETHEREUM_RPC_URL` is optional. Set it to a browser-compatible Ethereum
 RPC if you do not want to use the public default. Because it is exposed to the
@@ -283,9 +283,10 @@ approval and swap signing always occur in the connected wallet.
 
 Activity is scoped to the network selected in the wallet header. It loads
 complete address history from an explorer indexer and shows at most five recent
-transactions. Etherscan API V2 covers Ethereum, Arbitrum One, Celo, Monad, and
-HyperEVM. Alchemy's Transfers API covers Base, BNB Smart Chain, and Robinhood
-Chain. “View all” opens the selected network's address page on its explorer.
+transactions. Etherscan API V2 covers Ethereum, Arbitrum One, Monad, and
+HyperEVM. Alchemy's Transfers API covers Base, BNB Smart Chain, Celo, and
+Robinhood Chain. “View all” opens the selected network's address page on its
+explorer.
 
 Sends, approvals, and swaps submitted through this client are also recorded
 locally as pending so they appear before an indexer catches up. Once explorer

@@ -76,8 +76,8 @@ describe('wallet activity Pages Function', () => {
     });
   });
 
-  it('requires a server-side Alchemy key for its three routed networks', async () => {
-    for (const chainId of [56, 4663, 8453]) {
+  it('requires a server-side Alchemy key for its routed networks', async () => {
+    for (const chainId of [56, 4663, 8453, 42220]) {
       const response = await request(`address=${wallet}&chainId=${chainId}`);
       expect(response.status).toBe(503);
       expect(await response.json()).toEqual({
@@ -90,6 +90,7 @@ describe('wallet activity Pages Function', () => {
     [56, 'https://bnb-mainnet.g.alchemy.com'],
     [4663, 'https://robinhood-mainnet.g.alchemy.com'],
     [8453, 'https://base-mainnet.g.alchemy.com'],
+    [42220, 'https://celo-mainnet.g.alchemy.com'],
   ])(
     'routes chain %i transfer history through Alchemy',
     async (chainId, origin) => {
