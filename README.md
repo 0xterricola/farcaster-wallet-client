@@ -21,6 +21,10 @@ in their own wallet.
 - Quote, route, minimum received, allowance, approval, and transaction handling
 - Five-item network activity page with transaction and explorer links
 - Explicit disconnect and reconnect flow
+- Independent Solana wallet support through Wallet Standard discovery: SOL and
+  SPL/Token-2022 portfolio, receive, send, same-chain swaps, and a five-item
+  activity feed classified from real on-chain data. Connects and disconnects
+  without affecting the EVM wallet
 
 ## How it works
 
@@ -44,13 +48,19 @@ wallet positions API is not used by these screens. See the web README for
 
 The wallet currently supports Base, Ethereum, Arbitrum One, BNB Smart Chain,
 Celo, Monad, HyperEVM, and Robinhood Chain. Base remains the default network.
+Solana Mainnet is supported as a fully independent wallet family alongside
+these EVM networks, using Solana RPC rather than Wagmi. See the web README's
+[wallet behavior](apps/farcaster-web/README.md#wallet-behavior) section for
+what Solana currently supports.
 
 ## Requirements
 
 - Node.js 20.19.5 (see `.node-version`)
 - pnpm 10.8.1 (declared in `package.json`)
 - A Reown project ID for WalletConnect
-- Etherscan and Alchemy API keys for complete multichain activity
+- Etherscan and Alchemy API keys for complete multichain EVM activity
+- A Solana RPC endpoint for hosted deployments (see the web README's
+  `SOLANA_RPC_URL` documentation)
 
 ## Web quick start
 
@@ -129,11 +139,16 @@ miniapp transactions, sends, swaps, and rejected approvals.
 - Wallet additions currently target the web client; the mobile client remains
   the upstream snapshot implementation.
 - Portfolio, receive guidance, sends, same-chain swaps, and recent activity
-  target the eight documented EVM networks. Miniapps continue to use the shared
-  wallet provider for their own supported networks.
+  target the eight documented EVM networks, plus an independent Solana
+  Mainnet wallet family with the same feature set. Miniapps continue to use
+  the shared EVM wallet provider for their own supported networks; Solana is
+  not wired into miniapp signing.
 - Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
-  be unavailable. Complete recent history depends on Etherscan or Alchemy;
-  locally submitted transactions remain visible while an indexer catches up.
+  be unavailable. Complete recent EVM history depends on Etherscan or Alchemy;
+  locally submitted EVM transactions remain visible while an indexer catches
+  up. Solana Activity reads directly from Solana RPC instead of an indexer, so
+  it has no equivalent local/optimistic fallback; see the web README's
+  [Recent activity](apps/farcaster-web/README.md#recent-activity) section.
 - Swap execution depends on LI.FI route availability and downstream liquidity.
 - Local development uses the production Farcaster API directly by default;
   hosted builds use it through the same-origin relay. This is not a sandbox.

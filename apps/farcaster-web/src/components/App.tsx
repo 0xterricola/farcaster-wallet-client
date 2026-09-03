@@ -24,6 +24,7 @@ import { PersistQueryClientInstanceProvider } from '~/contexts/PersistQueryClien
 import { PopStateProvider } from '~/contexts/PopStateProvider';
 import { RecentFetchProvider } from '~/contexts/RecentFetchProvider';
 import { ScrollProvider } from '~/contexts/ScrollProvider';
+import { SolanaWalletProvider } from '~/contexts/SolanaWalletProvider';
 import { StandaloneModeProvider } from '~/contexts/StandaloneModeProvider';
 import { ThemeProvider } from '~/contexts/ThemeProvider';
 import { VideoPlayStatusProvider } from '~/contexts/VideoPlayStatusProvider';
@@ -107,7 +108,9 @@ const App: FC = () => {
                                                     <MiniAppProvider>
                                                       <MinimizableWindowProvider>
                                                         <BrowserRouter>
-                                                          <Router />
+                                                          <SolanaWalletProvider>
+                                                            <Router />
+                                                          </SolanaWalletProvider>
                                                         </BrowserRouter>
                                                       </MinimizableWindowProvider>
                                                     </MiniAppProvider>

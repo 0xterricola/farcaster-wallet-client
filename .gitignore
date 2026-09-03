@@ -63,3 +63,4 @@ profiling/
 .local-ai-docs/
 .claude/settings.json
 .vercel
+Claude outputs/
