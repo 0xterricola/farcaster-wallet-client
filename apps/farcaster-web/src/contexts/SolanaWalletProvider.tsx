@@ -18,8 +18,12 @@ import {
   SOLANA_SIGN_TRANSACTION_FEATURE,
   useDetectedSolanaWallets,
 } from '~/hooks/useDetectedSolanaWallets';
+import { createSolanaWalletConnectWallet } from '~/utils/solanaWalletConnect';
 
 const SOLANA_WALLET_KEY = 'solana_wallet_name';
+const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
+  | string
+  | undefined;
 
 type SolanaWalletStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -85,7 +89,26 @@ function connectionError(error: unknown): string {
 }
 
 function SolanaWalletProvider({ children }: { children: ReactNode }) {
-  const detectedWallets = useDetectedSolanaWallets();
+  const browserWallets = useDetectedSolanaWallets();
+  // Stable across re-renders (created once per mounted provider) so the
+  // underlying WalletConnect session/modal are not recreated on every
+  // render -- they hold state (a pending or active session) that must
+  // persist for the life of the app, the same way a real browser extension
+  // wallet's own connection state persists independently of React.
+  const solanaWalletConnectWallet = useMemo(
+    () =>
+      walletConnectProjectId
+        ? createSolanaWalletConnectWallet(walletConnectProjectId)
+        : undefined,
+    [],
+  );
+  const detectedWallets = useMemo(
+    () =>
+      solanaWalletConnectWallet
+        ? [...browserWallets, solanaWalletConnectWallet]
+        : browserWallets,
+    [browserWallets, solanaWalletConnectWallet],
+  );
   const [wallet, setWallet] = useState<DetectedSolanaWallet>();
   const [account, setAccount] = useState<DetectedSolanaAccount>();
   const [address, setAddress] = useState<string>();
