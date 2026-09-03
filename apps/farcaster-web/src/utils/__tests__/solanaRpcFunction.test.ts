@@ -132,6 +132,65 @@ describe('Solana RPC Pages Function', () => {
     ).toBe(400);
   });
 
+  it('allows a bounded signature history read with no pagination cursor', async () => {
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: 1, result: [] }), { status: 200 }),
+      );
+    const response = await request('getSignaturesForAddress', [
+      wallet,
+      { commitment: 'confirmed', limit: 5 },
+    ]);
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledOnce();
+
+    expect(
+      (
+        await request('getSignaturesForAddress', [
+          wallet,
+          { commitment: 'confirmed', limit: 25 },
+        ])
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await request('getSignaturesForAddress', [
+          wallet,
+          { before: 'AnySignature', commitment: 'confirmed', limit: 5 },
+        ])
+      ).status,
+    ).toBe(400);
+  });
+
+  it('allows a full jsonParsed transaction read by signature', async () => {
+    const fetch = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: 1, result: null }), { status: 200 }),
+      );
+    const signature = '1'.repeat(64);
+    const response = await request('getTransaction', [
+      signature,
+      {
+        commitment: 'confirmed',
+        encoding: 'jsonParsed',
+        maxSupportedTransactionVersion: 0,
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledOnce();
+
+    expect(
+      (
+        await request('getTransaction', [
+          signature,
+          { commitment: 'confirmed', encoding: 'json' },
+        ])
+      ).status,
+    ).toBe(400);
+  });
+
   it('rejects an insecure configured upstream', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch');
     const response = await request(

@@ -33,6 +33,12 @@ vi.mock('~/components/forms/buttons/DefaultButton', () => ({
   ),
 }));
 
+vi.mock('~/components/rightSidebar/ExternalSolanaWalletActivity', () => ({
+  ExternalSolanaWalletActivity: ({ address }: { address: string }) => (
+    <div data-testid="solana-activity">{address}</div>
+  ),
+}));
+
 vi.mock('~/components/rightSidebar/ExternalSolanaWalletPortfolio', () => ({
   ExternalSolanaWalletPortfolio: ({ address }: { address: string }) => (
     <div data-testid="solana-portfolio">{address}</div>
@@ -77,7 +83,7 @@ describe('ExternalSolanaWalletPanel', () => {
     );
   });
 
-  it('enables Send and Trade while keeping Activity disabled', () => {
+  it('enables Receive, Send, Trade, and Activity', () => {
     render(
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
@@ -97,7 +103,7 @@ describe('ExternalSolanaWalletPanel', () => {
     ).toBe(false);
     expect(
       screen.getByRole('button', { name: 'Activity' }).hasAttribute('disabled'),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('opens the Receive screen with an address QR', () => {
@@ -142,6 +148,21 @@ describe('ExternalSolanaWalletPanel', () => {
     expect(screen.getByText('Solana trade screen')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Back from trade' }));
     expect(screen.getByText('Solana Mainnet')).toBeTruthy();
+  });
+
+  it('opens the Activity screen', () => {
+    render(
+      <ExternalSolanaWalletPanel
+        address="SolanaAddress123456"
+        onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Activity' }));
+    expect(screen.getByText('Solana activity')).toBeTruthy();
+    expect(screen.getByTestId('solana-activity').textContent).toBe(
+      'SolanaAddress123456',
+    );
   });
 
   it('opens the shared wallet-connections screen', () => {

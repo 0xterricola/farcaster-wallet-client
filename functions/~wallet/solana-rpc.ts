@@ -3,6 +3,10 @@ const tokenProgramIds = new Set([
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
   'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
 ]);
+// The client only ever needs a short, bounded recent-activity list (mirrors
+// the EVM wallet's "five most recent transactions" behavior) — there is no
+// pagination to support, so this stays small on purpose.
+const MAX_SIGNATURES_LIMIT = 5;
 
 type PagesFunctionContext = {
   request: Request;
@@ -96,6 +100,16 @@ function validRequest(body: unknown): body is Record<string, unknown> {
       options?.searchTransactionHistory === true
     );
   }
+  if (request.method === 'getTransaction') {
+    const options = record(filter);
+    return (
+      request.params.length === 2 &&
+      base58(address) &&
+      options?.commitment === 'confirmed' &&
+      options.encoding === 'jsonParsed' &&
+      options.maxSupportedTransactionVersion === 0
+    );
+  }
   if (
     typeof address !== 'string' ||
     !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)
@@ -115,6 +129,21 @@ function validRequest(body: unknown): body is Record<string, unknown> {
       tokenProgramIds.has(ownerFilter.programId) &&
       options?.commitment === 'confirmed' &&
       options.encoding === 'jsonParsed'
+    );
+  }
+  if (request.method === 'getSignaturesForAddress') {
+    const options = record(filter);
+    const limit = options?.limit;
+    return (
+      request.params.length === 2 &&
+      typeof limit === 'number' &&
+      Number.isInteger(limit) &&
+      limit > 0 &&
+      limit <= MAX_SIGNATURES_LIMIT &&
+      options?.commitment === 'confirmed' &&
+      // No pagination cursor is supported — reject it rather than silently
+      // ignoring it.
+      options?.before === undefined
     );
   }
   return false;

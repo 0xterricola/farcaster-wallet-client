@@ -12,6 +12,7 @@ import React, { ReactNode, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
+import { ExternalSolanaWalletActivity } from '~/components/rightSidebar/ExternalSolanaWalletActivity';
 import { ExternalSolanaWalletPortfolio } from '~/components/rightSidebar/ExternalSolanaWalletPortfolio';
 import { ExternalSolanaWalletSend } from '~/components/rightSidebar/ExternalSolanaWalletSend';
 import { ExternalSolanaWalletSwap } from '~/components/rightSidebar/ExternalSolanaWalletSwap';
@@ -22,7 +23,7 @@ import {
   solanaAddressUrl,
 } from '~/utils/solanaWallet';
 
-type SolanaView = 'overview' | 'receive' | 'send' | 'trade';
+type SolanaView = 'activity' | 'overview' | 'receive' | 'send' | 'trade';
 
 export function ExternalSolanaWalletPanel({
   address,
@@ -96,6 +97,17 @@ export function ExternalSolanaWalletPanel({
     );
   }
 
+  if (view === 'activity') {
+    return (
+      <SolanaSubscreen
+        title="Solana activity"
+        onBack={() => setView('overview')}
+      >
+        <ExternalSolanaWalletActivity address={address} />
+      </SolanaSubscreen>
+    );
+  }
+
   return (
     <>
       <div className="rounded-xl border p-3 bg-elevated-nohover border-default">
@@ -159,10 +171,9 @@ export function ExternalSolanaWalletPanel({
           onClick={() => setView('trade')}
         />
         <SolanaAction
-          disabled
           label="Activity"
           icon={<HistoryIcon className="size-5" />}
-          onClick={() => undefined}
+          onClick={() => setView('activity')}
         />
         <SolanaAction
           label="Wallets"
@@ -172,8 +183,8 @@ export function ExternalSolanaWalletPanel({
       </div>
 
       <div className="mt-3 rounded-xl p-3 text-xs leading-relaxed text-muted bg-elevated-nohover">
-        SOL and SPL token balances, Receive, Send, and same-chain Trade are
-        available. Activity stays disabled until its Solana path is ready.
+        SOL and SPL token balances, Receive, Send, same-chain Trade, and
+        Activity are available.
       </div>
 
       <ExternalSolanaWalletPortfolio address={address} />
