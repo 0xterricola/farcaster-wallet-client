@@ -89,6 +89,18 @@ describe('Solana RPC Pages Function', () => {
       ['getMinimumBalanceForRentExemption', [0, { commitment: 'confirmed' }]],
       ['getMinimumBalanceForRentExemption', [165, { commitment: 'confirmed' }]],
       [
+        'simulateTransaction',
+        [
+          message,
+          {
+            commitment: 'confirmed',
+            encoding: 'base64',
+            replaceRecentBlockhash: true,
+            sigVerify: false,
+          },
+        ],
+      ],
+      [
         'sendTransaction',
         [
           message,
@@ -112,6 +124,10 @@ describe('Solana RPC Pages Function', () => {
 
     expect(
       (await request('sendTransaction', [message, { skipPreflight: true }]))
+        .status,
+    ).toBe(400);
+    expect(
+      (await request('simulateTransaction', [message, { sigVerify: true }]))
         .status,
     ).toBe(400);
   });

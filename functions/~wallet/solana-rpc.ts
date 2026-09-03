@@ -74,6 +74,17 @@ function validRequest(body: unknown): body is Record<string, unknown> {
       options.skipPreflight === false
     );
   }
+  if (request.method === 'simulateTransaction') {
+    const options = record(filter);
+    return (
+      request.params.length === 2 &&
+      base64(address, 3_000) &&
+      options?.commitment === 'confirmed' &&
+      options.encoding === 'base64' &&
+      options.replaceRecentBlockhash === true &&
+      options.sigVerify === false
+    );
+  }
   if (request.method === 'getSignatureStatuses') {
     const signatures = address;
     const options = record(filter);

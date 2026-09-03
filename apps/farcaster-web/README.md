@@ -261,9 +261,12 @@ or assume every miniapp will work on a fork's domain.
   browser-wallet connection, SOL and SPL token balances, address copy, Receive
   QR, and exact SOL or recognized SPL token sends. Every send shows the RPC fee
   and any recipient token-account rent before signing, uses RPC preflight, and
-  waits for confirmed status. Trade and Activity remain disabled. Solana RPC
-  is the balance source of truth while LI.FI supplies recognized token metadata
-  and estimated prices.
+  waits for confirmed status. Same-chain SOL/SPL trades show their route,
+  estimated output, minimum received, and estimated network fee; refresh and
+  validate the quote, simulate before signing, submit with RPC preflight, and
+  wait for confirmed status. Activity remains disabled. Solana RPC is the
+  balance source of truth while LI.FI supplies recognized token metadata,
+  estimated prices, and trade quotes.
 - WalletConnect remains available for QR, mobile, browser, and hardware-wallet
   workflows on EVM. Solana WalletConnect is not implemented yet.
 - Disconnecting returns the dashboard to the connection choices.

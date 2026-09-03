@@ -284,6 +284,30 @@ export async function submitSignedSolanaTransaction(
   );
 }
 
+export async function simulateSolanaTransaction(
+  transaction: Uint8Array,
+  rpcUrl?: string,
+): Promise<void> {
+  const result = await rpc<{ value?: { err?: unknown } }>(
+    'simulateTransaction',
+    [
+      base64(transaction),
+      {
+        commitment: 'confirmed',
+        encoding: 'base64',
+        replaceRecentBlockhash: true,
+        sigVerify: false,
+      },
+    ],
+    rpcUrl,
+  );
+  if (!result.value || result.value.err) {
+    throw new Error(
+      'The selected route failed a Solana preflight simulation. No transaction was submitted. Get a new quote before trying again.',
+    );
+  }
+}
+
 export async function waitForSolanaConfirmation(
   signature: string,
   options: { attempts?: number; intervalMs?: number; rpcUrl?: string } = {},

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   parseSolanaAmount,
   prepareSolanaTransfer,
+  simulateSolanaTransaction,
   solanaTransactionUrl,
   submitSignedSolanaTransaction,
   waitForSolanaConfirmation,
@@ -28,6 +29,7 @@ function rpcMock(overrides: Record<string, unknown> = {}) {
         value: [{ confirmationStatus: 'confirmed', err: null }],
       },
       sendTransaction: Keypair.generate().publicKey.toBase58().repeat(2),
+      simulateTransaction: { value: { err: null } },
     };
     return Promise.resolve(
       new Response(
@@ -215,6 +217,37 @@ describe('Solana transfers', () => {
     });
     expect(bodies[1].method).toBe('getSignatureStatuses');
     expect(solanaTransactionUrl(signature)).toContain('/tx/');
+  });
+
+  it('simulates unsigned route bytes without signature verification', async () => {
+    const fetch = rpcMock();
+    vi.stubGlobal('fetch', fetch);
+
+    await expect(
+      simulateSolanaTransaction(new Uint8Array([1, 2, 3])),
+    ).resolves.toBeUndefined();
+    expect(JSON.parse(fetch.mock.calls[0][1]?.body as string)).toMatchObject({
+      method: 'simulateTransaction',
+      params: [
+        expect.any(String),
+        {
+          commitment: 'confirmed',
+          encoding: 'base64',
+          replaceRecentBlockhash: true,
+          sigVerify: false,
+        },
+      ],
+    });
+  });
+
+  it('blocks a Solana route that fails preflight simulation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      rpcMock({ simulateTransaction: { value: { err: { Custom: 1 } } } }),
+    );
+    await expect(
+      simulateSolanaTransaction(new Uint8Array([1, 2, 3])),
+    ).rejects.toThrow('failed a Solana preflight simulation');
   });
 
   it('surfaces a confirmed transaction failure', async () => {

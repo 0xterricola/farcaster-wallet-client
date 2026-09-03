@@ -48,6 +48,15 @@ vi.mock('~/components/rightSidebar/ExternalSolanaWalletSend', () => ({
   ),
 }));
 
+vi.mock('~/components/rightSidebar/ExternalSolanaWalletSwap', () => ({
+  ExternalSolanaWalletSwap: ({ onBack }: { onBack: () => void }) => (
+    <div>
+      <span>Solana trade screen</span>
+      <button onClick={onBack}>Back from trade</button>
+    </div>
+  ),
+}));
+
 describe('ExternalSolanaWalletPanel', () => {
   it('shows the Solana Mainnet address and SOL balance', () => {
     render(
@@ -68,7 +77,7 @@ describe('ExternalSolanaWalletPanel', () => {
     );
   });
 
-  it('enables Send while keeping unfinished actions disabled', () => {
+  it('enables Send and Trade while keeping Activity disabled', () => {
     render(
       <ExternalSolanaWalletPanel
         address="SolanaAddress123456"
@@ -83,11 +92,12 @@ describe('ExternalSolanaWalletPanel', () => {
     expect(
       screen.getByRole('button', { name: 'Send' }).hasAttribute('disabled'),
     ).toBe(false);
-    for (const name of ['Trade', 'Activity']) {
-      expect(
-        screen.getByRole('button', { name }).hasAttribute('disabled'),
-      ).toBe(true);
-    }
+    expect(
+      screen.getByRole('button', { name: 'Trade' }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(
+      screen.getByRole('button', { name: 'Activity' }).hasAttribute('disabled'),
+    ).toBe(true);
   });
 
   it('opens the Receive screen with an address QR', () => {
@@ -117,6 +127,20 @@ describe('ExternalSolanaWalletPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(screen.getByText('Solana send screen')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Back from send' }));
+    expect(screen.getByText('Solana Mainnet')).toBeTruthy();
+  });
+
+  it('opens the Trade quote screen and can return to the overview', () => {
+    render(
+      <ExternalSolanaWalletPanel
+        address="SolanaAddress123456"
+        onManageWallets={vi.fn()}
+        signTransaction={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Trade' }));
+    expect(screen.getByText('Solana trade screen')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Back from trade' }));
     expect(screen.getByText('Solana Mainnet')).toBeTruthy();
   });
 

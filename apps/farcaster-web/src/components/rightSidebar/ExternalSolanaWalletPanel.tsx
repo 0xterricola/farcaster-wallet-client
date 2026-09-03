@@ -14,6 +14,7 @@ import { QRCode } from 'react-qrcode-logo';
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { ExternalSolanaWalletPortfolio } from '~/components/rightSidebar/ExternalSolanaWalletPortfolio';
 import { ExternalSolanaWalletSend } from '~/components/rightSidebar/ExternalSolanaWalletSend';
+import { ExternalSolanaWalletSwap } from '~/components/rightSidebar/ExternalSolanaWalletSwap';
 import { useSolanaBalance } from '~/hooks/useSolanaBalance';
 import {
   formatSolBalance,
@@ -21,7 +22,7 @@ import {
   solanaAddressUrl,
 } from '~/utils/solanaWallet';
 
-type SolanaView = 'overview' | 'receive' | 'send';
+type SolanaView = 'overview' | 'receive' | 'send' | 'trade';
 
 export function ExternalSolanaWalletPanel({
   address,
@@ -78,6 +79,16 @@ export function ExternalSolanaWalletPanel({
   if (view === 'send') {
     return (
       <ExternalSolanaWalletSend
+        address={address}
+        onBack={() => setView('overview')}
+        signTransaction={signTransaction}
+      />
+    );
+  }
+
+  if (view === 'trade') {
+    return (
+      <ExternalSolanaWalletSwap
         address={address}
         onBack={() => setView('overview')}
         signTransaction={signTransaction}
@@ -143,10 +154,9 @@ export function ExternalSolanaWalletPanel({
           onClick={() => setView('send')}
         />
         <SolanaAction
-          disabled
           label="Trade"
           icon={<ArrowLeftRightIcon className="size-5" />}
-          onClick={() => undefined}
+          onClick={() => setView('trade')}
         />
         <SolanaAction
           disabled
@@ -162,8 +172,8 @@ export function ExternalSolanaWalletPanel({
       </div>
 
       <div className="mt-3 rounded-xl p-3 text-xs leading-relaxed text-muted bg-elevated-nohover">
-        SOL and SPL token balances, Receive, and Send are available. Trade and
-        Activity stay disabled until their Solana paths are ready.
+        SOL and SPL token balances, Receive, Send, and same-chain Trade are
+        available. Activity stays disabled until its Solana path is ready.
       </div>
 
       <ExternalSolanaWalletPortfolio address={address} />
