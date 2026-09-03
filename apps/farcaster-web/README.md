@@ -264,9 +264,14 @@ or assume every miniapp will work on a fork's domain.
   waits for confirmed status. Same-chain SOL/SPL trades show their route,
   estimated output, minimum received, and estimated network fee; refresh and
   validate the quote, simulate before signing, submit with RPC preflight, and
-  wait for confirmed status. Activity remains disabled. Solana RPC is the
-  balance source of truth while LI.FI supplies recognized token metadata,
-  estimated prices, and trade quotes.
+  wait for confirmed status. Activity shows the five most recent Solana
+  transactions for the connected address, classified as send, receive, swap,
+  or unknown from real on-chain SOL and SPL/Token-2022 balance deltas — never
+  from local or optimistic state. Multi-asset transactions are only labeled
+  swap when a recognized router program is present; otherwise they show as
+  unknown rather than a guessed type. Solana RPC is the balance and activity
+  source of truth while LI.FI supplies recognized token metadata, estimated
+  prices, and trade quotes.
 - WalletConnect remains available for QR, mobile, browser, and hardware-wallet
   workflows on EVM. Solana WalletConnect is not implemented yet.
 - Disconnecting returns the dashboard to the connection choices.
@@ -309,6 +314,9 @@ or assume every miniapp will work on a fork's domain.
   (`0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168`, 6 decimals) as the default
   stablecoin. LI.FI currently reports the token as unverified, so the client
   identifies it only by Robinhood's published canonical contract.
+- View Solana SOL and SPL/Token-2022 balances, receive guidance, send SOL or
+  recognized SPL tokens, swap through LI.FI, and open Activity for the five
+  most recent transactions classified as send, receive, swap, or unknown.
 
 Swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
@@ -333,6 +341,20 @@ history is therefore available in a deployed Pages environment. Vite alone
 does not run Pages Functions; during ordinary local development, Activity can
 still show locally submitted transactions but may report that complete history
 is unavailable.
+
+Solana Activity works differently: it reads the five most recent signatures
+directly from Solana RPC (`getSignaturesForAddress`, then `getTransaction` for
+each) rather than from a third-party indexer, so no Etherscan/Alchemy-style
+secret is needed. It is not affected by the Cloudflare-Functions-only
+limitation above — the same Vite dev proxy that serves Solana balance reads
+also serves Solana Activity in local development. Classification compares
+pre/post SOL and SPL/Token-2022 balances for the connected address: exactly
+one changed asset is a send or receive, several changed assets are only
+labeled a swap when a recognized router program is present in the
+transaction, and anything else is shown as unknown rather than guessed. There
+is no local/optimistic entry merge for Solana Activity; every row reflects
+confirmed on-chain state, and a failed transaction is shown as failed rather
+than omitted.
 
 ## Wallet data sources
 
@@ -401,10 +423,15 @@ confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
   Solana JSON-RPC requests from the deployed site's browser origin, or confirm
   the Pages deployment includes `/~wallet/solana-rpc` and its server-side
   `SOLANA_RPC_URL` has sufficient rate-limit capacity.
-- If complete Activity history is unavailable, add both server-side
+- If complete EVM Activity history is unavailable, add both server-side
   `ETHERSCAN_API_KEY` and `ALCHEMY_API_KEY` secrets to Cloudflare Pages and
   redeploy. Preview and Production secrets are configured separately. Never
   expose either key as a `VITE_` variable.
+- If Solana Activity is empty or shows mostly unknown entries, confirm the
+  configured Solana RPC node retains enough transaction history for the
+  address. Classification intentionally does not guess a swap from an
+  unrecognized program, so multi-asset transactions through routers not in
+  the recognized list will show as unknown rather than swap.
 - If a browser wallet does not appear, confirm it supports EIP-6963 and is
   enabled for the local site.
 - If a stale local Farcaster login produces repeated `401` responses, clear
