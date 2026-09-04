@@ -39,11 +39,11 @@ function ExternalWalletNetworkHeader({ network }: Pick<Props, 'network'>) {
           ))}
         </select>
       </label>
-      <div className="mt-1 text-xs text-muted">
-        {confirmed
-          ? 'Confirmed by your connected wallet.'
-          : 'Wallet confirmation is required before wallet actions are enabled.'}
-      </div>
+      {!confirmed && (
+        <div className="mt-1 text-xs text-muted">
+          Wallet confirmation is required before wallet actions are enabled.
+        </div>
+      )}
     </div>
   );
 }

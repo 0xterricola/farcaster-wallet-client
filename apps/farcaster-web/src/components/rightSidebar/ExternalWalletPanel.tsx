@@ -234,6 +234,7 @@ function ExternalWalletPanel() {
                 label="Wallets"
                 icon={<WalletIcon className="size-5" />}
                 onClick={() => setView('connections')}
+                isManagement
               />
             </div>
 
@@ -326,16 +327,22 @@ function WalletAction({
   icon,
   onClick,
   disabled = false,
+  isManagement = false,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  isManagement?: boolean;
 }) {
   return (
     <button
       type="button"
-      className="flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold bg-elevated-nohover text-default hover:bg-overlay-light disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-elevated-nohover"
+      className={`flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold hover:bg-overlay-light disabled:cursor-not-allowed disabled:opacity-40 ${
+        isManagement
+          ? 'text-accent bg-surface-secondary disabled:hover:bg-surface-secondary'
+          : 'bg-elevated-nohover text-default disabled:hover:bg-elevated-nohover'
+      }`}
       onClick={onClick}
       disabled={disabled}
     >

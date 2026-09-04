@@ -74,6 +74,9 @@ describe('ExternalSolanaWalletPanel', () => {
     );
 
     expect(screen.getByText('Solana Mainnet')).toBeTruthy();
+    expect(
+      screen.queryByText('Confirmed by your connected Solana wallet.'),
+    ).toBeNull();
     expect(screen.getByText('1.25 SOL')).toBeTruthy();
     expect(
       screen.getByRole('link', { name: 'View address on Solana Explorer' }),
@@ -174,7 +177,10 @@ describe('ExternalSolanaWalletPanel', () => {
         signTransaction={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Wallets' }));
+    const walletsButton = screen.getByRole('button', { name: 'Wallets' });
+    expect(walletsButton.className).toContain('bg-surface-secondary');
+    expect(walletsButton.className).toContain('text-accent');
+    fireEvent.click(walletsButton);
     expect(onManageWallets).toHaveBeenCalledOnce();
   });
 });

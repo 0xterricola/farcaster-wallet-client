@@ -244,120 +244,133 @@ export function PreferredWalletSelector({
       )}
       <WalletFamilySelector value={walletFamily} onChange={setWalletFamily} />
       {walletFamily === 'evm' ? (
-        <div className="flex flex-col rounded-xl bg-surface-secondary">
-          {blockedPrivateWallets.map((wallet) => (
-            <Fragment key={wallet.id}>
-              <div className="h-px w-full bg-app" />
-              <WalletOption
-                name={wallet.displayName}
-                description="Blocked for mini-apps by default"
-                onClick={() => undefined}
-                isDisabled
-              />
-            </Fragment>
-          ))}
-          <div className="h-px w-full bg-app" />
-          {connectors.map((connector, index) => {
-            if (!showAllWallets && connector.id !== localPreferredWallet) {
-              return null;
-            }
-
-            const icon =
-              connector.id === 'walletConnect'
-                ? WALLET_CONNECT_ICON
-                : connector.icon;
-
-            return (
-              <Fragment key={connector.id}>
+        <div className="flex flex-col gap-3 rounded-xl p-3 bg-surface-secondary">
+          <div>
+            <div className="font-semibold text-default">EVM wallets</div>
+            <div className="text-sm text-muted">
+              Connect a detected browser wallet, or scan a QR code with
+              WalletConnect, without changing your Solana connection.
+            </div>
+          </div>
+          <div className="flex flex-col overflow-hidden rounded-lg bg-app">
+            {blockedPrivateWallets.map((wallet, index) => (
+              <Fragment key={wallet.id}>
                 <WalletOption
-                  key={index}
-                  name={connector.name}
-                  description={
-                    isExternalWalletConnected &&
-                    connector.id === existingConnector?.id &&
-                    externalWalletAddress
-                      ? `${externalWalletAddress.slice(0, 6)}…${externalWalletAddress.slice(-4)}`
-                      : undefined
-                  }
-                  icon={icon}
-                  onClick={() => handleConnect(connector)}
-                  isSelected={
-                    localPreferredWallet === connector.id &&
-                    isExternalWalletConnected &&
-                    existingConnector?.id === connector.id
-                  }
-                  isConnected={
-                    isExternalWalletConnected &&
-                    existingConnector &&
-                    connector.id === existingConnector.id
-                  }
-                  isInstalled={connector.id !== 'walletConnect'}
-                  isDisabled={isEvmConnecting}
+                  name={wallet.displayName}
+                  description="Blocked for mini-apps by default"
+                  onClick={() => undefined}
+                  isDisabled
                 />
-                {index !== connectors.length - 1 && (
-                  <div className="h-px w-full bg-app" />
+                {(index !== blockedPrivateWallets.length - 1 ||
+                  connectors.length > 0) && (
+                  <div className="h-px w-full bg-surface-secondary" />
                 )}
               </Fragment>
-            );
-          })}
-          {!showAllWallets && localPreferredWallet !== 'walletConnect' && (
-            <WalletOption
-              name="External Wallet"
-              icon={
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M20 3L15 3C14.4477 3 14 3.44772 14 4L14 9C14 9.55228 14.4477 10 15 10L20 10C20.5523 10 21 9.55228 21 9L21 4C21 3.44772 20.5523 3 20 3Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-default"
-                  />
-                  <path
-                    d="M10 21L10 8C10 7.73478 9.89464 7.48043 9.70711 7.29289C9.51957 7.10536 9.26522 7 9 7L4 7C3.73478 7 3.48043 7.10536 3.29289 7.29289C3.10536 7.48043 3 7.73478 3 8L3 20C3 20.2652 3.10536 20.5196 3.29289 20.7071C3.48043 20.8946 3.73478 21 4 21L16 21C16.2652 21 16.5196 20.8946 16.7071 20.7071C16.8946 20.5196 17 20.2652 17 20L17 15C17 14.7348 16.8946 14.4804 16.7071 14.2929C16.5196 14.1054 16.2652 14 16 14L3 14"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-default"
-                  />
-                </svg>
+            ))}
+            {connectors.map((connector, index) => {
+              if (!showAllWallets && connector.id !== localPreferredWallet) {
+                return null;
               }
-              onClick={() => {
-                const walletConnectConnector = connectors.find(
-                  (connector) => connector.id === 'walletConnect',
-                );
-                if (walletConnectConnector) {
-                  void handleConnect(walletConnectConnector);
-                  return;
-                }
 
-                setShowAllWallets(true);
-              }}
-            />
-          )}
+              const icon =
+                connector.id === 'walletConnect'
+                  ? WALLET_CONNECT_ICON
+                  : connector.icon;
+
+              return (
+                <Fragment key={connector.id}>
+                  <WalletOption
+                    key={index}
+                    name={connector.name}
+                    description={
+                      isExternalWalletConnected &&
+                      connector.id === existingConnector?.id &&
+                      externalWalletAddress
+                        ? `${externalWalletAddress.slice(0, 6)}…${externalWalletAddress.slice(-4)}`
+                        : undefined
+                    }
+                    icon={icon}
+                    onClick={() => handleConnect(connector)}
+                    isSelected={
+                      localPreferredWallet === connector.id &&
+                      isExternalWalletConnected &&
+                      existingConnector?.id === connector.id
+                    }
+                    isConnected={
+                      isExternalWalletConnected &&
+                      existingConnector &&
+                      connector.id === existingConnector.id
+                    }
+                    isInstalled={connector.id !== 'walletConnect'}
+                    isDisabled={isEvmConnecting}
+                  />
+                  {index !== connectors.length - 1 && (
+                    <div className="h-px w-full bg-surface-secondary" />
+                  )}
+                </Fragment>
+              );
+            })}
+            {!showAllWallets && localPreferredWallet !== 'walletConnect' && (
+              <WalletOption
+                name="External Wallet"
+                icon={
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M20 3L15 3C14.4477 3 14 3.44772 14 4L14 9C14 9.55228 14.4477 10 15 10L20 10C20.5523 10 21 9.55228 21 9L21 4C21 3.44772 20.5523 3 20 3Z"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-default"
+                    />
+                    <path
+                      d="M10 21L10 8C10 7.73478 9.89464 7.48043 9.70711 7.29289C9.51957 7.10536 9.26522 7 9 7L4 7C3.73478 7 3.48043 7.10536 3.29289 7.29289C3.10536 7.48043 3 7.73478 3 8L3 20C3 20.2652 3.10536 20.5196 3.29289 20.7071C3.48043 20.8946 3.73478 21 4 21L16 21C16.2652 21 16.5196 20.8946 16.7071 20.7071C16.8946 20.5196 17 20.2652 17 20L17 15C17 14.7348 16.8946 14.4804 16.7071 14.2929C16.5196 14.1054 16.2652 14 16 14L3 14"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-default"
+                    />
+                  </svg>
+                }
+                onClick={() => {
+                  const walletConnectConnector = connectors.find(
+                    (connector) => connector.id === 'walletConnect',
+                  );
+                  if (walletConnectConnector) {
+                    void handleConnect(walletConnectConnector);
+                    return;
+                  }
+
+                  setShowAllWallets(true);
+                }}
+              />
+            )}
+          </div>
           {evmError && (
-            <div className="m-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
               {evmError}
             </div>
           )}
           {isExternalWalletConnected && (
-            <div className="p-3 pt-0">
-              <DefaultButton
-                className="w-full"
-                variant="secondary"
-                onClick={() => void handleEvmDisconnect()}
-              >
-                Disconnect EVM wallet
-              </DefaultButton>
-            </div>
+            <DefaultButton
+              className="w-full"
+              variant="secondary"
+              onClick={() => void handleEvmDisconnect()}
+            >
+              Disconnect EVM wallet
+            </DefaultButton>
           )}
+          <div className="text-xs text-faint">
+            This EVM connection is independent from your Solana wallet and its
+            WalletConnect session.
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-3 rounded-xl p-3 bg-surface-secondary">
@@ -384,6 +397,10 @@ export function PreferredWalletSelector({
                     icon={wallet.icon}
                     onClick={() => void handleSolanaConnect(wallet)}
                     isConnected={
+                      solanaWallet?.name === wallet.name &&
+                      Boolean(solanaAddress)
+                    }
+                    isSelected={
                       solanaWallet?.name === wallet.name &&
                       Boolean(solanaAddress)
                     }
