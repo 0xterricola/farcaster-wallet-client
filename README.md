@@ -10,7 +10,8 @@ in their own wallet.
 
 ## Wallet features
 
-- WalletConnect support for QR, mobile, browser, and wallet-directory flows
+- WalletConnect support for EVM and Solana QR, mobile, browser, and
+  wallet-directory flows
 - Automatic discovery of modern EIP-6963 browser wallets
 - One persistent wallet across the dashboard and Farcaster miniapps
 - EIP-1193 provider support for miniapp signatures and transactions
@@ -21,10 +22,10 @@ in their own wallet.
 - Quote, route, minimum received, allowance, approval, and transaction handling
 - Five-item network activity page with transaction and explorer links
 - Explicit disconnect and reconnect flow
-- Independent Solana wallet support through Wallet Standard discovery: SOL and
-  SPL/Token-2022 portfolio, receive, send, same-chain swaps, and a five-item
-  activity feed classified from real on-chain data. Connects and disconnects
-  without affecting the EVM wallet
+- Independent Solana wallet support through Wallet Standard discovery and
+  WalletConnect: SOL and SPL/Token-2022 portfolio, receive, send, same-chain
+  swaps, and a five-item activity feed classified from real on-chain data.
+  Solana connects, restores, and disconnects without affecting the EVM wallet
 
 ## How it works
 
@@ -32,8 +33,12 @@ The web client uses Wagmi for connection state and exposes the selected wallet
 through the client's existing wallet context. Miniapps, the wallet dashboard,
 sends, and swaps all consume that same provider and address.
 
-WalletConnect is the universal fallback. Compatible browser extensions are
-discovered through EIP-6963 and displayed as direct connection options. No seed
+WalletConnect is the universal fallback for both wallet families. EVM and
+Solana WalletConnect sessions use isolated storage and remain independent, so
+both can stay connected at the same time. A remembered Solana WalletConnect
+session restores silently after refresh without opening a new pairing prompt.
+Compatible EVM browser extensions are discovered through EIP-6963, while
+compatible Solana extensions are discovered through Wallet Standard. No seed
 phrase or private key is created, requested, or stored by this client.
 
 Swap quotes and transaction requests come from the public LI.FI quote API.
@@ -120,9 +125,10 @@ pnpm --filter farcaster-web test
 pnpm --filter farcaster-web build
 ```
 
-The wallet flows have also been exercised manually with WalletConnect, a
-browser with no injected wallet, detected browser wallets, page refreshes,
-miniapp transactions, sends, swaps, and rejected approvals.
+The wallet flows have also been exercised manually with EVM and Solana
+WalletConnect, a browser with no injected wallet, detected browser wallets,
+page refreshes, cancelled pairings, miniapp transactions, sends, swaps, and
+rejected approvals.
 
 ## Security notes
 
