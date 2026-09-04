@@ -49,8 +49,8 @@ describe('external wallet network UI', () => {
       (screen.getByLabelText('Current network') as HTMLSelectElement).value,
     ).toBe('8453');
     expect(
-      screen.getByText('Confirmed by your connected wallet.'),
-    ).toBeTruthy();
+      screen.queryByText('Confirmed by your connected wallet.'),
+    ).toBeNull();
     expect(screen.getByRole('option', { name: 'Ethereum' })).toBeTruthy();
   });
 

@@ -117,9 +117,6 @@ export function ExternalSolanaWalletPanel({
         <div className="mt-1 font-semibold text-default">
           {SOLANA_MAINNET_NAME}
         </div>
-        <div className="mt-1 text-xs text-muted">
-          Confirmed by your connected Solana wallet.
-        </div>
       </div>
 
       <div className="mt-4 rounded-2xl p-4 bg-elevated-nohover">
@@ -179,6 +176,7 @@ export function ExternalSolanaWalletPanel({
           label="Wallets"
           icon={<WalletIcon className="size-5" />}
           onClick={onManageWallets}
+          isManagement
         />
       </div>
 
@@ -204,17 +202,23 @@ export function ExternalSolanaWalletPanel({
 function SolanaAction({
   disabled = false,
   icon,
+  isManagement = false,
   label,
   onClick,
 }: {
   disabled?: boolean;
   icon: ReactNode;
+  isManagement?: boolean;
   label: string;
   onClick: () => void;
 }) {
   return (
     <button
-      className="flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold bg-elevated-nohover text-default hover:bg-overlay-light disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-elevated-nohover"
+      className={`flex flex-col items-center gap-2 rounded-xl p-3 text-sm font-semibold hover:bg-overlay-light disabled:cursor-not-allowed disabled:opacity-40 ${
+        isManagement
+          ? 'text-accent bg-surface-secondary disabled:hover:bg-surface-secondary'
+          : 'bg-elevated-nohover text-default disabled:hover:bg-elevated-nohover'
+      }`}
       disabled={disabled}
       onClick={onClick}
       type="button"
