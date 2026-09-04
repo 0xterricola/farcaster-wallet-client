@@ -18,10 +18,15 @@ import {
 // block hash per CAIP-2, not the human-readable 'solana:mainnet' string the
 // Wallet Standard side of this app uses elsewhere. The two are not
 // interchangeable: this constant is only ever sent to WalletConnect itself.
-const SOLANA_MAINNET_CAIP2 =
-  'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d';
+// CAIP-2 requires the "reference" component (everything after the
+// namespace) to match [-_a-zA-Z0-9]{1,32} -- i.e. at most 32 characters.
+// https://chainagnostic.org/CAIPs/caip-2
+// Solana's own CAIP-2 registration derives its mainnet reference by
+// truncating the (44-character, base58) genesis hash to its first 32
+// characters, not by using the hash in full:
+// https://namespaces.chainagnostic.org/solana/caip2
+const SOLANA_MAINNET_CAIP2 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 const SOLANA_SIGN_TRANSACTION_METHOD = 'solana_signTransaction';
-const SOLANA_SIGN_MESSAGE_METHOD = 'solana_signMessage';
 
 export const WALLET_CONNECT_WALLET_NAME = 'WalletConnect';
 
@@ -113,6 +118,13 @@ export function createSolanaWalletConnectWallet(
 
   function getProvider() {
     providerPromise ??= UniversalProvider.init({
+      // WalletConnect's Core caches a single global instance per
+      // customStoragePrefix (including across unrelated SDKs on the same
+      // page, e.g. Wagmi's EVM WalletConnect connector, which also
+      // defaults to an empty prefix). Without a prefix of our own, this
+      // Solana provider would silently share -- and corrupt -- the EVM
+      // connector's session storage and keychain, breaking both.
+      customStoragePrefix: 'farcaster-solana',
       projectId,
       metadata: {
         name: 'Farcaster Wallet Client',
@@ -134,21 +146,63 @@ export function createSolanaWalletConnectWallet(
     const showModal = (uri: string) =>
       void walletConnectModal.openModal({ uri });
     provider.on('display_uri', showModal);
-    try {
-      await provider.connect({
-        namespaces: {
-          solana: {
-            chains: [SOLANA_MAINNET_CAIP2],
-            events: [],
-            methods: [
-              SOLANA_SIGN_TRANSACTION_METHOD,
-              SOLANA_SIGN_MESSAGE_METHOD,
-            ],
-          },
-        },
+
+    // provider.connect() only resolves once a wallet approves (or the
+    // request times out on WalletConnect's own schedule, which can be
+    // minutes). If the user closes the QR modal themselves instead of
+    // approving, that promise has no idea -- it just keeps waiting forever,
+    // which would otherwise leave every Solana wallet option stuck showing
+    // as "connecting" until a full page reload. Race the connection against
+    // the modal being closed (after having actually been open) so a manual
+    // close surfaces as a normal rejection instead of a silent hang.
+    let hasOpened = false;
+    let unsubscribeModal = () => {};
+    const cancelled = new Promise<never>((_resolve, reject) => {
+      unsubscribeModal = walletConnectModal.subscribeModal(({ open }) => {
+        if (open) {
+          hasOpened = true;
+          return;
+        }
+        if (hasOpened) {
+          reject(new Error('WalletConnect connection cancelled.'));
+        }
       });
+    });
+    // If provider.connect() wins the race, this promise is left pending (or
+    // later rejects when we close the modal ourselves below) -- swallow that
+    // so it doesn't surface as an unhandled rejection.
+    cancelled.catch(() => {});
+
+    try {
+      await Promise.race([
+        provider.connect({
+          namespaces: {
+            solana: {
+              chains: [SOLANA_MAINNET_CAIP2],
+              events: [],
+              // Only requesting the method this wallet actually implements
+              // and calls (see signTransaction below). Requiring a method
+              // we never use is needless risk: WalletConnect's spec says a
+              // wallet that can't satisfy a required method should reject
+              // the session outright, but Solana wallet support for the
+              // protocol is far less mature than EVM's, and some
+              // implementations have been observed hanging instead of
+              // rejecting when they can't meet a required namespace.
+              methods: [SOLANA_SIGN_TRANSACTION_METHOD],
+            },
+          },
+        }),
+        cancelled,
+      ]);
+    } catch (connectFailure) {
+      // Whether the user cancelled or the connection genuinely failed,
+      // clear any half-started pairing so the next attempt starts clean
+      // instead of silently colliding with a stuck one.
+      provider.abortPairingAttempt();
+      throw connectFailure;
     } finally {
       provider.off('display_uri', showModal);
+      unsubscribeModal();
       walletConnectModal.closeModal();
     }
 

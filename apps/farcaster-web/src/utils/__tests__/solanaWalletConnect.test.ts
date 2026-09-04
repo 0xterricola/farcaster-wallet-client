@@ -11,6 +11,7 @@ const providerInstance: {
   disconnect: ReturnType<typeof vi.fn>;
   on: ReturnType<typeof vi.fn>;
   off: ReturnType<typeof vi.fn>;
+  abortPairingAttempt: ReturnType<typeof vi.fn>;
   client: { request: ReturnType<typeof vi.fn> };
 } = {
   session: undefined,
@@ -18,6 +19,7 @@ const providerInstance: {
   disconnect: vi.fn(),
   on: vi.fn(),
   off: vi.fn(),
+  abortPairingAttempt: vi.fn(),
   client: { request: vi.fn() },
 };
 
@@ -29,9 +31,14 @@ vi.mock('@walletconnect/universal-provider', () => ({
   },
 }));
 
+// No-op by default: tests that don't care about a manual close never invoke
+// the callback, so the cancellation race below never fires for them.
 const modalInstance = {
   openModal: vi.fn(async () => undefined),
   closeModal: vi.fn(),
+  subscribeModal: vi.fn((_callback: (state: { open: boolean }) => void) => {
+    return () => {};
+  }),
 };
 const modalConstructor = vi.fn((..._args: unknown[]) => modalInstance);
 
@@ -49,7 +56,7 @@ const SESSION: MockSession = {
   namespaces: {
     solana: {
       accounts: [
-        'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d:SolAddress1111111111111111111111111111111',
+        'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SolAddress1111111111111111111111111111111',
       ],
     },
   },
@@ -70,11 +77,14 @@ describe('createSolanaWalletConnectWallet', () => {
     providerInstance.disconnect.mockReset();
     providerInstance.on.mockReset();
     providerInstance.off.mockReset();
+    providerInstance.abortPairingAttempt.mockReset();
     providerInstance.client.request.mockReset();
     initMock.mockClear();
     modalConstructor.mockClear();
     modalInstance.openModal.mockClear();
     modalInstance.closeModal.mockClear();
+    modalInstance.subscribeModal.mockClear();
+    modalInstance.subscribeModal.mockImplementation(() => () => {});
   });
 
   it('describes itself with the shared WalletConnect name and icon', () => {
@@ -150,6 +160,67 @@ describe('createSolanaWalletConnectWallet', () => {
     );
   });
 
+  it('cancels and cleans up the pairing when the modal is closed before approval', async () => {
+    let modalStateCallback: ((state: { open: boolean }) => void) | undefined;
+    modalInstance.subscribeModal.mockImplementation((callback) => {
+      modalStateCallback = callback;
+      return () => {};
+    });
+    // A real provider.connect() only resolves once a wallet approves, so it
+    // must never settle on its own here -- the only way this test's
+    // connect() can settle is via the cancellation race below.
+    providerInstance.connect.mockImplementation(() => new Promise(() => {}));
+
+    const wallet = createSolanaWalletConnectWallet('project-id');
+    const { connect } = feature<{ connect: () => Promise<unknown> }>(
+      wallet,
+      'standard:connect',
+    );
+
+    const connecting = connect();
+    // getModal() resolves through a microtask chain (a dynamic import plus
+    // a .then), so subscribeModal isn't registered the instant connect() is
+    // called -- wait for it before simulating the user's actions.
+    await vi.waitFor(() => {
+      if (!modalStateCallback) {
+        throw new Error('subscribeModal was not called yet');
+      }
+    });
+    // The modal opens once pairing starts, then the user closes it
+    // themselves before any wallet approves.
+    modalStateCallback?.({ open: true });
+    modalStateCallback?.({ open: false });
+
+    await expect(connecting).rejects.toThrow(
+      'WalletConnect connection cancelled.',
+    );
+    expect(providerInstance.abortPairingAttempt).toHaveBeenCalledOnce();
+    expect(modalInstance.closeModal).toHaveBeenCalledOnce();
+  });
+
+  it('ignores the modal reporting closed before it has ever opened', async () => {
+    modalInstance.subscribeModal.mockImplementation((callback) => {
+      // Some modal implementations replay the current (closed) state
+      // synchronously on subscribe -- that must not be mistaken for the
+      // user cancelling a connection they never opened.
+      callback({ open: false });
+      return () => {};
+    });
+    providerInstance.connect.mockImplementation(async () => {
+      providerInstance.session = SESSION;
+    });
+
+    const wallet = createSolanaWalletConnectWallet('project-id');
+    const { connect } = feature<{
+      connect: () => Promise<{ accounts: readonly { address: string }[] }>;
+    }>(wallet, 'standard:connect');
+
+    const result = await connect();
+
+    expect(result.accounts).toHaveLength(1);
+    expect(providerInstance.abortPairingAttempt).not.toHaveBeenCalled();
+  });
+
   it('disconnects the underlying session when one exists', async () => {
     providerInstance.session = SESSION;
     const wallet = createSolanaWalletConnectWallet('project-id');
@@ -192,7 +263,7 @@ describe('createSolanaWalletConnectWallet', () => {
 
     expect(providerInstance.client.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        chainId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d',
+        chainId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
         request: expect.objectContaining({ method: 'solana_signTransaction' }),
         topic: 'topic-1',
       }),
