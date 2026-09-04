@@ -1,7 +1,8 @@
 # Farcaster Web
 
-The Farcaster web client with external wallet support through WalletConnect and
-detected EIP-6963 browser wallets.
+The Farcaster web client with independent EVM and Solana wallet support through
+WalletConnect, detected EIP-6963 EVM wallets, and Wallet Standard Solana
+wallets.
 
 ## Setup
 
@@ -99,8 +100,11 @@ The local file is ignored by Git. Configure the same variable in the production
 hosting environment and allow the relevant local and production origins in the
 Reown project settings.
 
-WalletConnect requires this project ID. Modern browser extensions can also be
-discovered automatically through EIP-6963.
+WalletConnect requires this project ID for both EVM and Solana sessions. Add
+each deployed origin to the Reown project's allowlist; a wildcard such as
+`https://*.farcaster-wallet-client.pages.dev` covers Cloudflare preview URLs.
+Modern EVM browser extensions are discovered automatically through EIP-6963,
+and Solana extensions are discovered through Wallet Standard.
 
 ## Development
 
@@ -272,8 +276,16 @@ or assume every miniapp will work on a fork's domain.
   unknown rather than a guessed type. Solana RPC is the balance and activity
   source of truth while LI.FI supplies recognized token metadata, estimated
   prices, and trade quotes.
-- WalletConnect remains available for QR, mobile, browser, and hardware-wallet
-  workflows on EVM. Solana WalletConnect is not implemented yet.
+- WalletConnect supports QR, mobile, browser, and wallet-directory workflows
+  for both EVM and Solana. Their sessions use isolated storage and can remain
+  connected simultaneously. A remembered Solana WalletConnect session restores
+  silently after refresh; without a persisted session, restoration does not
+  open the QR modal or start a new pairing. Closing the modal cancels the UI
+  attempt immediately so another wallet can be selected or pairing retried.
+- Solana sends and swaps through WalletConnect require the connected wallet to
+  return the complete serialized signed transaction. Signature-only responses
+  are rejected as unsupported instead of constructing an unverified
+  transaction.
 - Disconnecting returns the dashboard to the connection choices.
 - Private keys and seed phrases never enter the Farcaster client.
 
@@ -404,6 +416,14 @@ confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
 
 - If WalletConnect is unavailable, verify
   `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
+- If a Solana WalletConnect session does not restore after refresh, confirm the
+  session still exists in the connected wallet and that the current origin is
+  allowed by the Reown project. Restoration is deliberately silent and will
+  not create a replacement session or show a QR prompt.
+- If a Solana WalletConnect wallet connects but cannot send or swap, it may
+  return only a detached signature for `solana_signTransaction`. The client
+  currently requires the complete serialized signed transaction so it can run
+  the normal submission and confirmation path safely.
 - If Ethereum balances are unavailable, confirm that `VITE_ETHEREUM_RPC_URL`
   accepts JSON-RPC requests from the deployed site's browser origin.
 - If Arbitrum balances are unavailable, confirm that `VITE_ARBITRUM_RPC_URL`

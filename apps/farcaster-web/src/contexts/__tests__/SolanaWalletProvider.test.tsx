@@ -9,6 +9,7 @@ import {
   useSolanaWallet,
 } from '~/contexts/SolanaWalletProvider';
 import { DetectedSolanaWallet } from '~/hooks/useDetectedSolanaWallets';
+import { WALLET_CONNECT_WALLET_NAME } from '~/utils/solanaWalletConnect';
 
 const mockUseDetectedSolanaWallets =
   vi.fn<() => readonly DetectedSolanaWallet[]>();
@@ -25,6 +26,7 @@ function makeWallet({
   connectAccounts = [
     { address: 'SolanaAddress123', chains: ['solana:mainnet'] },
   ],
+  name = 'Test Solana Wallet',
 }: {
   accounts?: readonly {
     address: string;
@@ -34,6 +36,7 @@ function makeWallet({
     address: string;
     chains: readonly string[];
   }[];
+  name?: string;
 } = {}) {
   const connect = vi.fn().mockResolvedValue({ accounts: connectAccounts });
   const disconnect = vi.fn().mockResolvedValue(undefined);
@@ -49,7 +52,7 @@ function makeWallet({
       'standard:disconnect': { disconnect, version: '1.0.0' },
     },
     icon: 'data:image/png;base64,AA==',
-    name: 'Test Solana Wallet',
+    name,
     version: '1.0.0',
   };
   return { connect, disconnect, signTransaction, wallet };
@@ -96,6 +99,59 @@ describe('SolanaWalletProvider', () => {
       expect(view.result.current.address).toBe(account.address);
     });
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('silently restores a persisted WalletConnect session', async () => {
+    const account = {
+      address: 'RestoredWalletConnectAddress',
+      chains: ['solana:mainnet'],
+    };
+    const { connect, wallet } = makeWallet({
+      connectAccounts: [account],
+      name: WALLET_CONNECT_WALLET_NAME,
+    });
+    localStorage.setItem('solana_wallet_name', wallet.name);
+    mockUseDetectedSolanaWallets.mockReturnValue([wallet]);
+
+    const view = renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(view.result.current.address).toBe(account.address);
+    });
+    expect(connect).toHaveBeenCalledOnce();
+    expect(connect).toHaveBeenCalledWith({ silent: true });
+  });
+
+  it('clears a remembered WalletConnect wallet when no session remains', async () => {
+    const { connect, wallet } = makeWallet({
+      connectAccounts: [],
+      name: WALLET_CONNECT_WALLET_NAME,
+    });
+    localStorage.setItem('solana_wallet_name', wallet.name);
+    mockUseDetectedSolanaWallets.mockReturnValue([wallet]);
+
+    renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(localStorage.getItem('solana_wallet_name')).toBeNull();
+    });
+    expect(connect).toHaveBeenCalledWith({ silent: true });
+  });
+
+  it('keeps the remembered WalletConnect wallet after a temporary restore error', async () => {
+    const { connect, wallet } = makeWallet({
+      name: WALLET_CONNECT_WALLET_NAME,
+    });
+    connect.mockRejectedValueOnce(new Error('Relay unavailable'));
+    localStorage.setItem('solana_wallet_name', wallet.name);
+    mockUseDetectedSolanaWallets.mockReturnValue([wallet]);
+
+    renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(connect).toHaveBeenCalledWith({ silent: true });
+    });
+    expect(localStorage.getItem('solana_wallet_name')).toBe(wallet.name);
   });
 
   it('disconnects only the selected Solana wallet', async () => {

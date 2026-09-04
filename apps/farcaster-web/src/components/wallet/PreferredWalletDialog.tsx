@@ -15,6 +15,7 @@ import { useWallet } from '~/contexts/WalletProvider';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { useIsAdmin } from '~/hooks/data/useIsAdmin';
 import { DetectedSolanaWallet } from '~/hooks/useDetectedSolanaWallets';
+import { WALLET_CONNECT_WALLET_NAME } from '~/utils/solanaWalletConnect';
 import { WalletFamily } from '~/utils/walletFamily';
 
 function getMiniAppPermission(
@@ -363,8 +364,8 @@ export function PreferredWalletSelector({
           <div>
             <div className="font-semibold text-default">Solana wallets</div>
             <div className="text-sm text-muted">
-              Connect a detected browser wallet without changing your EVM
-              connection.
+              Connect a detected browser wallet, or scan a QR code with
+              WalletConnect, without changing your EVM connection.
             </div>
           </div>
           {solanaWallets.length ? (
@@ -376,7 +377,9 @@ export function PreferredWalletSelector({
                     description={
                       solanaWallet?.name === wallet.name && solanaAddress
                         ? `${solanaAddress.slice(0, 4)}…${solanaAddress.slice(-4)}`
-                        : 'Detected Solana wallet'
+                        : wallet.name === WALLET_CONNECT_WALLET_NAME
+                          ? 'Scan with a mobile wallet'
+                          : 'Detected Solana wallet'
                     }
                     icon={wallet.icon}
                     onClick={() => void handleSolanaConnect(wallet)}
@@ -384,7 +387,7 @@ export function PreferredWalletSelector({
                       solanaWallet?.name === wallet.name &&
                       Boolean(solanaAddress)
                     }
-                    isInstalled
+                    isInstalled={wallet.name !== WALLET_CONNECT_WALLET_NAME}
                     isDisabled={solanaStatus === 'connecting'}
                   />
                   {index !== solanaWallets.length - 1 && (

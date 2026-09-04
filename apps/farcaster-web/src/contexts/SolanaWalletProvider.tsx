@@ -18,8 +18,15 @@ import {
   SOLANA_SIGN_TRANSACTION_FEATURE,
   useDetectedSolanaWallets,
 } from '~/hooks/useDetectedSolanaWallets';
+import {
+  createSolanaWalletConnectWallet,
+  WALLET_CONNECT_WALLET_NAME,
+} from '~/utils/solanaWalletConnect';
 
 const SOLANA_WALLET_KEY = 'solana_wallet_name';
+const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
+  | string
+  | undefined;
 
 type SolanaWalletStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -85,7 +92,26 @@ function connectionError(error: unknown): string {
 }
 
 function SolanaWalletProvider({ children }: { children: ReactNode }) {
-  const detectedWallets = useDetectedSolanaWallets();
+  const browserWallets = useDetectedSolanaWallets();
+  // Stable across re-renders (created once per mounted provider) so the
+  // underlying WalletConnect session/modal are not recreated on every
+  // render -- they hold state (a pending or active session) that must
+  // persist for the life of the app, the same way a real browser extension
+  // wallet's own connection state persists independently of React.
+  const solanaWalletConnectWallet = useMemo(
+    () =>
+      walletConnectProjectId
+        ? createSolanaWalletConnectWallet(walletConnectProjectId)
+        : undefined,
+    [],
+  );
+  const detectedWallets = useMemo(
+    () =>
+      solanaWalletConnectWallet
+        ? [...browserWallets, solanaWalletConnectWallet]
+        : browserWallets,
+    [browserWallets, solanaWalletConnectWallet],
+  );
   const [wallet, setWallet] = useState<DetectedSolanaWallet>();
   const [account, setAccount] = useState<DetectedSolanaAccount>();
   const [address, setAddress] = useState<string>();
@@ -194,10 +220,43 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Wallet Standard exposes already-authorized accounts without prompting.
-    // Never call connect during restoration because wallets may ignore the
-    // silent option and unexpectedly display an approval request.
-    setConnectedAccount(rememberedWallet, rememberedWallet.accounts);
+    if (rememberedWallet.name !== WALLET_CONNECT_WALLET_NAME) {
+      // Wallet Standard exposes already-authorized accounts synchronously.
+      // Never call connect for browser wallets during restoration because
+      // some wallets may ignore the silent option and display a prompt.
+      setConnectedAccount(rememberedWallet, rememberedWallet.accounts);
+      return;
+    }
+
+    const connectFeature = feature<ConnectFeature>(
+      rememberedWallet,
+      SOLANA_CONNECT_FEATURE,
+    );
+    if (!connectFeature?.connect) {
+      localStorage.removeItem(SOLANA_WALLET_KEY);
+      return;
+    }
+
+    let cancelled = false;
+    void connectFeature
+      .connect({ silent: true })
+      .then(({ accounts }) => {
+        if (cancelled) {
+          return;
+        }
+        if (!mainnetAccount(accounts)) {
+          localStorage.removeItem(SOLANA_WALLET_KEY);
+          return;
+        }
+        setConnectedAccount(rememberedWallet, accounts);
+      })
+      // A relay or network failure is not proof that the persisted session is
+      // invalid. Keep the preference so another reload can restore it.
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [detectedWallets, setConnectedAccount, wallet]);
 
   useEffect(() => {
