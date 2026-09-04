@@ -147,6 +147,21 @@ describe('createSolanaWalletConnectWallet', () => {
     expect(result.accounts).toHaveLength(1);
   });
 
+  it('checks for a persisted session silently without opening the modal', async () => {
+    const wallet = createSolanaWalletConnectWallet('project-id');
+    const { connect } = feature<{
+      connect: (input?: { silent?: boolean }) => Promise<{
+        accounts: readonly { address: string }[];
+      }>;
+    }>(wallet, 'standard:connect');
+
+    const result = await connect({ silent: true });
+
+    expect(result.accounts).toEqual([]);
+    expect(providerInstance.connect).not.toHaveBeenCalled();
+    expect(modalConstructor).not.toHaveBeenCalled();
+  });
+
   it('throws when the wallet never establishes a session', async () => {
     providerInstance.connect.mockResolvedValue(undefined);
     const wallet = createSolanaWalletConnectWallet('project-id');

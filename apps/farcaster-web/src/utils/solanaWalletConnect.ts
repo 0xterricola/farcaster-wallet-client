@@ -79,13 +79,6 @@ function accountsFromSession(
 // implements, so SolanaWalletProvider needs no WalletConnect-specific code
 // at all -- it is just another DetectedSolanaWallet to it.
 //
-// Known limitation (tracked for a follow-up slice): reconnecting an existing
-// WalletConnect session on page load is inherently asynchronous (checking a
-// persisted session with the relay), unlike a Wallet Standard extension's
-// already-authorized accounts, which are available synchronously. This
-// wallet's `accounts` therefore starts empty on every page load even if a
-// session already exists; SolanaWalletProvider's silent-restore effect will
-// not pick it back up automatically yet.
 export function createSolanaWalletConnectWallet(
   projectId: string,
 ): DetectedSolanaWallet {
@@ -136,10 +129,18 @@ export function createSolanaWalletConnectWallet(
     return providerPromise;
   }
 
-  const connect = async () => {
+  const connect = async (input?: { silent?: boolean }) => {
     const provider = await getProvider();
     if (provider.session) {
       return { accounts: accountsFromSession(provider) };
+    }
+
+    // Restoring a remembered WalletConnect wallet must initialize the
+    // provider so it can read its persisted session, but it must never start
+    // a new pairing or open the QR modal. An empty account list tells the
+    // context that there is no session to restore.
+    if (input?.silent) {
+      return { accounts: [] };
     }
 
     const walletConnectModal = await getModal();
