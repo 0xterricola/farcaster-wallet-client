@@ -4,26 +4,29 @@ import { UsersRound } from 'lucide-react';
 import React from 'react';
 
 import { Avatar } from '~/components/avatar/Avatar';
-import { useOptionalEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { TokenIcon } from '~/components/tokens/TokenIcon';
 import { useWalletGeoRestricted } from '~/hooks/data/useWalletGeoRestricted';
 import { useNavigateToProfile } from '~/hooks/navigation/useNavigateToProfile';
+import { useOpenWalletToken } from '~/hooks/useOpenWalletToken';
 
 export function TokenSummary({ token }: { token: ApiTokenLink }) {
   const navigateToProfile = useNavigateToProfile();
 
   const isGeoRestricted = useWalletGeoRestricted();
-  const embeddedWalletBridge = useOptionalEmbeddedWalletBridge();
-  const navigateInWallet = embeddedWalletBridge?.navigate;
+  const openWalletToken = useOpenWalletToken();
 
   const onPress = React.useCallback(() => {
-    if (!isGeoRestricted && navigateInWallet) {
-      navigateInWallet({
-        path: 'Token',
-        params: { chain: token.chain, ca: token.ca, via: 'cast_embed' },
+    if (!isGeoRestricted) {
+      openWalletToken({
+        ca: token.ca,
+        chain: token.chain,
+        decimals: token.decimals,
+        name: token.name,
+        symbol: token.ticker,
+        via: 'cast_embed',
       });
     }
-  }, [token.ca, token.chain, isGeoRestricted, navigateInWallet]);
+  }, [isGeoRestricted, openWalletToken, token]);
 
   const onCreatorPress = React.useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

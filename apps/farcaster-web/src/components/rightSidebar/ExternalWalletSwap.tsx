@@ -156,13 +156,19 @@ function defaultStablecoinLabel(chain: Chain) {
   return `native USDC on ${chain.name}`;
 }
 
-export function ExternalWalletSwap({ chain = base }: { chain?: Chain }) {
+export function ExternalWalletSwap({
+  chain = base,
+  initialBuyTokenAddress,
+}: {
+  chain?: Chain;
+  initialBuyTokenAddress?: Address;
+}) {
   const { address, provider } = useWallet();
   const queryClient = useQueryClient();
   const client = usePublicClient({ chainId: chain.id });
   const defaultStablecoin = DEFAULT_STABLECOIN.get(chain.id);
   const [fromInput, setFromInput] = useState(chain.nativeCurrency.symbol);
-  const [toInput, setToInput] = useState('');
+  const [toInput, setToInput] = useState(initialBuyTokenAddress ?? '');
   const [amount, setAmount] = useState('');
   const [review, setReview] = useState<Review>();
   const [busy, setBusy] = useState(false);

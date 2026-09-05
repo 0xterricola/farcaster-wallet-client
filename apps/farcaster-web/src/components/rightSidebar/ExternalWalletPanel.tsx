@@ -8,7 +8,7 @@ import {
   HistoryIcon,
   WalletIcon,
 } from 'lucide-react';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import { formatUnits } from 'viem';
 import { base } from 'viem/chains';
@@ -26,6 +26,7 @@ import { ExternalWalletSend } from '~/components/rightSidebar/ExternalWalletSend
 import { ExternalWalletSwap } from '~/components/rightSidebar/ExternalWalletSwap';
 import { PreferredWalletSelector } from '~/components/wallet/PreferredWalletDialog';
 import { WalletFamilySelector } from '~/components/wallet/WalletFamilySelector';
+import { useMinimizableWindowContext } from '~/contexts/MinimizableWindowProvider';
 import { useSolanaWallet } from '~/contexts/SolanaWalletProvider';
 import { useWallet } from '~/contexts/WalletProvider';
 import { useLifiAsset } from '~/hooks/useLifiWallet';
@@ -36,6 +37,7 @@ import {
   DASHBOARD_CHAINS,
   walletChainCapabilities,
 } from '~/utils/walletNetwork';
+import { WalletTradeIntent } from '~/utils/walletTradeIntent';
 
 type WalletView =
   | 'overview'
@@ -50,6 +52,8 @@ function ExternalWalletPanel() {
   const { address: solanaAddress, signTransaction: signSolanaTransaction } =
     useSolanaWallet();
   const { disconnect } = useDisconnect();
+  const { consumeWalletTradeIntent, walletTradeIntent } =
+    useMinimizableWindowContext();
   const chain = DASHBOARD_CHAINS.get(network.selectedChainId) ?? base;
   const capabilities = walletChainCapabilities(chain.id);
   const {
@@ -62,6 +66,10 @@ function ExternalWalletPanel() {
     chain,
   );
   const [view, setView] = useState<WalletView>('overview');
+  const [activeTradeIntent, setActiveTradeIntent] = useState<
+    WalletTradeIntent | undefined
+  >();
+  const handlingTradeIntent = useRef<number | undefined>(undefined);
   const [dashboardFamily, setDashboardFamily] = useState<WalletFamily>(() =>
     !address && solanaAddress ? 'solana' : 'evm',
   );
@@ -76,6 +84,53 @@ function ExternalWalletPanel() {
   useEffect(() => {
     setView('overview');
   }, [network.selectedChainId]);
+
+  useEffect(() => {
+    if (
+      !walletTradeIntent ||
+      handlingTradeIntent.current === walletTradeIntent.id
+    ) {
+      return;
+    }
+    if (walletTradeIntent.family === 'solana') {
+      if (!solanaAddress) {
+        setDashboardFamily('solana');
+        setView('connections');
+        return;
+      }
+      handlingTradeIntent.current = walletTradeIntent.id;
+      setDashboardFamily('solana');
+      setActiveTradeIntent(walletTradeIntent);
+      consumeWalletTradeIntent(walletTradeIntent.id);
+      return;
+    }
+    if (!address) {
+      setDashboardFamily('evm');
+      setView('connections');
+      return;
+    }
+
+    handlingTradeIntent.current = walletTradeIntent.id;
+    const intent = walletTradeIntent;
+    setDashboardFamily('evm');
+    void (async () => {
+      const ready =
+        network.selectedChainId === intent.chainId && network.status === 'ready'
+          ? true
+          : await network.switchNetwork(intent.chainId);
+      if (ready) {
+        setActiveTradeIntent(intent);
+        setView('trade');
+      }
+      consumeWalletTradeIntent(intent.id);
+    })();
+  }, [
+    address,
+    consumeWalletTradeIntent,
+    network,
+    solanaAddress,
+    walletTradeIntent,
+  ]);
 
   const formattedBalance = useMemo(() => {
     if (!balance || balanceError) {
@@ -104,7 +159,10 @@ function ExternalWalletPanel() {
             EVM and Solana wallets connect independently.
           </div>
         </div>
-        <PreferredWalletSelector hideHeader />
+        <PreferredWalletSelector
+          defaultFamily={walletTradeIntent?.family ?? 'evm'}
+          hideHeader
+        />
       </div>
     );
   }
@@ -121,7 +179,9 @@ function ExternalWalletPanel() {
         >
           <div className="mt-4">
             <PreferredWalletSelector
-              defaultFamily={visibleDashboardFamily}
+              defaultFamily={
+                walletTradeIntent?.family ?? visibleDashboardFamily
+              }
               hideHeader
             />
           </div>
@@ -148,6 +208,11 @@ function ExternalWalletPanel() {
           address={solanaAddress}
           onManageWallets={() => setView('connections')}
           signTransaction={signSolanaTransaction}
+          tradeIntent={
+            activeTradeIntent?.family === 'solana'
+              ? activeTradeIntent
+              : undefined
+          }
         />
       </div>
     );
@@ -299,8 +364,14 @@ function ExternalWalletPanel() {
             onBack={() => setView('overview')}
           >
             <ExternalWalletSwap
-              key={`${chain.id}:${address.toLowerCase()}`}
+              key={`${chain.id}:${address.toLowerCase()}:${activeTradeIntent?.id ?? 'manual'}`}
               chain={chain}
+              initialBuyTokenAddress={
+                activeTradeIntent?.family === 'evm' &&
+                activeTradeIntent.chainId === chain.id
+                  ? activeTradeIntent.tokenAddress
+                  : undefined
+              }
             />
           </WalletSubscreen>
         )}

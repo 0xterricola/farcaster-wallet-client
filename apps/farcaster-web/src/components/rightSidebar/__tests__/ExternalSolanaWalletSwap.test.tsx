@@ -88,6 +88,14 @@ function renderSwap(signTransaction = vi.fn()) {
   return signTransaction;
 }
 
+const embeddedToken = {
+  amount: '0',
+  decimals: 6,
+  mint: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6m2qGxvAEP6vLh5S',
+  name: 'Bonk',
+  symbol: 'BONK',
+};
+
 function quotedSwap(overrides: Record<string, unknown> = {}) {
   return {
     amount: 10_000_000n,
@@ -111,6 +119,21 @@ function quotedSwap(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ExternalSolanaWalletSwap', () => {
+  it('prefills an embedded token even when it is not in the wallet portfolio', () => {
+    render(
+      <ExternalSolanaWalletSwap
+        address="wallet"
+        initialBuyToken={embeddedToken}
+        onBack={vi.fn()}
+        signTransaction={vi.fn()}
+      />,
+    );
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    expect(selects[1].value).toBe(embeddedToken.mint);
+    expect(screen.getByRole('option', { name: 'BONK' })).toBeTruthy();
+    expect(fetchQuote).not.toHaveBeenCalled();
+  });
+
   it('offers SOL and recognized SPL assets with USDC as the default output', () => {
     renderSwap();
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];

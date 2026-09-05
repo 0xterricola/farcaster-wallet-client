@@ -6,12 +6,12 @@ import React, { useCallback } from 'react';
 
 import { Avatar } from '~/components/avatar/Avatar';
 import { TokenPlatform } from '~/components/chain/ChainImage';
-import { useOptionalEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { TokenIcon } from '~/components/tokens/TokenIcon';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useIsSignedIn } from '~/hooks/data/useIsSignedIn';
 import { useWalletGeoRestricted } from '~/hooks/data/useWalletGeoRestricted';
 import { useExternalNavigate } from '~/hooks/navigation/useExternalNavigate';
+import { useOpenWalletToken } from '~/hooks/useOpenWalletToken';
 
 type TokenEmbedProps = {
   token: ApiTokenLinkCore;
@@ -62,8 +62,7 @@ function UnauthedTokenEmbed({ token, disabled }: TokenEmbedProps) {
 
 function AuthedTokenEmbed({ token, disabled, location }: TokenEmbedProps) {
   const navigate = useExternalNavigate();
-  const embeddedWalletBridge = useOptionalEmbeddedWalletBridge();
-  const navigateInWallet = embeddedWalletBridge?.navigate;
+  const openWalletToken = useOpenWalletToken();
   const isGeoRestricted = useWalletGeoRestricted();
 
   const { trackEvent } = useAnalytics();
@@ -82,24 +81,33 @@ function AuthedTokenEmbed({ token, disabled, location }: TokenEmbedProps) {
         location,
       });
 
-      if (!isGeoRestricted && navigateInWallet) {
-        navigateInWallet({
-          path: 'Token',
-          params: { chain: token.chain, ca: token.ca, via: 'cast_embed' },
-        });
-      } else {
-        const url = `https://dexscreener.com/${token.chain}/${token.ca}`;
-        navigate({ to: url, openInNewTab: true });
+      if (
+        !isGeoRestricted &&
+        openWalletToken({
+          ca: token.ca,
+          chain: token.chain,
+          decimals: token.decimals,
+          name: token.name,
+          symbol: token.ticker,
+          via: 'cast_embed',
+        })
+      ) {
+        return;
       }
+      const url = `https://dexscreener.com/${token.chain}/${token.ca}`;
+      navigate({ to: url, openInNewTab: true });
     },
     [
       disabled,
       isGeoRestricted,
       location,
       navigate,
-      navigateInWallet,
+      openWalletToken,
       token.ca,
       token.chain,
+      token.decimals,
+      token.name,
+      token.ticker,
       trackEvent,
     ],
   );

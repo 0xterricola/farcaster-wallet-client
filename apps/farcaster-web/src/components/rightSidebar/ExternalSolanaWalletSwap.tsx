@@ -52,10 +52,12 @@ const QUOTE_FRESHNESS_MS = 15_000;
 
 export function ExternalSolanaWalletSwap({
   address,
+  initialBuyToken,
   onBack,
   signTransaction,
 }: {
   address: string;
+  initialBuyToken?: SolanaSwapAsset;
   onBack: () => void;
   signTransaction: (transaction: Uint8Array) => Promise<Uint8Array>;
 }) {
@@ -63,7 +65,9 @@ export function ExternalSolanaWalletSwap({
   const balance = useSolanaBalance(address);
   const portfolio = useSolanaTokenPortfolio(address);
   const [fromMint, setFromMint] = useState(SOLANA_NATIVE_MINT);
-  const [toMint, setToMint] = useState(SOLANA_USDC_MINT);
+  const [toMint, setToMint] = useState(
+    initialBuyToken?.mint ?? SOLANA_USDC_MINT,
+  );
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -77,12 +81,16 @@ export function ExternalSolanaWalletSwap({
     const sol = { ...SOL, amount: String(balance.data ?? 0) };
     const usdc =
       tokens.find((asset) => asset.mint === SOLANA_USDC_MINT) ?? USDC;
-    return [
+    const baseAssets = [
       sol,
       usdc,
       ...tokens.filter((asset) => asset.mint !== SOLANA_USDC_MINT),
     ];
-  }, [balance.data, portfolio.data]);
+    return initialBuyToken &&
+      !baseAssets.some((asset) => asset.mint === initialBuyToken.mint)
+      ? [...baseAssets, initialBuyToken]
+      : baseAssets;
+  }, [balance.data, initialBuyToken, portfolio.data]);
   const from = assets.find((asset) => asset.mint === fromMint);
   const to = assets.find((asset) => asset.mint === toMint);
   const available = from

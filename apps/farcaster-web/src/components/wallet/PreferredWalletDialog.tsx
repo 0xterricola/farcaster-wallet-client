@@ -218,6 +218,10 @@ export function PreferredWalletSelector({
     setLocalPreferredWallet(preferredWallet);
   }, [preferredWallet]);
 
+  useEffect(() => {
+    setWalletFamily(defaultFamily);
+  }, [defaultFamily]);
+
   return (
     <div className="flex flex-col gap-4 ">
       {!hideHeader && (
