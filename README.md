@@ -20,6 +20,7 @@ in their own wallet.
 - Native-asset and ERC-20 sending with live balance checks
 - Same-chain swaps between native assets and arbitrary ERC-20 contracts
 - Quote, route, minimum received, allowance, approval, and transaction handling
+- Chain-aware token embeds that open Trade with the selected token prefilled
 - Five-item network activity page with transaction and explorer links
 - Explicit disconnect and reconnect flow
 - Independent Solana wallet support through Wallet Standard discovery and
@@ -43,6 +44,11 @@ phrase or private key is created, requested, or stored by this client.
 
 Swap quotes and transaction requests come from the public LI.FI quote API.
 The connected wallet remains responsible for approvals and transaction signing.
+Structured Farcaster token embeds can pass their existing chain and contract
+metadata into the external-wallet dashboard. The dashboard selects the matching
+EVM or Solana family, requests an EVM network change when necessary, and opens
+Trade with that token as the buy asset. It never guesses the chain for a raw
+contract address or automatically requests a quote, signature, or transaction.
 
 LI.FI also supplies wallet token discovery, token metadata, and estimated prices.
 Portfolio, Send, and Trade share one cache keyed by chain + wallet + token contract.

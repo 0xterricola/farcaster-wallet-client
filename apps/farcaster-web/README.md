@@ -260,6 +260,11 @@ or assume every miniapp will work on a fork's domain.
   address are shared by the EVM dashboard and EVM miniapps.
 - Base/EVM remains the default dashboard when both wallet families are
   connected; the family selector switches between the EVM and Solana views.
+- Structured token embeds route external-wallet users to the matching EVM or
+  Solana Trade screen and prefill the embedded token as the buy asset. If that
+  wallet family is disconnected, the matching connection tab opens first and
+  preserves the intent until connection. No quote or wallet request starts
+  automatically.
 - Installed EIP-6963 wallets appear as direct choices.
 - Installed Wallet Standard wallets appear as Solana choices. Solana supports
   browser-wallet connection, SOL and SPL token balances, address copy, Receive
@@ -332,6 +337,28 @@ or assume every miniapp will work on a fork's domain.
 
 Swap quotes and transaction requests use LI.FI's public quote API. Token
 approval and swap signing always occur in the connected wallet.
+
+## Token embed trade intents
+
+Authenticated Farcaster token cards include structured chain and token
+metadata. When an external wallet is selected, pressing a supported embed
+publishes a one-time trade intent to the wallet dashboard. The dashboard opens,
+selects EVM or Solana, requests the embedded EVM network when needed, opens
+Trade, and initializes the buy asset from the embedded contract or mint.
+
+The intent boundary accepts only dashboard chains with swap support. EVM token
+contracts must be valid addresses. Solana mints must be valid public keys and
+must include the token name, symbol, and decimals supplied by the structured
+embed. Unsupported or malformed tokens retain the existing external-link
+fallback. Plain contract-address text is deliberately excluded because an
+address alone does not reliably identify its chain.
+
+This is navigation and form prefilling only. The user must still enter an
+amount, request and review a quote, approve when required, and explicitly sign
+in the connected wallet. The intent never automatically fetches a quote,
+requests a signature, or submits a transaction. Farcaster Wallet continues to
+use its existing token-detail navigation rather than the external-wallet Trade
+screen.
 
 ## Recent activity
 
