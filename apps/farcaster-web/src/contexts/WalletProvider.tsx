@@ -19,6 +19,7 @@ import {
   WalletNetworkController,
 } from '~/hooks/useWalletNetworkController';
 import { logError } from '~/utils/logUtils';
+import { WalletFamily } from '~/utils/walletFamily';
 
 const PREFERRED_WALLET_KEY = 'preferred_wallet';
 const MAX_AGE = 30 * 1000;
@@ -47,7 +48,7 @@ const siwfLog = (...args: unknown[]) => {
 interface WalletContextType {
   // Connect Wallet
   connectors: readonly Connector[];
-  openConnectModal: () => void;
+  openConnectModal: (family?: WalletFamily) => void;
   closeConnectModal: () => void;
   isConnectModalOpen: boolean;
 
@@ -124,6 +125,8 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
 
   // State management
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [connectModalFamily, setConnectModalFamily] =
+    useState<WalletFamily>('evm');
   const [isFullyLoaded, setIsFullyLoaded] = useState(false);
   const [preferredWallet, setPreferredWallet] = useState<string | undefined>(
     () => localStorage.getItem(PREFERRED_WALLET_KEY) ?? undefined,
@@ -155,7 +158,10 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
   );
 
   // Modal controls
-  const openConnectModal = useCallback(() => setIsConnectModalOpen(true), []);
+  const openConnectModal = useCallback((family: WalletFamily = 'evm') => {
+    setConnectModalFamily(family);
+    setIsConnectModalOpen(true);
+  }, []);
   const closeConnectModal = useCallback(() => setIsConnectModalOpen(false), []);
 
   // Wallet preference handlers
@@ -436,7 +442,9 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
   return (
     <WalletContext.Provider value={value}>
       {children}
-      {isConnectModalOpen && <PreferredWalletDialog />}
+      {isConnectModalOpen && (
+        <PreferredWalletDialog defaultFamily={connectModalFamily} />
+      )}
     </WalletContext.Provider>
   );
 };

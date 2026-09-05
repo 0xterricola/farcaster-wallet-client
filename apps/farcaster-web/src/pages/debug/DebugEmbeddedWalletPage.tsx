@@ -103,7 +103,7 @@ const DebugEmbeddedWalletPage: FC = memo(() => {
               <DefaultButton onClick={clearPreferredWallet}>
                 Clear Preferred Wallet
               </DefaultButton>
-              <DefaultButton onClick={connectWallet}>
+              <DefaultButton onClick={() => connectWallet()}>
                 Open Wallet Switcher
               </DefaultButton>
             </div>

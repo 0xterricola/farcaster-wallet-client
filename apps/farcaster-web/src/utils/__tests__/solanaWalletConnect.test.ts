@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type MockSession = {
-  namespaces: { solana?: { accounts: readonly string[] } };
+  namespaces: {
+    solana?: { accounts: readonly string[]; methods: readonly string[] };
+  };
   topic: string;
 };
 
@@ -58,6 +60,7 @@ const SESSION: MockSession = {
       accounts: [
         'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:SolAddress1111111111111111111111111111111',
       ],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
     },
   },
   topic: 'topic-1',
@@ -97,6 +100,7 @@ describe('createSolanaWalletConnectWallet', () => {
         'standard:connect',
         'standard:disconnect',
         'standard:events',
+        'solana:signMessage',
         'solana:signTransaction',
       ]),
     );
@@ -125,6 +129,15 @@ describe('createSolanaWalletConnectWallet', () => {
       uri: 'wc:pairing-uri',
     });
     expect(modalInstance.closeModal).toHaveBeenCalledOnce();
+    expect(providerInstance.connect).toHaveBeenCalledWith({
+      namespaces: {
+        solana: {
+          chains: ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'],
+          events: [],
+          methods: ['solana_signTransaction', 'solana_signMessage'],
+        },
+      },
+    });
     expect(result.accounts).toEqual([
       {
         address: 'SolAddress1111111111111111111111111111111',
@@ -286,6 +299,40 @@ describe('createSolanaWalletConnectWallet', () => {
     expect(new TextDecoder().decode(result.signedTransaction)).toBe(
       'signed-bytes',
     );
+  });
+
+  it('signs a message using the WalletConnect Solana base58 convention', async () => {
+    providerInstance.session = SESSION;
+    providerInstance.client.request.mockResolvedValue({ signature: 'Ldp' });
+    const wallet = createSolanaWalletConnectWallet('project-id');
+    const { signMessage } = feature<{
+      signMessage: (
+        ...inputs: readonly {
+          account: { address: string };
+          message: Uint8Array;
+        }[]
+      ) => Promise<readonly { signature: Uint8Array }[]>;
+    }>(wallet, 'solana:signMessage');
+
+    const [result] = await signMessage({
+      account: {
+        address: 'SolAddress1111111111111111111111111111111',
+      },
+      message: new Uint8Array([1, 2, 3]),
+    });
+
+    expect(providerInstance.client.request).toHaveBeenCalledWith({
+      chainId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+      request: {
+        method: 'solana_signMessage',
+        params: {
+          message: 'Ldp',
+          pubkey: 'SolAddress1111111111111111111111111111111',
+        },
+      },
+      topic: 'topic-1',
+    });
+    expect(result.signature).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   it('rejects signing before a session exists', async () => {

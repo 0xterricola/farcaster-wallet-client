@@ -15,6 +15,7 @@ import {
   SOLANA_DISCONNECT_FEATURE,
   SOLANA_EVENTS_FEATURE,
   SOLANA_MAINNET_CHAIN,
+  SOLANA_SIGN_MESSAGE_FEATURE,
   SOLANA_SIGN_TRANSACTION_FEATURE,
   useDetectedSolanaWallets,
 } from '~/hooks/useDetectedSolanaWallets';
@@ -59,12 +60,22 @@ type SignTransactionFeature = {
   ) => Promise<readonly { signedTransaction: Uint8Array }[]>;
 };
 
+type SignMessageFeature = {
+  signMessage: (
+    ...inputs: readonly {
+      account: DetectedSolanaAccount;
+      message: Uint8Array;
+    }[]
+  ) => Promise<readonly { signature: Uint8Array }[]>;
+};
+
 type SolanaWalletContextValue = {
   address: string | undefined;
   connect: (wallet: DetectedSolanaWallet) => Promise<boolean>;
   detectedWallets: readonly DetectedSolanaWallet[];
   disconnect: () => Promise<void>;
   error: string | undefined;
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
   signTransaction: (transaction: Uint8Array) => Promise<Uint8Array>;
   status: SolanaWalletStatus;
   wallet: DetectedSolanaWallet | undefined;
@@ -208,6 +219,27 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
     [account, status, wallet],
   );
 
+  const signMessage = useCallback(
+    async (message: Uint8Array) => {
+      if (!wallet || !account || status !== 'connected') {
+        throw new Error('Connect a Solana wallet before signing.');
+      }
+      const signing = feature<SignMessageFeature>(
+        wallet,
+        SOLANA_SIGN_MESSAGE_FEATURE,
+      );
+      if (!signing?.signMessage) {
+        throw new Error('This wallet cannot sign Solana messages.');
+      }
+      const [result] = await signing.signMessage({ account, message });
+      if (!result?.signature?.length) {
+        throw new Error('The wallet did not return a message signature.');
+      }
+      return result.signature;
+    },
+    [account, status, wallet],
+  );
+
   useEffect(() => {
     if (wallet || !detectedWallets.length) {
       return;
@@ -281,6 +313,7 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       detectedWallets,
       disconnect,
       error,
+      signMessage,
       signTransaction,
       status,
       wallet,
@@ -291,6 +324,7 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       detectedWallets,
       disconnect,
       error,
+      signMessage,
       signTransaction,
       status,
       wallet,

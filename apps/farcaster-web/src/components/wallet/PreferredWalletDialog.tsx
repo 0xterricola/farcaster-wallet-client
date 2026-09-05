@@ -35,7 +35,11 @@ function getMiniAppPermission(
 const WALLET_CONNECT_ICON =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4lMEE8cmVjdCB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIGZpbGw9IiMzQjk5RkMiLz4lMEE8cGF0aCBkPSJNOC4zODk2OSAxMC4zNzM5QzExLjQ4ODIgNy4yNzUzOCAxNi41MTE4IDcuMjc1MzggMTkuNjEwMyAxMC4zNzM5TDE5Ljk4MzIgMTAuNzQ2OEMyMC4xMzgyIDEwLjkwMTcgMjAuMTM4MiAxMS4xNTI5IDE5Ljk4MzIgMTEuMzA3OEwxOC43MDc2IDEyLjU4MzVDMTguNjMwMSAxMi42NjA5IDE4LjUwNDUgMTIuNjYwOSAxOC40MjcxIDEyLjU4MzVMMTcuOTEzOSAxMi4wNzAzQzE1Ljc1MjMgOS45MDg3IDEyLjI0NzcgOS45MDg3IDEwLjA4NjEgMTIuMDcwM0w5LjUzNjU1IDEyLjYxOThDOS40NTkwOSAxMi42OTczIDkuMzMzNSAxMi42OTczIDkuMjU2MDQgMTIuNjE5OEw3Ljk4MDM5IDExLjM0NDJDNy44MjU0NyAxMS4xODkzIDcuODI1NDcgMTAuOTM4MSA3Ljk4MDM5IDEwLjc4MzJMOC4zODk2OSAxMC4zNzM5Wk0yMi4yNDg1IDEzLjAxMkwyMy4zODM4IDE0LjE0NzRDMjMuNTM4NyAxNC4zMDIzIDIzLjUzODcgMTQuNTUzNSAyMy4zODM4IDE0LjcwODRMMTguMjY0NSAxOS44Mjc3QzE4LjEwOTYgMTkuOTgyNyAxNy44NTg0IDE5Ljk4MjcgMTcuNzAzNSAxOS44Mjc3QzE3LjcwMzUgMTkuODI3NyAxNy43MDM1IDE5LjgyNzcgMTcuNzAzNSAxOS44Mjc3TDE0LjA3MDIgMTYuMTk0NEMxNC4wMzE0IDE2LjE1NTcgMTMuOTY4NiAxNi4xNTU3IDEzLjkyOTkgMTYuMTk0NEMxMy45Mjk5IDE2LjE5NDQgMTMuOTI5OSAxNi4xOTQ0IDEzLjkyOTkgMTYuMTk0NEwxMC4yOTY2IDE5LjgyNzdDMTAuMTQxNyAxOS45ODI3IDkuODkwNTMgMTkuOTgyNyA5LjczNTYxIDE5LjgyNzhDOS43MzU2IDE5LjgyNzggOS43MzU2IDE5LjgyNzcgOS43MzU2IDE5LjgyNzdMNC42MTYxOSAxNC43MDgzQzQuNDYxMjcgMTQuNTUzNCA0LjQ2MTI3IDE0LjMwMjIgNC42MTYxOSAxNC4xNDczTDUuNzUxNTIgMTMuMDEyQzUuOTA2NDUgMTIuODU3IDYuMTU3NjMgMTIuODU3IDYuMzEyNTUgMTMuMDEyTDkuOTQ1OTUgMTYuNjQ1NEM5Ljk4NDY4IDE2LjY4NDEgMTAuMDQ3NSAxNi42ODQxIDEwLjA4NjIgMTYuNjQ1NEMxMC4wODYyIDE2LjY0NTQgMTAuMDg2MiAxNi42NDU0IDEwLjA4NjIgMTYuNjQ1NEwxMy43MTk0IDEzLjAxMkMxMy44NzQzIDEyLjg1NyAxNC4xMjU1IDEyLjg1NyAxNC4yODA1IDEzLjAxMkMxNC4yODA1IDEzLjAxMiAxNC4yODA1IDEzLjAxMiAxNC4yODA1IDEzLjAxMkwxNy45MTM5IDE2LjY0NTRDMTcuOTUyNiAxNi42ODQxIDE4LjAxNTQgMTYuNjg0MSAxOC4wNTQxIDE2LjY0NTRMMjEuNjg3NCAxMy4wMTJDMjEuODQyNCAxMi44NTcxIDIyLjA5MzYgMTIuODU3MSAyMi4yNDg1IDEzLjAxMloiIGZpbGw9IndoaXRlIi8+JTBBPC9zdmc+';
 
-export function PreferredWalletDialog() {
+export function PreferredWalletDialog({
+  defaultFamily = 'evm',
+}: {
+  defaultFamily?: WalletFamily;
+}) {
   const { closeConnectModal } = useWallet();
 
   return (
@@ -62,7 +66,7 @@ export function PreferredWalletDialog() {
           }}
         >
           <div className="border-top border-left border-right relative w-[424px] overflow-hidden rounded-xl p-4 bg-app">
-            <PreferredWalletSelector modal />
+            <PreferredWalletSelector defaultFamily={defaultFamily} modal />
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -217,6 +221,10 @@ export function PreferredWalletSelector({
   useEffect(() => {
     setLocalPreferredWallet(preferredWallet);
   }, [preferredWallet]);
+
+  useEffect(() => {
+    setWalletFamily(defaultFamily);
+  }, [defaultFamily]);
 
   useEffect(() => {
     setWalletFamily(defaultFamily);
