@@ -3,6 +3,7 @@
 // has a side effect that crashes under jsdom.
 import type { WalletConnectModal } from '@walletconnect/modal';
 import { UniversalProvider } from '@walletconnect/universal-provider';
+import bs58 from 'bs58';
 
 import {
   DetectedSolanaAccount,
@@ -11,6 +12,7 @@ import {
   SOLANA_DISCONNECT_FEATURE,
   SOLANA_EVENTS_FEATURE,
   SOLANA_MAINNET_CHAIN,
+  SOLANA_SIGN_MESSAGE_FEATURE,
   SOLANA_SIGN_TRANSACTION_FEATURE,
 } from '~/hooks/useDetectedSolanaWallets';
 
@@ -27,6 +29,7 @@ import {
 // https://namespaces.chainagnostic.org/solana/caip2
 const SOLANA_MAINNET_CAIP2 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 const SOLANA_SIGN_TRANSACTION_METHOD = 'solana_signTransaction';
+const SOLANA_SIGN_MESSAGE_METHOD = 'solana_signMessage';
 
 export const WALLET_CONNECT_WALLET_NAME = 'WalletConnect';
 
@@ -181,15 +184,13 @@ export function createSolanaWalletConnectWallet(
             solana: {
               chains: [SOLANA_MAINNET_CAIP2],
               events: [],
-              // Only requesting the method this wallet actually implements
-              // and calls (see signTransaction below). Requiring a method
-              // we never use is needless risk: WalletConnect's spec says a
-              // wallet that can't satisfy a required method should reject
-              // the session outright, but Solana wallet support for the
-              // protocol is far less mature than EVM's, and some
-              // implementations have been observed hanging instead of
-              // rejecting when they can't meet a required namespace.
-              methods: [SOLANA_SIGN_TRANSACTION_METHOD],
+              // Mini Apps can request both transaction and message signing.
+              // Requiring both here makes the session's capabilities honest
+              // before a Mini App is allowed to rely on them.
+              methods: [
+                SOLANA_SIGN_TRANSACTION_METHOD,
+                SOLANA_SIGN_MESSAGE_METHOD,
+              ],
             },
           },
         }),
@@ -253,6 +254,54 @@ export function createSolanaWalletConnectWallet(
     return results;
   };
 
+  const signMessage = async (
+    ...inputs: readonly {
+      account: DetectedSolanaAccount;
+      message: Uint8Array;
+    }[]
+  ) => {
+    const provider = await getProvider();
+    const { session } = provider;
+    if (!session) {
+      throw new Error('Connect a Solana wallet before signing.');
+    }
+    if (
+      !session.namespaces.solana?.methods.includes(SOLANA_SIGN_MESSAGE_METHOD)
+    ) {
+      throw new Error(
+        'Reconnect WalletConnect to enable Solana message signing.',
+      );
+    }
+    const connectedAddresses = new Set(
+      accountsFromSession(provider).map(({ address }) => address),
+    );
+    const results: { signature: Uint8Array; signedMessage: Uint8Array }[] = [];
+    for (const { account, message } of inputs) {
+      if (!connectedAddresses.has(account.address)) {
+        throw new Error('The requested Solana account is not connected.');
+      }
+      const response = await provider.client.request<{ signature?: string }>({
+        chainId: SOLANA_MAINNET_CAIP2,
+        request: {
+          method: SOLANA_SIGN_MESSAGE_METHOD,
+          params: {
+            message: bs58.encode(message),
+            pubkey: account.address,
+          },
+        },
+        topic: session.topic,
+      });
+      if (!response?.signature) {
+        throw new Error('The wallet did not return a message signature.');
+      }
+      results.push({
+        signature: bs58.decode(response.signature),
+        signedMessage: message,
+      });
+    }
+    return results;
+  };
+
   const on = (
     _event: 'change',
     listener: (properties: {
@@ -292,6 +341,7 @@ export function createSolanaWalletConnectWallet(
       [SOLANA_CONNECT_FEATURE]: { connect },
       [SOLANA_DISCONNECT_FEATURE]: { disconnect },
       [SOLANA_EVENTS_FEATURE]: { on },
+      [SOLANA_SIGN_MESSAGE_FEATURE]: { signMessage },
       [SOLANA_SIGN_TRANSACTION_FEATURE]: { signTransaction },
     },
     icon: WALLET_CONNECT_ICON,

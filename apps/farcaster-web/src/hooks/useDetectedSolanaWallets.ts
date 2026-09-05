@@ -5,6 +5,7 @@ export const SOLANA_MAINNET_CHAIN = 'solana:mainnet';
 export const SOLANA_CONNECT_FEATURE = 'standard:connect';
 export const SOLANA_DISCONNECT_FEATURE = 'standard:disconnect';
 export const SOLANA_EVENTS_FEATURE = 'standard:events';
+export const SOLANA_SIGN_MESSAGE_FEATURE = 'solana:signMessage';
 export const SOLANA_SIGN_TRANSACTION_FEATURE = 'solana:signTransaction';
 
 export type DetectedSolanaAccount = {

@@ -13,8 +13,10 @@ in their own wallet.
 - WalletConnect support for EVM and Solana QR, mobile, browser, and
   wallet-directory flows
 - Automatic discovery of modern EIP-6963 browser wallets
-- One persistent wallet across the dashboard and Farcaster miniapps
-- EIP-1193 provider support for miniapp signatures and transactions
+- Persistent EVM and Solana connections shared by the dashboard and Farcaster
+  miniapps
+- EIP-1193 EVM and Farcaster Solana provider support for miniapp connections,
+  signatures, and transactions
 - Connected address, native balance, and token portfolio on eight EVM networks
 - Receive address with QR code and copy action
 - Native-asset and ERC-20 sending with live balance checks
@@ -30,9 +32,12 @@ in their own wallet.
 
 ## How it works
 
-The web client uses Wagmi for connection state and exposes the selected wallet
-through the client's existing wallet context. Miniapps, the wallet dashboard,
-sends, and swaps all consume that same provider and address.
+The web client uses Wagmi for EVM connection state and Wallet Standard for
+Solana connection state, then exposes each selected external wallet through the
+client's wallet contexts. Miniapps and the corresponding EVM or Solana
+dashboard flows consume the same provider and address. A Solana miniapp can
+connect, sign messages, sign transactions, and sign and submit transactions
+through the selected external Solana wallet.
 
 WalletConnect is the universal fallback for both wallet families. EVM and
 Solana WalletConnect sessions use isolated storage and remain independent, so
@@ -152,9 +157,8 @@ rejected approvals.
   the upstream snapshot implementation.
 - Portfolio, receive guidance, sends, same-chain swaps, and recent activity
   target the eight documented EVM networks, plus an independent Solana
-  Mainnet wallet family with the same feature set. Miniapps continue to use
-  the shared EVM wallet provider for their own supported networks; Solana is
-  not wired into miniapp signing.
+  Mainnet wallet family with the same feature set. Miniapps use the shared EVM
+  or Solana connection according to the provider interface they request.
 - Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
   be unavailable. Complete recent EVM history depends on Etherscan or Alchemy;
   locally submitted EVM transactions remain visible while an indexer catches

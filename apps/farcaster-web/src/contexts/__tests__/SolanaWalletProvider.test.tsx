@@ -40,6 +40,9 @@ function makeWallet({
 } = {}) {
   const connect = vi.fn().mockResolvedValue({ accounts: connectAccounts });
   const disconnect = vi.fn().mockResolvedValue(undefined);
+  const signMessage = vi
+    .fn()
+    .mockResolvedValue([{ signature: new Uint8Array([7, 8, 9]) }]);
   const signTransaction = vi
     .fn()
     .mockResolvedValue([{ signedTransaction: new Uint8Array([4, 5, 6]) }]);
@@ -47,6 +50,7 @@ function makeWallet({
     accounts,
     chains: ['solana:mainnet'],
     features: {
+      'solana:signMessage': { signMessage, version: '1.0.0' },
       'solana:signTransaction': { signTransaction, version: '1.0.0' },
       'standard:connect': { connect, version: '1.0.0' },
       'standard:disconnect': { disconnect, version: '1.0.0' },
@@ -55,7 +59,7 @@ function makeWallet({
     name,
     version: '1.0.0',
   };
-  return { connect, disconnect, signTransaction, wallet };
+  return { connect, disconnect, signMessage, signTransaction, wallet };
 }
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -190,6 +194,25 @@ describe('SolanaWalletProvider', () => {
         account: expect.objectContaining({ address: 'SolanaAddress123' }),
         chain: 'solana:mainnet',
         transaction: new Uint8Array([1, 2, 3]),
+      }),
+    );
+  });
+
+  it('signs messages through the connected Wallet Standard account', async () => {
+    const { signMessage, wallet } = makeWallet();
+    mockUseDetectedSolanaWallets.mockReturnValue([wallet]);
+    const view = renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+    await act(async () => {
+      await view.result.current.connect(wallet);
+    });
+
+    await expect(
+      view.result.current.signMessage(new Uint8Array([1, 2, 3])),
+    ).resolves.toEqual(new Uint8Array([7, 8, 9]));
+    expect(signMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: expect.objectContaining({ address: 'SolanaAddress123' }),
+        message: new Uint8Array([1, 2, 3]),
       }),
     );
   });

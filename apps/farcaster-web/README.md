@@ -258,6 +258,12 @@ or assume every miniapp will work on a fork's domain.
   at the same time. Disconnecting one family does not disconnect the other.
 - The active EVM wallet is persisted as the preferred wallet. Its provider and
   address are shared by the EVM dashboard and EVM miniapps.
+- The active Solana wallet is likewise shared by the Solana dashboard and
+  Solana miniapps. Miniapp `connect` opens the wallet chooser directly on the
+  Solana tab when needed; `signMessage`, `signTransaction`, and
+  `signAndSendTransaction` are delegated to that external wallet. Signed
+  transactions are submitted through the existing same-origin Solana RPC
+  relay with preflight enabled.
 - Base/EVM remains the default dashboard when both wallet families are
   connected; the family selector switches between the EVM and Solana views.
 - Structured token embeds route external-wallet users to the matching EVM or
@@ -291,6 +297,11 @@ or assume every miniapp will work on a fork's domain.
   return the complete serialized signed transaction. Signature-only responses
   are rejected as unsupported instead of constructing an unverified
   transaction.
+- Solana WalletConnect sessions request both `solana_signTransaction` and
+  `solana_signMessage`, matching the operations exposed to miniapps. A wallet
+  that cannot authorize both methods may reject the WalletConnect session;
+  Wallet Standard browser wallets can still connect for dashboard use and
+  surface a clear error only if a miniapp requests an unsupported signature.
 - Disconnecting returns the dashboard to the connection choices.
 - Private keys and seed phrases never enter the Farcaster client.
 

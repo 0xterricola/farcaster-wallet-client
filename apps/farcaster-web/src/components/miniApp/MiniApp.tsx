@@ -115,6 +115,7 @@ import { useIsAdmin } from '~/hooks/data/useIsAdmin';
 import { useUserLevel } from '~/hooks/data/useUserLevel';
 import { useExternalNavigate } from '~/hooks/navigation/useExternalNavigate';
 import { useNavigateToConversation } from '~/hooks/navigation/useNavigateToConversation';
+import { useSolanaMiniAppProvider } from '~/hooks/useSolanaMiniAppProvider';
 import { cn } from '~/lib/utils';
 import { CastComposerIntent } from '~/types';
 import { trackError } from '~/utils/errorUtils';
@@ -397,10 +398,10 @@ function InnerMiniAppContent({
     connectionContextRef,
     navigate: navigateInWallet,
     sendToken,
-    solanaProvider,
     swapToken,
     clearPreviewRequests,
   } = useEmbeddedWalletBridge();
+  const solanaProvider = useSolanaMiniAppProvider();
 
   const close = useCallback(() => {
     // Clear any pending transaction preview requests
