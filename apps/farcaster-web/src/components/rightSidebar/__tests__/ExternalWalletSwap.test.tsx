@@ -516,6 +516,17 @@ describe('trade selector regressions', () => {
       (screen.getByLabelText(label) as HTMLSelectElement).options,
     );
   }
+  it('prefills an embedded token contract as the buy asset', () => {
+    render(<ExternalWalletSwap initialBuyTokenAddress={contract} />);
+    expect((screen.getByLabelText('Buy token') as HTMLInputElement).value).toBe(
+      contract,
+    );
+    expect(
+      (screen.getByLabelText('Choose buy asset') as HTMLSelectElement).value,
+    ).toBe('custom');
+    expect(mocks.quote).not.toHaveBeenCalled();
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
   it('offers only ETH and native Base USDC as defaults without wallet holdings', () => {
     render(<ExternalWalletSwap />);
     expect(choices('Choose buy asset').map((option) => option.value)).toEqual([

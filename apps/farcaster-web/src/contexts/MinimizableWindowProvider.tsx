@@ -2,6 +2,10 @@ import { AnalyticsEvent } from 'farcaster-analytics';
 import * as React from 'react';
 
 import { MiniAppParams, useLaunchMiniApp } from '~/contexts/MiniAppProvider';
+import {
+  WalletTradeIntent,
+  WalletTradeIntentInput,
+} from '~/utils/walletTradeIntent';
 
 import { useAnalytics } from './AnalyticsProvider';
 import { OpenableWarpcastWalletContext } from './OpenableWarpcastWalletContext';
@@ -14,6 +18,9 @@ type MinimizableWindowContextType = {
   dismissMiniApp: () => void;
   minimizeMiniApp: () => void;
   maximizeMiniApp: () => void;
+  walletTradeIntent: WalletTradeIntent | undefined;
+  openWalletTradeIntent: (intent: WalletTradeIntentInput) => void;
+  consumeWalletTradeIntent: (id: number) => void;
 };
 
 const MinimizableWindowContext = React.createContext<
@@ -29,6 +36,10 @@ function MinimizableWindowProvider({
 }: MinimizableWindowProviderProps) {
   const { trackEvent } = useAnalytics();
   const [isWarpcastWalletOpen, setIsWarpcastWalletOpen] = React.useState(false);
+  const [walletTradeIntent, setWalletTradeIntent] = React.useState<
+    WalletTradeIntent | undefined
+  >();
+  const walletTradeIntentId = React.useRef(0);
 
   const {
     launchMiniAppWithoutMinimizingWallet,
@@ -47,6 +58,19 @@ function MinimizableWindowProvider({
     setIsWarpcastWalletOpen(false);
     trackEvent(AnalyticsEvent.CloseWallet, {});
   }, [trackEvent]);
+  const openWalletTradeIntent = React.useCallback(
+    (intent: WalletTradeIntentInput) => {
+      walletTradeIntentId.current += 1;
+      setWalletTradeIntent({ ...intent, id: walletTradeIntentId.current });
+      openWarpcastWallet();
+    },
+    [openWarpcastWallet],
+  );
+  const consumeWalletTradeIntent = React.useCallback((id: number) => {
+    setWalletTradeIntent((current) =>
+      current?.id === id ? undefined : current,
+    );
+  }, []);
 
   const openMainWarpcastWallet = openWarpcastWallet;
   const [miniAppLoadingMessage, setMiniAppLoadingMessage] = React.useState<
@@ -90,6 +114,9 @@ function MinimizableWindowProvider({
       maximizeMiniApp,
       miniAppLoadingMessage,
       setMiniAppLoadingMessage,
+      walletTradeIntent,
+      openWalletTradeIntent,
+      consumeWalletTradeIntent,
     }),
     [
       miniAppMinimized,
@@ -98,6 +125,9 @@ function MinimizableWindowProvider({
       minimizeMiniApp,
       maximizeMiniApp,
       miniAppLoadingMessage,
+      walletTradeIntent,
+      openWalletTradeIntent,
+      consumeWalletTradeIntent,
       setMiniAppLoadingMessage,
     ],
   );

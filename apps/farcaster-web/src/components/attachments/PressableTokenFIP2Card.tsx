@@ -5,10 +5,10 @@ import {
 } from 'farcaster-client-data';
 import React, { useCallback } from 'react';
 
-import { useOptionalEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useWalletGeoRestricted } from '~/hooks/data/useWalletGeoRestricted';
 import { useExternalNavigate } from '~/hooks/navigation/useExternalNavigate';
+import { useOpenWalletToken } from '~/hooks/useOpenWalletToken';
 
 import { TokenFIP2CardContent } from './TokenFIP2Card';
 
@@ -20,8 +20,7 @@ function PressableTokenFIP2Card({
   tx: ApiOnchainTransactionSwapEmbed | undefined;
 }) {
   const navigate = useExternalNavigate();
-  const embeddedWalletBridge = useOptionalEmbeddedWalletBridge();
-  const navigateInWallet = embeddedWalletBridge?.navigate;
+  const openWalletToken = useOpenWalletToken();
   const isGeoRestricted = useWalletGeoRestricted();
 
   const { trackEvent } = useAnalytics();
@@ -35,26 +34,31 @@ function PressableTokenFIP2Card({
         chain: token.chain,
       });
 
-      if (!isGeoRestricted && navigateInWallet) {
-        navigateInWallet({
-          path: 'Token',
-          params: {
-            chain: token.chain,
-            ca: token.ca,
-            via: 'fip2-embed',
-          },
-        });
-      } else {
-        const url = `https://dexscreener.com/${token.chain}/${token.ca}`;
-        navigate({ to: url, openInNewTab: true });
+      if (
+        !isGeoRestricted &&
+        openWalletToken({
+          ca: token.ca,
+          chain: token.chain,
+          decimals: token.decimals,
+          name: token.name,
+          symbol: token.symbol,
+          via: 'fip2-embed',
+        })
+      ) {
+        return;
       }
+      const url = `https://dexscreener.com/${token.chain}/${token.ca}`;
+      navigate({ to: url, openInNewTab: true });
     },
     [
       navigate,
-      navigateInWallet,
+      openWalletToken,
       isGeoRestricted,
       token.ca,
       token.chain,
+      token.decimals,
+      token.name,
+      token.symbol,
       trackEvent,
     ],
   );

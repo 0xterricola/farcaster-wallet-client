@@ -2,8 +2,8 @@ import { chainIdToChain } from 'farcaster-client-data';
 import { useFetchToken } from 'farcaster-client-hooks';
 import { useCallback } from 'react';
 
-import { useOptionalEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { useExternalNavigate } from '~/hooks/navigation/useExternalNavigate';
+import { useOpenWalletToken } from '~/hooks/useOpenWalletToken';
 
 const CAIP_19_ERC20_PATTERN = /^eip155:(\d+)\/erc20:(0x[a-fA-F0-9]{40})$/;
 
@@ -29,13 +29,12 @@ const parseToken = (token: string) => {
 export const useViewToken = () => {
   const openUrl = useExternalNavigate();
   const fetchToken = useFetchToken();
-  const embeddedWalletBridge = useOptionalEmbeddedWalletBridge();
-  const navigateInWallet = embeddedWalletBridge?.navigate;
+  const openWalletToken = useOpenWalletToken();
 
   return useCallback(
     async ({ url, token }: { url: string; token: string }) => {
       const tokenData = parseToken(token);
-      if (!tokenData || !navigateInWallet) {
+      if (!tokenData) {
         openUrl({ to: url, openInNewTab: true });
         return;
       }
@@ -43,18 +42,19 @@ export const useViewToken = () => {
       try {
         await fetchToken(tokenData);
 
-        navigateInWallet({
-          path: 'Token',
-          params: {
-            chain: tokenData.chain,
+        if (
+          !openWalletToken({
             ca: tokenData.ca,
+            chain: tokenData.chain,
             via: 'miniapp_view_token',
-          },
-        });
+          })
+        ) {
+          openUrl({ to: url, openInNewTab: true });
+        }
       } catch {
         openUrl({ to: url, openInNewTab: true });
       }
     },
-    [fetchToken, navigateInWallet, openUrl],
+    [fetchToken, openUrl, openWalletToken],
   );
 };

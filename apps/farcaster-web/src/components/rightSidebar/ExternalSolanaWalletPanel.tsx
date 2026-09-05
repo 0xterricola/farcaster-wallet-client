@@ -8,7 +8,7 @@ import {
   HistoryIcon,
   WalletIcon,
 } from 'lucide-react';
-import React, { ReactNode, useMemo, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
@@ -22,6 +22,7 @@ import {
   SOLANA_MAINNET_NAME,
   solanaAddressUrl,
 } from '~/utils/solanaWallet';
+import { WalletTradeIntent } from '~/utils/walletTradeIntent';
 
 type SolanaView = 'activity' | 'overview' | 'receive' | 'send' | 'trade';
 
@@ -29,14 +30,21 @@ export function ExternalSolanaWalletPanel({
   address,
   onManageWallets,
   signTransaction,
+  tradeIntent,
 }: {
   address: string;
   onManageWallets: () => void;
   signTransaction: (transaction: Uint8Array) => Promise<Uint8Array>;
+  tradeIntent?: Extract<WalletTradeIntent, { family: 'solana' }>;
 }) {
   const [view, setView] = useState<SolanaView>('overview');
   const [copied, setCopied] = useState(false);
   const balance = useSolanaBalance(address);
+  useEffect(() => {
+    if (tradeIntent) {
+      setView('trade');
+    }
+  }, [tradeIntent]);
   const formattedBalance = useMemo(() => {
     if (balance.isLoading) {
       return 'Loading…';
@@ -90,7 +98,19 @@ export function ExternalSolanaWalletPanel({
   if (view === 'trade') {
     return (
       <ExternalSolanaWalletSwap
+        key={tradeIntent?.id}
         address={address}
+        initialBuyToken={
+          tradeIntent
+            ? {
+                amount: '0',
+                decimals: tradeIntent.tokenDecimals,
+                mint: tradeIntent.tokenAddress,
+                name: tradeIntent.tokenName,
+                symbol: tradeIntent.tokenSymbol,
+              }
+            : undefined
+        }
         onBack={() => setView('overview')}
         signTransaction={signTransaction}
       />
