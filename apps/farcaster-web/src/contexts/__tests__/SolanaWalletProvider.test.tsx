@@ -11,6 +11,21 @@ import {
 import { DetectedSolanaWallet } from '~/hooks/useDetectedSolanaWallets';
 import { WALLET_CONNECT_WALLET_NAME } from '~/utils/solanaWalletConnect';
 
+const mockUnifiedMetaMask = {
+  disconnect: vi.fn(),
+  solanaAddress: undefined as string | undefined,
+  solanaWallet: undefined as DetectedSolanaWallet | undefined,
+  status: 'disconnected' as
+    | 'disconnected'
+    | 'connecting'
+    | 'connected'
+    | 'error',
+};
+
+vi.mock('~/contexts/UnifiedMetaMaskProvider', () => ({
+  useUnifiedMetaMask: () => mockUnifiedMetaMask,
+}));
+
 const mockUseDetectedSolanaWallets =
   vi.fn<() => readonly DetectedSolanaWallet[]>();
 
@@ -71,6 +86,81 @@ describe('SolanaWalletProvider', () => {
     localStorage.clear();
     mockUseDetectedSolanaWallets.mockReset();
     mockUseDetectedSolanaWallets.mockReturnValue([]);
+    mockUnifiedMetaMask.disconnect.mockReset();
+    mockUnifiedMetaMask.solanaAddress = undefined;
+    mockUnifiedMetaMask.solanaWallet = undefined;
+    mockUnifiedMetaMask.status = 'disconnected';
+  });
+
+  it('exposes a complete Unified MetaMask session through the Solana pipe', async () => {
+    const account = {
+      address: 'UnifiedSolanaAddress',
+      chains: ['solana:mainnet'],
+    };
+    const { signTransaction, wallet } = makeWallet({
+      accounts: [account],
+      name: 'MetaMask',
+    });
+    mockUnifiedMetaMask.solanaAddress = account.address;
+    mockUnifiedMetaMask.solanaWallet = wallet;
+    mockUnifiedMetaMask.status = 'connected';
+
+    const view = renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    expect(view.result.current).toMatchObject({
+      address: account.address,
+      status: 'connected',
+      wallet,
+    });
+    await expect(
+      view.result.current.signTransaction(new Uint8Array([1, 2, 3])),
+    ).resolves.toEqual(new Uint8Array([4, 5, 6]));
+    expect(signTransaction).toHaveBeenCalledOnce();
+  });
+
+  it('blocks an independent Solana connection while Unified is occupied', async () => {
+    const { connect, wallet } = makeWallet();
+    mockUnifiedMetaMask.status = 'connecting';
+    const view = renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    await act(async () => {
+      expect(await view.result.current.connect(wallet)).toBe(false);
+    });
+
+    expect(connect).not.toHaveBeenCalled();
+    expect(view.result.current.error).toContain('Disconnect Unified MetaMask');
+  });
+
+  it('releases a restored independent wallet when Unified takes ownership', async () => {
+    const { disconnect, wallet } = makeWallet();
+    mockUseDetectedSolanaWallets.mockReturnValue([wallet]);
+    const view = renderHook(() => useSolanaWallet(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await view.result.current.connect(wallet);
+    });
+    expect(localStorage.getItem('solana_wallet_name')).toBe(wallet.name);
+
+    const unifiedAccount = {
+      address: 'UnifiedSolanaAddress',
+      chains: ['solana:mainnet'],
+    };
+    const { wallet: unifiedWallet } = makeWallet({
+      accounts: [unifiedAccount],
+      name: 'MetaMask',
+    });
+    mockUnifiedMetaMask.solanaAddress = unifiedAccount.address;
+    mockUnifiedMetaMask.solanaWallet = unifiedWallet;
+    mockUnifiedMetaMask.status = 'connected';
+    view.rerender();
+
+    await waitFor(() => expect(disconnect).toHaveBeenCalledOnce());
+    expect(localStorage.getItem('solana_wallet_name')).toBeNull();
+    expect(view.result.current).toMatchObject({
+      address: unifiedAccount.address,
+      status: 'connected',
+      wallet: unifiedWallet,
+    });
   });
 
   it('connects a Solana wallet without requiring any EVM state', async () => {

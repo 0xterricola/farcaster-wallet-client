@@ -2,7 +2,7 @@
 
 The Farcaster web client with independent EVM and Solana wallet support through
 WalletConnect, detected EIP-6963 EVM wallets, and Wallet Standard Solana
-wallets.
+wallets, plus an atomic Unified MetaMask connection through MetaMask Connect.
 
 ## Setup
 
@@ -105,6 +105,11 @@ each deployed origin to the Reown project's allowlist; a wildcard such as
 `https://*.farcaster-wallet-client.pages.dev` covers Cloudflare preview URLs.
 Modern EVM browser extensions are discovered automatically through EIP-6963,
 and Solana extensions are discovered through Wallet Standard.
+
+Unified MetaMask uses the bundled MetaMask Connect EVM, Solana, and multichain
+SDKs and does not require another environment variable. Use a current MetaMask
+version and select a MetaMask Multichain Account that provides both an EVM
+address and a Solana address.
 
 ## Development
 
@@ -254,6 +259,21 @@ or assume every miniapp will work on a fork's domain.
 
 ## Wallet behavior
 
+- The connection screen offers Unified, EVM, and Solana modes. Unified MetaMask
+  requests all supported EVM networks and Solana Mainnet together through
+  MetaMask Connect, then supplies its EIP-1193 provider and Wallet Standard
+  signer to the existing EVM and Solana wallet paths.
+- Unified MetaMask is atomic. The client publishes neither wallet family until
+  MetaMask provides both addresses and the Solana signer is ready. If either
+  address is unavailable, the attempt is disconnected and the UI explains how
+  to choose or create a compatible MetaMask Multichain Account.
+- Unified and independent connections are mutually exclusive. An active or
+  connecting Unified session disables the EVM and Solana tabs; an active or
+  connecting independent EVM or Solana wallet disables Unified. Independent
+  EVM and Solana wallets may still remain connected simultaneously.
+- Disconnecting Unified clears both exposed wallet families. When Unified takes
+  ownership, remembered independent connections are released so disconnecting
+  it cannot unexpectedly reveal a previously connected browser wallet.
 - EVM and Solana browser wallets connect independently and can remain connected
   at the same time. Disconnecting one family does not disconnect the other.
 - The active EVM wallet is persisted as the preferred wallet. Its provider and
@@ -452,6 +472,13 @@ confirmation. Swaps are same-chain; this patch does not add cross-chain swaps.
 
 ## Troubleshooting
 
+- If Unified MetaMask reports a missing EVM or Solana address, update MetaMask
+  and select or create a Multichain Account that contains both addresses. The
+  connection is intentionally all-or-nothing, so an incomplete approval does
+  not expose either wallet family to the client.
+- If Unified MetaMask connects but its Solana signer does not become ready,
+  disconnect it in MetaMask and the client, confirm Solana is available in the
+  selected Multichain Account, and retry with MetaMask unlocked.
 - If WalletConnect is unavailable, verify
   `VITE_WALLETCONNECT_PROJECT_ID` and the allowed Reown project origins.
 - If a Solana WalletConnect session does not restore after refresh, confirm the

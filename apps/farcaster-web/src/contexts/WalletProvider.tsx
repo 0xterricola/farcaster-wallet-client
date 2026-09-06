@@ -10,15 +10,17 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Connector, useAccount, useConnectors } from 'wagmi';
+import { Connector, useAccount, useConnectors, useDisconnect } from 'wagmi';
 
 import { useEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { PreferredWalletDialog } from '~/components/wallet/PreferredWalletDialog';
+import { useUnifiedMetaMask } from '~/contexts/UnifiedMetaMaskProvider';
 import {
   useWalletNetworkController,
   WalletNetworkController,
 } from '~/hooks/useWalletNetworkController';
 import { logError } from '~/utils/logUtils';
+import { shouldReleaseIndependentConnection } from '~/utils/metamaskConnection';
 import { WalletFamily } from '~/utils/walletFamily';
 
 const PREFERRED_WALLET_KEY = 'preferred_wallet';
@@ -121,7 +123,21 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     address,
     isConnected: isExternalWalletConnected,
   } = useAccount();
+  const { disconnectAsync: disconnectIndependentEvm } = useDisconnect();
   const { ethProvider, isConnected } = useEmbeddedWalletBridge();
+  const {
+    evmAddress: unifiedEvmAddress,
+    evmProvider: unifiedEvmProvider,
+    status: unifiedStatus,
+  } = useUnifiedMetaMask();
+  const isUnifiedConnected =
+    unifiedStatus === 'connected' &&
+    Boolean(unifiedEvmAddress) &&
+    Boolean(unifiedEvmProvider);
+  const shouldReleaseIndependentEvm = shouldReleaseIndependentConnection(
+    unifiedStatus,
+    isExternalWalletConnected ? 'connected' : 'disconnected',
+  );
 
   // State management
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
@@ -190,6 +206,25 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     localStorage.removeItem(PREFERRED_WALLET_KEY);
   }, [setPreferredWalletInner]);
 
+  // Wagmi may restore an older connector after Unified starts. Release that
+  // hidden independent session so disconnecting Unified cannot reveal it.
+  useEffect(() => {
+    if (!shouldReleaseIndependentEvm) {
+      return;
+    }
+    clearPreferredWallet();
+    void disconnectIndependentEvm().catch((error) => {
+      logError(
+        '[WalletProvider] Failed to release independent EVM wallet:',
+        error,
+      );
+    });
+  }, [
+    clearPreferredWallet,
+    disconnectIndependentEvm,
+    shouldReleaseIndependentEvm,
+  ]);
+
   // Keep the active external connector and the wallet used by miniapps in
   // sync. Wagmi can expose the connected address before connectAsync settles,
   // so adopting the connector here avoids a temporary second selection step.
@@ -197,6 +232,8 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     if (
       !isExternalWalletConnected ||
       !connector ||
+      unifiedStatus === 'connecting' ||
+      unifiedStatus === 'connected' ||
       preferredWallet === 'warpcast' ||
       preferredWallet === connector.id
     ) {
@@ -209,6 +246,7 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     handleSetPreferredWallet,
     isExternalWalletConnected,
     preferredWallet,
+    unifiedStatus,
   ]);
 
   // Disconnected provider that queues requests while loading
@@ -319,6 +357,14 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
 
   // Resolve and set up the provider based on preferred wallet
   const refreshConnectedProvider = useCallback(async () => {
+    if (isUnifiedConnected && unifiedEvmProvider) {
+      const nextProvider = unifiedEvmProvider as unknown as Provider.Provider;
+      await processPendingRequests(nextProvider);
+      setConnectedProvider(wrapProvider(nextProvider));
+      setIsFullyLoaded(true);
+      return;
+    }
+
     // No preferred wallet - clear provider and potentially show modal
     if (!preferredWallet) {
       setConnectedProvider(undefined);
@@ -378,6 +424,8 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
     ethProvider,
     openConnectModal,
     isExternalWalletConnected,
+    isUnifiedConnected,
+    unifiedEvmProvider,
     wrapProvider,
   ]);
 
@@ -412,9 +460,11 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
           ? connectedProvider
           : disconnectedProvider,
       address: isFullyLoaded
-        ? preferredWallet === 'warpcast'
-          ? warpcastWalletAddress
-          : address
+        ? isUnifiedConnected
+          ? (unifiedEvmAddress as `0x${string}`)
+          : preferredWallet === 'warpcast'
+            ? warpcastWalletAddress
+            : address
         : undefined,
       network,
 
@@ -434,6 +484,8 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
       disconnectedProvider,
       warpcastWalletAddress,
       address,
+      isUnifiedConnected,
+      unifiedEvmAddress,
       network,
       connectionContextRef,
     ],

@@ -4,8 +4,21 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { createRequire } from 'module';
 
 const httpsEnabled = process.env.HTTPS !== 'false';
+const require = createRequire(import.meta.url);
+const metamaskMultichainDirectory = path.dirname(
+  require.resolve('@metamask/connect-multichain/package.json'),
+);
+const metamaskMobileProtocolCore = path.resolve(
+  metamaskMultichainDirectory,
+  '../mobile-wallet-protocol-core/dist/index.mjs',
+);
+const metamaskEciesCommonJs = path.resolve(
+  metamaskMultichainDirectory,
+  '../../eciesjs/dist/index.js',
+);
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, __dirname, '');
@@ -26,9 +39,31 @@ export default defineConfig(({ mode }) => {
       ...(httpsEnabled ? [basicSsl()] : []),
     ],
     resolve: {
-      alias: {
-        '~': path.resolve(__dirname, './src'),
-      },
+      alias: [
+        {
+          find: '~',
+          replacement: path.resolve(__dirname, './src'),
+        },
+        {
+          find: /^eciesjs$/,
+          replacement: path.resolve(
+            __dirname,
+            './config/metamaskEciesInterop.mjs',
+          ),
+        },
+        {
+          find: /^metamask-ecies-commonjs$/,
+          replacement: metamaskEciesCommonJs,
+        },
+        {
+          // The package publishes an ESM build but omits its module/exports
+          // metadata. Without this alias Vite wraps the CommonJS entry as a
+          // default-only module, while MetaMask Connect dynamically imports its
+          // named SessionStore and WebSocketTransport exports.
+          find: /^@metamask\/mobile-wallet-protocol-core$/,
+          replacement: metamaskMobileProtocolCore,
+        },
+      ],
     },
     server: {
       https: httpsEnabled,
