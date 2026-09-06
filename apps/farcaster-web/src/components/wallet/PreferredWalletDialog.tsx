@@ -6,15 +6,21 @@ import { Fragment, ReactNode, useCallback, useEffect, useState } from 'react';
 import { base } from 'viem/chains';
 import { Connector, useAccount, useConnect, useDisconnect } from 'wagmi';
 
+import metamaskFoxIcon from '~/assets/wallets/metamask-fox.svg';
 import { DefaultButton } from '~/components/forms/buttons/DefaultButton';
 import { Image } from '~/components/images/Image';
-import { WalletFamilySelector } from '~/components/wallet/WalletFamilySelector';
+import { WalletConnectionModeSelector } from '~/components/wallet/WalletConnectionModeSelector';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useSolanaWallet } from '~/contexts/SolanaWalletProvider';
+import { useUnifiedMetaMask } from '~/contexts/UnifiedMetaMaskProvider';
 import { useWallet } from '~/contexts/WalletProvider';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { useIsAdmin } from '~/hooks/data/useIsAdmin';
 import { DetectedSolanaWallet } from '~/hooks/useDetectedSolanaWallets';
+import {
+  getWalletConnectionModeAvailability,
+  WalletConnectionMode,
+} from '~/utils/metamaskConnection';
 import { WALLET_CONNECT_WALLET_NAME } from '~/utils/solanaWalletConnect';
 import { WalletFamily } from '~/utils/walletFamily';
 
@@ -86,6 +92,7 @@ export function PreferredWalletSelector({
   const { connectAsync } = useConnect();
   const { disconnectAsync } = useDisconnect();
   const {
+    address: selectedEvmAddress,
     clearPreferredWallet,
     closeConnectModal,
     connectors,
@@ -93,7 +100,8 @@ export function PreferredWalletSelector({
     preferredWallet,
   } = useWallet();
   const [localPreferredWallet, setLocalPreferredWallet] = useState<string>();
-  const [walletFamily, setWalletFamily] = useState<WalletFamily>(defaultFamily);
+  const [connectionMode, setConnectionMode] =
+    useState<WalletConnectionMode>(defaultFamily);
   const [evmError, setEvmError] = useState<string>();
   const [isEvmConnecting, setIsEvmConnecting] = useState(false);
   const {
@@ -106,11 +114,30 @@ export function PreferredWalletSelector({
     wallet: solanaWallet,
   } = useSolanaWallet();
   const {
+    connect: connectUnified,
+    disconnect: disconnectUnified,
+    error: unifiedError,
+    status: unifiedStatus,
+  } = useUnifiedMetaMask();
+  const {
     address: externalWalletAddress,
     connector: existingConnector,
     isConnected: isExternalWalletConnected,
   } = useAccount();
   const [showAllWallets, setShowAllWallets] = useState(!modal);
+  const unifiedOccupied =
+    unifiedStatus === 'connecting' || unifiedStatus === 'connected';
+  const independentEvmConnected =
+    !unifiedOccupied && Boolean(selectedEvmAddress);
+  const availability = getWalletConnectionModeAvailability({
+    unified: unifiedStatus,
+    evm: isEvmConnecting
+      ? 'connecting'
+      : independentEvmConnected
+        ? 'connected'
+        : 'disconnected',
+    solana: unifiedOccupied ? 'disconnected' : solanaStatus,
+  });
   const { trackEvent } = useAnalytics();
   const currentUser = useCurrentUser();
   const isAdmin = useIsAdmin();
@@ -138,6 +165,10 @@ export function PreferredWalletSelector({
 
   const handleConnect = useCallback(
     async (connector: Connector) => {
+      if (availability.evm.disabled) {
+        setEvmError(availability.evm.reason);
+        return;
+      }
       setEvmError(undefined);
       setIsEvmConnecting(true);
       try {
@@ -165,8 +196,16 @@ export function PreferredWalletSelector({
       existingConnector,
       handleSelectPreferredWallet,
       isExternalWalletConnected,
+      availability.evm.disabled,
+      availability.evm.reason,
     ],
   );
+
+  const handleUnifiedConnect = useCallback(async () => {
+    if (!availability.unified.disabled) {
+      await connectUnified();
+    }
+  }, [availability.unified.disabled, connectUnified]);
 
   const handleEvmDisconnect = useCallback(async () => {
     setEvmError(undefined);
@@ -186,7 +225,13 @@ export function PreferredWalletSelector({
   }, [clearPreferredWallet, disconnectAsync, preferredWallet]);
 
   const handleDone = useCallback(() => {
-    if (walletFamily === 'solana') {
+    if (connectionMode === 'unified') {
+      if (unifiedStatus === 'connected') {
+        closeConnectModal();
+      }
+      return;
+    }
+    if (connectionMode === 'solana') {
       if (solanaAddress) {
         closeConnectModal();
       }
@@ -208,7 +253,8 @@ export function PreferredWalletSelector({
     setPreferredWallet,
     solanaAddress,
     trackEvent,
-    walletFamily,
+    connectionMode,
+    unifiedStatus,
   ]);
 
   const handleSolanaConnect = useCallback(
@@ -223,12 +269,14 @@ export function PreferredWalletSelector({
   }, [preferredWallet]);
 
   useEffect(() => {
-    setWalletFamily(defaultFamily);
+    setConnectionMode(defaultFamily);
   }, [defaultFamily]);
 
   useEffect(() => {
-    setWalletFamily(defaultFamily);
-  }, [defaultFamily]);
+    if (unifiedOccupied) {
+      setConnectionMode('unified');
+    }
+  }, [unifiedOccupied]);
 
   return (
     <div className="flex flex-col gap-4 ">
@@ -249,13 +297,69 @@ export function PreferredWalletSelector({
             )}
           </div>
           <div className="text-md text-muted">
-            EVM and Solana wallets stay connected independently. Miniapps that
-            request an EVM wallet use your selected EVM connection.
+            Connect both wallet families with MetaMask, or manage EVM and Solana
+            separately.
           </div>
         </div>
       )}
-      <WalletFamilySelector value={walletFamily} onChange={setWalletFamily} />
-      {walletFamily === 'evm' ? (
+      <WalletConnectionModeSelector
+        availability={availability}
+        value={connectionMode}
+        onChange={setConnectionMode}
+      />
+      {connectionMode === 'unified' ? (
+        <div className="flex flex-col gap-3 rounded-xl p-3 bg-surface-secondary">
+          <div>
+            <div className="font-semibold text-default">
+              Connect both with MetaMask
+            </div>
+            <div className="text-sm text-muted">
+              Use one MetaMask connection for the EVM and Solana addresses in
+              your Multichain Account.
+            </div>
+          </div>
+          <div className="flex flex-col overflow-hidden rounded-lg bg-app">
+            <WalletOption
+              name="MetaMask"
+              icon={
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border bg-white p-2 border-default">
+                  <Image src={metamaskFoxIcon} alt="" className="size-9" />
+                </div>
+              }
+              onClick={() => void handleUnifiedConnect()}
+              isConnected={unifiedStatus === 'connected'}
+              isSelected={unifiedStatus === 'connected'}
+              isDisabled={
+                unifiedStatus === 'connecting' || availability.unified.disabled
+              }
+              isProminent
+            />
+          </div>
+          {availability.unified.disabled && availability.unified.reason && (
+            <div className="rounded-lg p-3 text-sm text-muted bg-app">
+              {availability.unified.reason}
+            </div>
+          )}
+          {unifiedError && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              {unifiedError}
+            </div>
+          )}
+          {unifiedStatus === 'connected' && (
+            <DefaultButton
+              className="w-full"
+              variant="secondary"
+              onClick={() => void disconnectUnified()}
+            >
+              Disconnect Unified MetaMask
+            </DefaultButton>
+          )}
+          <div className="text-xs text-faint">
+            Requires MetaMask to provide both an EVM address and a Solana
+            address. If either is unavailable, nothing is connected.
+          </div>
+        </div>
+      ) : connectionMode === 'evm' ? (
         <div className="flex flex-col gap-3 rounded-xl p-3 bg-surface-secondary">
           <div>
             <div className="font-semibold text-default">EVM wallets</div>
@@ -314,7 +418,7 @@ export function PreferredWalletSelector({
                       connector.id === existingConnector.id
                     }
                     isInstalled={connector.id !== 'walletConnect'}
-                    isDisabled={isEvmConnecting}
+                    isDisabled={isEvmConnecting || availability.evm.disabled}
                   />
                   {index !== connectors.length - 1 && (
                     <div className="h-px w-full bg-surface-secondary" />
@@ -417,7 +521,10 @@ export function PreferredWalletSelector({
                       Boolean(solanaAddress)
                     }
                     isInstalled={wallet.name !== WALLET_CONNECT_WALLET_NAME}
-                    isDisabled={solanaStatus === 'connecting'}
+                    isDisabled={
+                      solanaStatus === 'connecting' ||
+                      availability.solana.disabled
+                    }
                   />
                   {index !== solanaWallets.length - 1 && (
                     <div className="h-px w-full bg-surface-secondary" />
@@ -456,7 +563,11 @@ export function PreferredWalletSelector({
           onClick={handleDone}
           size="lg"
           disabled={
-            walletFamily === 'solana' ? !solanaAddress : !localPreferredWallet
+            connectionMode === 'unified'
+              ? unifiedStatus !== 'connected'
+              : connectionMode === 'solana'
+                ? !solanaAddress
+                : !localPreferredWallet
           }
         >
           Done
@@ -475,6 +586,7 @@ function WalletOption({
   isConnected,
   isInstalled,
   isDisabled,
+  isProminent,
 }: {
   name: string;
   description?: string;
@@ -484,10 +596,13 @@ function WalletOption({
   isConnected?: boolean;
   isInstalled?: boolean;
   isDisabled?: boolean;
+  isProminent?: boolean;
 }) {
   return (
     <div
-      className={`flex flex-row items-center justify-between rounded-lg p-3 transition-colors ${
+      className={`flex flex-row items-center justify-between rounded-lg transition-colors ${
+        isProminent ? 'min-h-[72px] px-4 py-3' : 'p-3'
+      } ${
         isDisabled
           ? 'cursor-not-allowed opacity-50'
           : 'cursor-pointer hover:bg-hover active:bg-elevated'
@@ -503,7 +618,13 @@ function WalletOption({
           <div className="size-[24px] rounded-lg bg-overlay-light" />
         )}
         <div className="flex flex-col">
-          <div className="text-default">{name}</div>
+          <div
+            className={
+              isProminent ? 'text-xl font-medium text-default' : 'text-default'
+            }
+          >
+            {name}
+          </div>
           {description && (
             <div className="text-sm text-muted">{description}</div>
           )}

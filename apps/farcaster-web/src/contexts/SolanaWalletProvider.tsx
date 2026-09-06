@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 
+import { useUnifiedMetaMask } from '~/contexts/UnifiedMetaMaskProvider';
 import {
   DetectedSolanaAccount,
   DetectedSolanaWallet,
@@ -19,6 +20,7 @@ import {
   SOLANA_SIGN_TRANSACTION_FEATURE,
   useDetectedSolanaWallets,
 } from '~/hooks/useDetectedSolanaWallets';
+import { shouldReleaseIndependentConnection } from '~/utils/metamaskConnection';
 import {
   createSolanaWalletConnectWallet,
   WALLET_CONNECT_WALLET_NAME,
@@ -104,6 +106,14 @@ function connectionError(error: unknown): string {
 
 function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const browserWallets = useDetectedSolanaWallets();
+  const {
+    disconnect: disconnectUnified,
+    solanaAddress: unifiedSolanaAddress,
+    solanaWallet: unifiedSolanaWallet,
+    status: unifiedStatus,
+  } = useUnifiedMetaMask();
+  const isUnifiedOccupied =
+    unifiedStatus === 'connecting' || unifiedStatus === 'connected';
   // Stable across re-renders (created once per mounted provider) so the
   // underlying WalletConnect session/modal are not recreated on every
   // render -- they hold state (a pending or active session) that must
@@ -128,6 +138,46 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string>();
   const [status, setStatus] = useState<SolanaWalletStatus>('disconnected');
   const [error, setError] = useState<string>();
+  const unifiedWallet = unifiedSolanaWallet as DetectedSolanaWallet | undefined;
+  const unifiedAccount = unifiedWallet?.accounts.find(
+    (candidate) => candidate.address === unifiedSolanaAddress,
+  );
+  const activeWallet = isUnifiedOccupied ? unifiedWallet : wallet;
+  const activeAccount = isUnifiedOccupied ? unifiedAccount : account;
+  const activeAddress = isUnifiedOccupied ? unifiedSolanaAddress : address;
+  const activeStatus: SolanaWalletStatus = isUnifiedOccupied
+    ? unifiedStatus === 'connected' && unifiedAccount
+      ? 'connected'
+      : unifiedStatus === 'connecting'
+        ? 'connecting'
+        : 'error'
+    : status;
+  const shouldReleaseIndependentSolana = shouldReleaseIndependentConnection(
+    unifiedStatus,
+    status,
+  );
+
+  // A remembered browser or WalletConnect session can restore after Unified
+  // starts. Clear it while Unified owns the Solana pipe so it cannot reappear
+  // when the shared session disconnects.
+  useEffect(() => {
+    if (!shouldReleaseIndependentSolana || !wallet) {
+      return;
+    }
+    const disconnectFeature = feature<DisconnectFeature>(
+      wallet,
+      SOLANA_DISCONNECT_FEATURE,
+    );
+    localStorage.removeItem(SOLANA_WALLET_KEY);
+    setWallet(undefined);
+    setAccount(undefined);
+    setAddress(undefined);
+    setStatus('disconnected');
+    setError(undefined);
+    if (disconnectFeature?.disconnect) {
+      void disconnectFeature.disconnect().catch(() => undefined);
+    }
+  }, [shouldReleaseIndependentSolana, wallet]);
 
   const setConnectedAccount = useCallback(
     (
@@ -147,6 +197,12 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(
     async (nextWallet: DetectedSolanaWallet) => {
+      if (isUnifiedOccupied) {
+        setError(
+          'Disconnect Unified MetaMask before choosing an independent Solana wallet.',
+        );
+        return false;
+      }
       const connectFeature = feature<ConnectFeature>(
         nextWallet,
         SOLANA_CONNECT_FEATURE,
@@ -175,10 +231,14 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [setConnectedAccount],
+    [isUnifiedOccupied, setConnectedAccount],
   );
 
   const disconnect = useCallback(async () => {
+    if (isUnifiedOccupied) {
+      await disconnectUnified();
+      return;
+    }
     const disconnectFeature = wallet
       ? feature<DisconnectFeature>(wallet, SOLANA_DISCONNECT_FEATURE)
       : undefined;
@@ -192,22 +252,22 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       setStatus('disconnected');
       setError(undefined);
     }
-  }, [wallet]);
+  }, [disconnectUnified, isUnifiedOccupied, wallet]);
 
   const signTransaction = useCallback(
     async (transaction: Uint8Array) => {
-      if (!wallet || !account || status !== 'connected') {
+      if (!activeWallet || !activeAccount || activeStatus !== 'connected') {
         throw new Error('Connect a Solana wallet before signing.');
       }
       const signing = feature<SignTransactionFeature>(
-        wallet,
+        activeWallet,
         SOLANA_SIGN_TRANSACTION_FEATURE,
       );
       if (!signing?.signTransaction) {
         throw new Error('This wallet cannot sign Solana transactions.');
       }
       const [result] = await signing.signTransaction({
-        account,
+        account: activeAccount,
         chain: SOLANA_MAINNET_CHAIN,
         transaction,
       });
@@ -216,32 +276,35 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
       }
       return result.signedTransaction;
     },
-    [account, status, wallet],
+    [activeAccount, activeStatus, activeWallet],
   );
 
   const signMessage = useCallback(
     async (message: Uint8Array) => {
-      if (!wallet || !account || status !== 'connected') {
+      if (!activeWallet || !activeAccount || activeStatus !== 'connected') {
         throw new Error('Connect a Solana wallet before signing.');
       }
       const signing = feature<SignMessageFeature>(
-        wallet,
+        activeWallet,
         SOLANA_SIGN_MESSAGE_FEATURE,
       );
       if (!signing?.signMessage) {
         throw new Error('This wallet cannot sign Solana messages.');
       }
-      const [result] = await signing.signMessage({ account, message });
+      const [result] = await signing.signMessage({
+        account: activeAccount,
+        message,
+      });
       if (!result?.signature?.length) {
         throw new Error('The wallet did not return a message signature.');
       }
       return result.signature;
     },
-    [account, status, wallet],
+    [activeAccount, activeStatus, activeWallet],
   );
 
   useEffect(() => {
-    if (wallet || !detectedWallets.length) {
+    if (isUnifiedOccupied || wallet || !detectedWallets.length) {
       return;
     }
     const rememberedName = localStorage.getItem(SOLANA_WALLET_KEY);
@@ -289,7 +352,7 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [detectedWallets, setConnectedAccount, wallet]);
+  }, [detectedWallets, isUnifiedOccupied, setConnectedAccount, wallet]);
 
   useEffect(() => {
     if (!wallet) {
@@ -308,26 +371,26 @@ function SolanaWalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<SolanaWalletContextValue>(
     () => ({
-      address,
+      address: activeAddress,
       connect,
       detectedWallets,
       disconnect,
       error,
       signMessage,
       signTransaction,
-      status,
-      wallet,
+      status: activeStatus,
+      wallet: activeWallet,
     }),
     [
-      address,
+      activeAddress,
+      activeStatus,
+      activeWallet,
       connect,
       detectedWallets,
       disconnect,
       error,
       signMessage,
       signTransaction,
-      status,
-      wallet,
     ],
   );
 

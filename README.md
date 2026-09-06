@@ -12,6 +12,8 @@ in their own wallet.
 
 - WalletConnect support for EVM and Solana QR, mobile, browser, and
   wallet-directory flows
+- Optional Unified MetaMask mode that connects EVM and Solana atomically
+  through MetaMask Connect
 - Automatic discovery of modern EIP-6963 browser wallets
 - Persistent EVM and Solana connections shared by the dashboard and Farcaster
   miniapps
@@ -46,6 +48,16 @@ session restores silently after refresh without opening a new pairing prompt.
 Compatible EVM browser extensions are discovered through EIP-6963, while
 compatible Solana extensions are discovered through Wallet Standard. No seed
 phrase or private key is created, requested, or stored by this client.
+
+Unified MetaMask is an alternative to those independent connections. It asks
+MetaMask Connect for the supported EVM networks and Solana Mainnet together,
+then exposes the resulting EVM provider and Solana Wallet Standard signer
+through the same dashboard and miniapp pipes. The connection is atomic: both
+an EVM address and a Solana address must be available and the Solana signer
+must be ready before either side is published. An incomplete attempt is
+disconnected instead of leaving a hidden partial wallet. Unified and
+independent modes are mutually exclusive, while independent EVM and Solana
+wallets may still coexist with each other.
 
 Swap quotes and transaction requests come from the public LI.FI quote API.
 The connected wallet remains responsible for approvals and transaction signing.
@@ -137,9 +149,10 @@ pnpm --filter farcaster-web build
 ```
 
 The wallet flows have also been exercised manually with EVM and Solana
-WalletConnect, a browser with no injected wallet, detected browser wallets,
-page refreshes, cancelled pairings, miniapp transactions, sends, swaps, and
-rejected approvals.
+WalletConnect, Unified MetaMask Connect on mobile, a browser with no injected
+wallet, detected browser wallets, page refreshes, cancelled pairings, miniapp
+transactions, sends, swaps, rejected approvals, and disconnect/reconnect
+cycles.
 
 ## Security notes
 
@@ -156,9 +169,10 @@ rejected approvals.
 - Wallet additions currently target the web client; the mobile client remains
   the upstream snapshot implementation.
 - Portfolio, receive guidance, sends, same-chain swaps, and recent activity
-  target the eight documented EVM networks, plus an independent Solana
-  Mainnet wallet family with the same feature set. Miniapps use the shared EVM
-  or Solana connection according to the provider interface they request.
+  target the eight documented EVM networks, plus Solana Mainnet with the same
+  feature set. EVM and Solana can connect independently or together through
+  Unified MetaMask. Miniapps use the shared EVM or Solana connection according
+  to the provider interface they request.
 - Token discovery/pricing depends on LI.FI coverage; unknown tokens or prices may
   be unavailable. Complete recent EVM history depends on Etherscan or Alchemy;
   locally submitted EVM transactions remain visible while an indexer catches

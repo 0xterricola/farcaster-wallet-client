@@ -27,6 +27,7 @@ import { ScrollProvider } from '~/contexts/ScrollProvider';
 import { SolanaWalletProvider } from '~/contexts/SolanaWalletProvider';
 import { StandaloneModeProvider } from '~/contexts/StandaloneModeProvider';
 import { ThemeProvider } from '~/contexts/ThemeProvider';
+import { UnifiedMetaMaskProvider } from '~/contexts/UnifiedMetaMaskProvider';
 import { VideoPlayStatusProvider } from '~/contexts/VideoPlayStatusProvider';
 import { WebFarcasterApiClientProvider } from '~/contexts/WebFarcasterApiClientProvider';
 import { InteractedSnapUrlsWebProvider } from '~/providers/InteractedSnapUrlsWebProvider';
@@ -108,9 +109,11 @@ const App: FC = () => {
                                                     <MiniAppProvider>
                                                       <MinimizableWindowProvider>
                                                         <BrowserRouter>
-                                                          <SolanaWalletProvider>
-                                                            <Router />
-                                                          </SolanaWalletProvider>
+                                                          <UnifiedMetaMaskProvider>
+                                                            <SolanaWalletProvider>
+                                                              <Router />
+                                                            </SolanaWalletProvider>
+                                                          </UnifiedMetaMaskProvider>
                                                         </BrowserRouter>
                                                       </MinimizableWindowProvider>
                                                     </MiniAppProvider>

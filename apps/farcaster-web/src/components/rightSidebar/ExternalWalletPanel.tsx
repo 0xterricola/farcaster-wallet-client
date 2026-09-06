@@ -156,7 +156,7 @@ function ExternalWalletPanel() {
             Wallet connections
           </div>
           <div className="mt-1 text-sm text-muted">
-            EVM and Solana wallets connect independently.
+            Choose how you want to connect.
           </div>
         </div>
         <PreferredWalletSelector
