@@ -105,6 +105,33 @@ const readSurface = (page) =>
     };
   });
 
+/**
+ * `page.evaluate` throws "Execution context was destroyed" whenever the app is
+ * mid-navigation, and a sign-in IS a navigation. Every read of the surface goes
+ * through here, so a destroyed context is "read again in a moment" rather than
+ * a dead run. MEASURED 2026-10-21: unguarded, the read right after clicking
+ * "Go social" killed the whole probe before check 1 could be recorded.
+ */
+const safeReadSurface = async (page) => {
+  let lastError;
+  for (let i = 0; i < 20; i += 1) {
+    try {
+      return await readSurface(page);
+    } catch (e) {
+      lastError = e;
+      if (
+        !/Execution context was destroyed|Cannot find context|Target closed|navigating/i.test(
+          String(e),
+        )
+      ) {
+        throw e;
+      }
+      await page.waitForTimeout(250);
+    }
+  }
+  throw lastError;
+};
+
 const run = async () => {
   const consoleErrors = [];
 
@@ -208,7 +235,7 @@ const run = async () => {
       'the ready step never offered "Go social — sign in with Farcaster"',
     );
   }
-  let surface = await readSurface(page);
+  let surface = await safeReadSurface(page);
   for (let i = 0; i < 60; i += 1) {
     if (
       surface.path === '/' &&
@@ -219,7 +246,7 @@ const run = async () => {
       break;
     }
     await page.waitForTimeout(1000);
-    surface = await readSurface(page);
+    surface = await safeReadSurface(page);
   }
   check(
     'a completed sign-in lands in the client',
