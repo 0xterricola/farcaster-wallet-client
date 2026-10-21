@@ -160,42 +160,71 @@ that node is back, the same probe run against `5173` needs no env override.
 (Playwright, headless Chrome, `ignoreHTTPSErrors`) signs in with a real SIWE
 message signed by a throwaway key — only the SIWF relay is stubbed, and it names
 `fid 3` (`dwr`) so the feed has a real follow graph — then drives the client
-against that node through the relay. One run, 11/11 checks:
+against a live public read node and **attributes every read to the machine that
+answered it**. Re-pointed at the provider chain and re-measured 2026-10-21
+(5174 → `https://haatz.quilibrium.com`): one run, **12/12 checks**.
 
-| Check | Evidence |
+| Check | Evidence (2026-10-21, 5174 → the live public node) |
 | --- | --- |
-| a completed sign-in lands in the client | `path=/`, not the setup, not the device-only landing |
-| the home feed reads the node | `GET 200 /v1/castsByFid?fid=…&pageSize=10&reverse=true` — one followed author at a time (seen: `fid=3`, `fid=7237`) |
-| real casts are on screen | 22–25 of ~480–620 node-returned cast texts found in the DOM (two runs) |
-| a cast detail opens | `GET 200 /v1/castsByParent?fid=3&hash=0x40a0…&pageSize=10&reverse=true` |
-| a profile reads the node | `GET 200 /v1/userDataByFid?fid=3&pageSize=100`, page names `dwr` |
-| a channel reads the node | `GET 200 /v1/castsByParent?url=…%2Fchannel%2Fdev&pageSize=50` |
-| notifications are derived | `GET 200 /v1/castsByMention?fid=3&pageSize=15` |
-| **a reload keeps it** | after `goto('/')`: the same bounded `castsByFid` read, 44–47 cast texts back on screen |
-| the rail is honest about DMs | `Direct Casts · soon` in place of the link |
+| a completed sign-in lands in the client | `clicked="Go social — sign in with Farcaster"`, `path=/` — not the setup, not the device-only landing |
+| cast text from bytes a server returned is on screen | 23 of 544 cast texts the node returned were found in the page column; the check names the server the first one came from |
+| the feed's cast reads came from a server this client can read from | 156 of 156 cast reads answered `200` by `https://haatz.quilibrium.com` (the page's own fetch log ×78, the network the probe watched ×78 — two lenses, see below) |
+| the feed is not an error page | no refusal on the feed itself, even when another surface in the same column carries one |
+| the rail is honest about DMs | `data-fiddy="dms-unavailable"` **and** `Direct Casts · soon` in the text |
+| a cast detail opens and shows its thread | the thread's own cast text (a cast a node returned) on screen; 12 `200` reads of `castsByParent`/`castById` at the node's own origin |
+| a profile renders and names the account | 7 `200` reads, mostly `userDataByFid`; the page column names `dwr` |
+| a channel renders and answers — never an empty success | 16 `200` reads; the column renders the channel's members and casts |
+| notifications are derived from a node read | 16 `200` reads on the notifications surface (`castsByMention`, `reactionsByFid`, `linksByTargetFid`) |
+| notifications are not an error page | the surface renders; no refusal, no fork copy |
+| **a reload keeps it** | 62 `200` node reads after `goto('/')`; 46 cast texts back on screen |
+| no surface fell back to the fork's generic copy | 6 surfaces read; `Could not reach Farcaster` / `Error retrieving data` / `Something went wrong` nowhere on any of them |
 
-Node routes the client used in that 11/11 run (2026-10-20), all `200`:
-`castsByFid` (62), `linksByFid` (96), `linksByTargetFid` (73),
-`reactionsByCast` (60),
-`userDataByFid` (28), `castsByParent` (10), `castById` (6), `castsByMention` (3),
-`reactionsByFid` (2), `verificationsByFid` (1), `userNameProofByName` (1),
-`info` (6) — the same shape as the first pass measured, re-measured after the
-fan-out bound and the honesty fixes.
+Node routes the client used in that 12/12 run, all `200`, all at the node's own
+origin: `linksByFid` (259), `linksByTargetFid` (227), `reactionsByCast` (164),
+`castsByFid` (129), `userDataByFid` (90), `castsByParent` (70), `castById` (17),
+`castsByMention` (8), `userNameProofByName` (7), `verificationsByFid` (7),
+`reactionsByFid` (4), `info` (7). The only `/snapchain-api` traffic in the whole
+run is the relay's health check, `GET 200 /v1/info` (41×).
 
-**Re-measured 2026-10-21 (card `t_8ffc2c23`): that probe is now 4/11, and the
-timeout work is not why.** Every failing check is one that requires the *feed's
-own reads to go through the `/snapchain-api` relay*, and the client no longer
-reads that way. Same probe, same live public node behind the relay (5174): the
-only `/snapchain-api` traffic is `GET 200 /v1/info` (the node health check, 3×),
-no `castsByFid` / `userDataByFid` / `castsByParent` read reaches the relay at all,
-and the client's own fetch log shows the feed reading an *absolute* node origin
-instead; the status pill says `Backup Feed`. The commits that did that
-(`703e2da`, `af8d9f8`, `131ae87`, `de0269e` — the provider chain in
-`~/snapchain/providers`) landed after this section's parent verified 11/11, and
-none of them is touched by `t_8ffc2c23`'s diff. All 7 failures are phrased as
-"no … read", never as "too few casts" — which is what a too-tight timeout would
-look like. The probe is worth re-pointing at the provider chain; that is the
-providers' card, not this one.
+**What changed, and why the 11/11 revision was measuring itself (2026-10-21, card
+`t_30c38e9a`).** The commits `703e2da`, `af8d9f8`, `131ae87`, `de0269e` (the
+provider chain in `~/snapchain/providers`) moved *where a read comes from* into
+the client: its fetch seam answers from whichever server the failover engine
+measured as live, so a read leaves the page as `https://<node>/v1/castsByFid…`
+(the provider's own origin) or as `<this origin>/snapchain-api/…` (the build's
+relay). The old revision demanded the relay path, so it failed 7 of 11 checks on
+a client that was working — re-measured on the same tree (`6dcfe29`) it is 4/11,
+and the only relay traffic left is `GET 200 /v1/info`. The probe now asserts what
+still matters — real text from the server it read from, each surface rendering, a
+reload keeping it, no generic copy, no empty success — and reports which server
+answered each read instead of dictating a route: `node:<origin>`, `this build's
+relay`, the named providers (`api.farcaster.xyz` = farcaster-public,
+`api.neynar.com` = neynar), and a bucket of its own for origins that are not read
+servers at all (`api.web3modal.org`, `pulse.walletconnect.org`, `ph.neynar.com` —
+the wallet kit and an unset analytics placeholder, which an earlier pass of this
+re-point had named "the node at …").
+
+Three further things were measured while re-pointing, and are honoured by the
+probe rather than hidden: **a refused relay is not a failure** — the same probe
+against 5175 (relay → refused port `127.0.0.1:3399`) is **12/12**, because the
+chain moves to the public node and every read is attributed to it; **a
+whole-document predicate is satisfied by the rail** — its `Notifications` item
+once made the notifications check measure the wrong surface, so every surface
+claim is now made against the page column (`main`); and **the probe fails on a
+client whose reads really fail** — one run on the live relay with the machine at
+load average ~230 came back **9/12** with the feed column carrying the client's
+own sentence, "Farcaster's own public server stopped answering — and nothing
+better is answering either, so nothing moved". That is a real failure, reported
+as one, and the reason the budgets are as generous as they are.
+
+**Fail-capable.** `NODE_BACKED_ISOLATE=1` puts every other server the chain could
+fall back to out of reach, leaving the build's own route as the only one; run
+against a black-holed node (5176 → `http://34.101.47.167:3381`, aborted at the
+browser) the same probe is **4/12, exit 1**: every read the page attempted threw,
+no cast text reached the column, and only the four checks that need no read
+passed (the sign-in, the DM note, notifications without a refusal panel, no
+generic copy). A green run therefore means reads happened — it is not a check
+that cannot fail.
 
 ### The 501s are the honest part
 
