@@ -15,7 +15,9 @@
 
 import { useEffect, useState } from 'react';
 
-export type BrainId = 'fiddy' | 'claude' | 'gemini' | 'other';
+import type { WalletChoiceId } from '~/lib/surp/walletChoice';
+
+export type BrainId = 'fiddy' | 'claude' | 'gemini' | 'surp' | 'other';
 
 export type ChannelId =
   | 'farcaster'
@@ -28,7 +30,7 @@ export type ChannelId =
 export interface FiddySetup {
   /** What the owner called their agent. */
   agentName: string;
-  /** Which brain is selected. Only 'fiddy' and 'other' are wired today. */
+  /** Which brain is selected. 'fiddy', 'surp' and 'other' are wired today. */
   brain: BrainId;
   /** Address of the agent service behind 'other'. Never a key. */
   brainServiceUrl: string | null;
@@ -36,6 +38,8 @@ export interface FiddySetup {
   toolServerUrl: string | null;
   /** Per-app permission, as the owner last set it. */
   channels: Record<ChannelId, boolean>;
+  /** Which wallet the owner chose to pay from. A preference, not a credential. */
+  walletChoice: WalletChoiceId;
   /** Set when the last onboarding step was reached; null until then. */
   completedAt: number | null;
 }
@@ -71,6 +75,7 @@ export const defaultFiddySetup = (): FiddySetup => ({
     imessage: false,
     email: false,
   },
+  walletChoice: 'farcaster',
   completedAt: null,
 });
 
@@ -78,9 +83,17 @@ const asString = (value: unknown): string | null =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 
 const asBrain = (value: unknown): BrainId =>
-  value === 'claude' || value === 'gemini' || value === 'other'
+  value === 'claude' || value === 'gemini' || value === 'surp' || value === 'other'
     ? value
     : 'fiddy';
+
+/**
+ * The wallet choice is a preference between two named options; anything else
+ * stored by an older build resolves to the default rather than to a third state
+ * no surface knows how to render.
+ */
+const asWalletChoice = (value: unknown): WalletChoiceId =>
+  value === 'fresh' ? 'fresh' : 'farcaster';
 
 /**
  * Read, never throw. Stored state from an older build, a half-written value or
@@ -114,6 +127,7 @@ export const loadFiddySetup = (): FiddySetup => {
       brainServiceUrl: asString(parsed.brainServiceUrl),
       toolServerUrl: asString(parsed.toolServerUrl),
       channels,
+      walletChoice: asWalletChoice(parsed.walletChoice),
       completedAt:
         typeof parsed.completedAt === 'number' ? parsed.completedAt : null,
     };
