@@ -207,10 +207,12 @@ footer .rule { height: 1px; background: rgba(255 255 255 / 0.08); margin-bottom:
        would render as "[email protected]" live. -->
 
   <div class="card" style="padding:22px;margin:18px 0">
-    <div class="kicker">Recommended — tested end to end</div>
+    <div class="kicker">Cheapest → costliest: Hetzner ~€120 · OVH ~$190 · AWS ~$285 · GCP ~$350</div>
     <p style="margin-top:0"><strong>Google Cloud, one click.</strong> Cloud Shell opens pre-authenticated with a guided
     walkthrough: one command creates the VM, disk and firewall, in your project, on your billing.
-    This exact path ran our own verified node (914M messages synced).</p>
+    This exact path ran our own verified node (914M messages synced). Hetzner is the cheapest
+    (~€120/mo, <code class="inline">fiddy provision --hetzner</code>) but that path is not yet battle-tested —
+    the ladder is in the miniapp: <a href="/client/deploy/">fiddy.fun/client/deploy</a>.</p>
     <p style="margin:14px 0 4px"><a href="https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fivcained%2Ffiddy&cloudshell_tutorial=docs%2FGCP-DEPLOY.md" target="_blank" rel="noopener" style="border:none"><img src="/client/assets/open-in-cloud-shell.svg" alt="Open in Google Cloud Shell" style="height:36px"></a></p>
     <p class="dim" style="font-size:14px;margin-bottom:0">~$350/mo (e2-standard-4 + 2 TB disk — our own GCP bill). <strong style="color:var(--ink)">New to GCP? You get <a href="https://cloud.google.com/free">$300 in free credit</a> — the node is free to start.</strong> Set a calendar reminder to delete the VM (or downgrade) before the credit runs out so nothing surprises you. Prefer a guided page? <a href="/client/deploy/">fiddy.fun/client/deploy</a>. Prefer the terminal? <code class="inline">fiddy provision --gcp</code> (needs the gcloud CLI signed in).</p>
   </div>
