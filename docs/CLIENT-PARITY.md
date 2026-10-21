@@ -162,7 +162,12 @@ message signed by a throwaway key — only the SIWF relay is stubbed, and it nam
 `fid 3` (`dwr`) so the feed has a real follow graph — then drives the client
 against a live public read node and **attributes every read to the machine that
 answered it**. Re-pointed at the provider chain and re-measured 2026-10-21
-(5174 → `https://haatz.quilibrium.com`): one run, **12/12 checks**.
+(5174 → `https://haatz.quilibrium.com`): the table below is the shape of a 12/12
+run, and **the one check that flips is the reload** — fifteen live-node runs of
+the same command on the same two revisions were measured that day and three of
+them failed it. "The one row that flips, measured" below has the numbers and the
+cause; the 12/12 numbers in the table are real, they are just not the only
+outcome.
 
 | Check | Evidence (2026-10-21, 5174 → the live public node) |
 | --- | --- |
@@ -176,7 +181,7 @@ answered it**. Re-pointed at the provider chain and re-measured 2026-10-21
 | a channel renders and answers — never an empty success | 16 `200` reads; the column renders the channel's members and casts |
 | notifications are derived from a node read | 16 `200` reads on the notifications surface (`castsByMention`, `reactionsByFid`, `linksByTargetFid`) |
 | notifications are not an error page | the surface renders; no refusal, no fork copy |
-| **a reload keeps it** | 62 `200` node reads after `goto('/')`; 46 cast texts back on screen |
+| **a reload keeps it** | `62` `200` node reads after `goto('/')`; `46` cast texts back on screen — **the row that flips**: 3 of the 15 runs measured on 2026-10-21 failed it, and when it fails the column carries the client's own panel while the node answers every read (see "The one row that flips, measured") |
 | no surface fell back to the fork's generic copy | 6 surfaces read; `Could not reach Farcaster` / `Error retrieving data` / `Something went wrong` nowhere on any of them |
 
 Node routes the client used in that 12/12 run, all `200`, all at the node's own
@@ -185,6 +190,42 @@ origin: `linksByFid` (259), `linksByTargetFid` (227), `reactionsByCast` (164),
 `castsByMention` (8), `userNameProofByName` (7), `verificationsByFid` (7),
 `reactionsByFid` (4), `info` (7). The only `/snapchain-api` traffic in the whole
 run is the relay's health check, `GET 200 /v1/info` (41×).
+
+**The one row that flips, measured.** Re-pointing the probe did not make the
+reload check stable, and this document does not claim it did. Fifteen live-node
+runs of the same command on the same two revisions were measured on 2026-10-21 —
+thirteen by this card, two by the review that asked for this pass (evidence: the
+card's attachments — `post-runs.log` and the per-run logs next to it):
+
+* **twelve 12/12.** The reload row read `62` `200` node reads and `46` cast texts
+  back on screen on every one of them, so the table's numbers are real; they are
+  just not the only outcome. One of these ran the previous revision, before this
+  pass's detail change; the rest ran this one.
+* **one 9/12** (this card, `post-run-live-7.log`): the reload check plus the
+  profile and channel checks, both of which read nothing. The page carried the
+  rail's own panel — `Cmd+K Explore didn't load from your node Farcaster's own
+  public server did not answer: Failed to fetch.` — while the node answered
+  elsewhere in the same run (the notifications surface's 27 reads, all `200`).
+  The reload detail read `×1 (200) | casts back on screen: 0`.
+* **two 11/12** (the review's runs of the previous revision, both with only the
+  reload check red): the column carried the client's own refusal, unchanged for
+  the whole 60s budget and 75s past the `goto('/')` —
+  `Home isn't on your node — POST /v2/feed-items is a write, and Farcaster's own
+  public server does not take writes from this client.` — while the node answered
+  every read it was handed (770 in one run, all `200`).
+
+So the reload row is a flake, and the flake is the client — not the node, and not
+a deadline: the seam refuses `POST /v2/feed-items` as a write whenever the
+provider in use is `farcaster-public`, and a cold load that starts there does not
+recover. That is card `t_f7c34463` (measured, with the code pointers) and it is
+not this probe's to fix. What this probe now does is say so: a failing reload
+prints the column's own words (the panel or the fork's copy, or the column when
+it says nothing — with a refusal that only the rail carries reported as the
+rail's), the read that did not answer `200`, and, in the report, every read the
+reload document itself made. The check stays red on purpose — no re-open and no
+tolerance, because the panel outlived the budget, so the red is a real condition
+and `visitSurface`'s one-re-open policy would hide the very thing "a reload keeps
+it" exists to catch.
 
 **What changed, and why the 11/11 revision was measuring itself (2026-10-21, card
 `t_30c38e9a`).** The commits `703e2da`, `af8d9f8`, `131ae87`, `de0269e` (the
@@ -224,7 +265,13 @@ browser) the same probe is **4/12, exit 1**: every read the page attempted threw
 no cast text reached the column, and only the four checks that need no read
 passed (the sign-in, the DM note, notifications without a refusal panel, no
 generic copy). A green run therefore means reads happened — it is not a check
-that cannot fail.
+that cannot fail. Its reload check red reads, in full, the shape this pass
+fixed — the surface's own state and the read that failed, not just the node:
+`no castsByFid read answered by a node after the reload | casts back on screen: 0
+| the client's own panel: "… didn't load from your node Your node did not answer
+this read: Could not reach the Snapchain node at https://haatz.quilibrium.com
+(Failed to fetch)." | 1 feed read did not answer 200: THREW GET /v1/castsByFid
+(the node at https://haatz.quilibrium.com)`.
 
 ### The 501s are the honest part
 

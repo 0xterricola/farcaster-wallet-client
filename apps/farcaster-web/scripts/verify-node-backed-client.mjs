@@ -63,7 +63,10 @@
 //   7. a channel page renders and answers — never an empty success
 //   8. notifications are derived from a node read, not from a refusal
 //   9. no surface has fallen back to generic error copy
-//  10. after a reload the client still reads the feed from the server it named
+//  10. after a reload the client still reads the feed from the server it named —
+//      the check that flips on a live node, so when it fails its detail names the
+//      surface's own state (the column's panel, or the fork's copy) and the read
+//      that did not answer, and the reload document's own reads are reported
 //  11. the client's own words about which server is answering, and every route
 //      it used, are reported with the statuses — evidence, not a verdict
 //
@@ -462,6 +465,37 @@ const run = async () => {
   /** The page column when there is one; the whole page when the layout has none. */
   const columnOf = (surface) =>
     surface.columnPresent && surface.columnText ? surface.columnText : surface.text;
+  /**
+   * The refusal sentence a piece of surface text carries — the client's own
+   * panel, or the fork's generic copy that panel replaces.
+   *
+   * MEASURED (2026-10-21, review round 1 and this revision's own 9/12 run): the
+   * reload check's failure detail named the node it had read from and left out
+   * the sentence the reader was actually looking at, while the column carried the
+   * client's own refusal for the whole budget and well past it. Which surface
+   * said it matters: on that 9/12 run the only refusal on the page was the RAIL's
+   * Explore panel ("Cmd+K Explore didn't load from your node …") while the column
+   * under test said nothing — so the column is asked first and the rest of the
+   * page is reported separately, never conflated. Sentences are split on `[.!?]`
+   * followed by space, not on every period, so `haatz.quilibrium.com` survives.
+   */
+  const CLIENT_PHRASE =
+    /didn[’']t load from your node|isn[’']t on your node|could not be loaded from your node/i;
+  const FORK_COPY = /Could not reach Farcaster|Error retrieving data|Something went wrong/i;
+  const refusalSentence = (text) => {
+    for (const sentence of String(text ?? '').split(/(?<=[.!?])\s+/)) {
+      if (CLIENT_PHRASE.test(sentence) || FORK_COPY.test(sentence)) {
+        return sentence.replace(/\s+/g, ' ').trim().slice(0, 220);
+      }
+    }
+    return null;
+  };
+  /** The labelled sentence, or null when that text carries no refusal at all. */
+  const wordsFor = (text) => {
+    const sentence = refusalSentence(text);
+    if (!sentence) return null;
+    return `${FORK_COPY.test(sentence) ? 'the fork’s generic copy' : 'the client’s own panel'}: "${sentence}"`;
+  };
   /** Casts a server returned whose text is in the COLUMN the reader is looking at. */
   const matchedCasts = (surface) =>
     servedCasts.filter((cast) => onScreen(columnOf(surface), cast.text));
@@ -792,6 +826,7 @@ const run = async () => {
   );
 
   // ── 4. a reload keeps it working ──────────────────────────────────────────
+  const netAtReload = netSeen.length;
   await page.goto(`${SERVER}/`, { waitUntil: 'domcontentloaded' });
   const reloadSurface = await readSurfaceUntil(
     (s) => inClient(s) && matchedCasts(s).length > 0,
@@ -800,16 +835,73 @@ const run = async () => {
   await page.waitForTimeout(1500);
   const reloadReads = await readLog(page);
   seen.push(...reloadReads);
+  const reloadNetReads = netSeen.slice(netAtReload);
   const reloadNodeReads = reloadReads.filter(
     (read) =>
       /^\/v1\/castsByFid/.test(read.path) && read.status === 200 && isNodeServer(read.serverKey),
   );
   const reloadMatches = matchedCasts(reloadSurface);
+  // MEASURED (2026-10-21, review round 1 + this card's own runs): this is the
+  // check that flips on a live node — the review's two runs of the previous
+  // revision were 11/12, this card's thirteen live-node runs of it were twelve
+  // green and one 9/12, and always with the same detail: "×1 (200) | casts back
+  // on screen: 0".
+  // That detail read as "the node's reads stopped", which is not what happened —
+  // the node answered every read it was handed (770 in one measured run, all
+  // 200) while the column carried the client's own refusal, unchanged for the
+  // whole budget and 75s past it. Both facts are in the probe already
+  // (`surfaceProbe`'s refusal patterns, and the reads that did not answer), so
+  // the failure detail now names the surface's own state and the read that
+  // failed, the way the cast-detail/profile/channel checks do. The check itself
+  // is unchanged on purpose: no re-open and no tolerance, because the state it
+  // reports is a real client condition — a reload that does not recover — and
+  // `visitSurface`'s one-re-open policy would hide the very thing this check
+  // exists to catch.
+  const reloadFailures = reloadReads.filter((read) => read.status !== 200);
+  const reloadFeedFailures = reloadFailures.filter((read) =>
+    /^\/(?:v2\/feed-items|v1\/castsByFid)/.test(read.path),
+  );
+  const reloadOk =
+    inClient(reloadSurface) && reloadMatches.length > 0 && reloadNodeReads.length > 0;
+  const columnWords = wordsFor(columnOf(reloadSurface));
+  // Only a failing check explains itself: a passing one keeps the detail the
+  // release doc quotes (the reads, and the casts back on screen). On a failure
+  // the detail answers the two questions an operator has — what does the reader
+  // see, and which read failed — and never blames the node when it answered.
+  const reloadStateParts = [];
+  if (!inClient(reloadSurface)) {
+    reloadStateParts.push(
+      `landed at ${reloadSurface.path || '(no path read)'} deviceOnly=${
+        reloadSurface.deviceOnlyLanding
+      } onboarding=${reloadSurface.onboardingSheet}`,
+    );
+  }
+  if (columnWords) {
+    reloadStateParts.push(columnWords);
+  } else {
+    reloadStateParts.push(`page column: "${columnOf(reloadSurface).slice(0, 160).trim()}"`);
+    const elsewhere = wordsFor(reloadSurface.text);
+    if (elsewhere) reloadStateParts.push(`elsewhere on the page — ${elsewhere}`);
+  }
+  if (reloadFailures.length > 0) {
+    const listed = reloadFeedFailures.length > 0 ? reloadFeedFailures : reloadFailures;
+    const label =
+      reloadFeedFailures.length > 0
+        ? `${reloadFeedFailures.length} feed read${reloadFeedFailures.length === 1 ? '' : 's'}`
+        : `${reloadFailures.length} read${reloadFailures.length === 1 ? '' : 's'} in the reload’s own log`;
+    reloadStateParts.push(
+      `${label} did not answer 200: ${listed
+        .slice(0, 4)
+        .map((read) => `${read.status} ${read.method} ${read.path} (${read.server})`)
+        .join('; ')}`,
+    );
+  }
+  const reloadState = reloadOk ? '' : reloadStateParts.map((part) => ` | ${part}`).join('');
   await shot(page, 'after-reload');
   check(
     'after a reload the client still reads the feed from a server it read from',
-    inClient(reloadSurface) && reloadMatches.length > 0 && reloadNodeReads.length > 0,
-    `${reloadNodeReads.length > 0 ? describeServers(reloadNodeReads) : 'no castsByFid read answered by a node after the reload'} | casts back on screen: ${reloadMatches.length}`,
+    reloadOk,
+    `${reloadNodeReads.length > 0 ? describeServers(reloadNodeReads) : 'no castsByFid read answered by a node after the reload'} | casts back on screen: ${reloadMatches.length}${reloadState}`,
   );
 
   // ── 5. no surface fell back to the fork's generic copy ────────────────────
@@ -912,6 +1004,30 @@ const run = async () => {
       console.log(`      ×${String(calls).padStart(3)}  ${key}`);
     }
   }
+
+  // The reload is the check that flips (see the note at it), so what the reload
+  // document itself did is reported on its own — both lenses, every server, and
+  // the cast texts that made it back to the column. That is the evidence an
+  // operator needs when the red bisects to the provider seam rather than the node.
+  console.log(`\n── what the reload document did (after goto('/')) ──`);
+  const reloadByServer = new Map();
+  for (const read of [...reloadReads, ...reloadNetReads]) {
+    const entry = reloadByServer.get(read.serverKey) ?? { server: read.server, calls: 0, routes: new Map() };
+    entry.calls += 1;
+    const key = `${read.status} ${read.method} ${read.path.split('?')[0]}`;
+    entry.routes.set(key, (entry.routes.get(key) ?? 0) + 1);
+    reloadByServer.set(read.serverKey, entry);
+  }
+  if (reloadByServer.size === 0) console.log('  (no read left the page)');
+  for (const [, entry] of [...reloadByServer.entries()].sort((a, b) => b[1].calls - a[1].calls)) {
+    console.log(`  ${entry.server} — ${entry.calls} read${entry.calls === 1 ? '' : 's'}`);
+    for (const [key, calls] of [...entry.routes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)) {
+      console.log(`      ×${String(calls).padStart(3)}  ${key}`);
+    }
+  }
+  console.log(
+    `  casts a server returned, back on screen: ${reloadMatches.length} of ${servedCasts.length}; castsByFid 200s in the reload's own log: ${reloadNodeReads.length}`,
+  );
 
   console.log(`\n── node routes the client used (${routeReport.length}) ──`);
   for (const r of routeReport) {
