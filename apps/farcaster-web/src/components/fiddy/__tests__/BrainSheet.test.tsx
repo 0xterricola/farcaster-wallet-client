@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('BrainSheet', () => {
-  it('offers the four brains, one card each', () => {
+  it('offers every brain, one card each', () => {
     render(<BrainSheet />);
     for (const card of BRAIN_CARDS) {
       expect(screen.getByText(card.title)).toBeTruthy();
@@ -91,6 +91,35 @@ describe('BrainSheet', () => {
     const advanced = document.querySelector('[data-fiddy="brain-advanced"]');
     expect(advanced).toBeTruthy();
     expect(advanced?.textContent?.toLowerCase()).toContain('not wired yet');
+  });
+
+  it('offers Surp as pay-as-you-go, and opens its panel when it is chosen', async () => {
+    // The panel reads surp.ivc.lol directly; a browser that cannot (which is
+    // every browser today — see lib/surp/transport.ts) gets a refusal here,
+    // exactly as the real one does. Stubbed so the test never leaves the process.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      }),
+    );
+
+    render(<BrainSheet />);
+    const surp = document.querySelector(
+      '[data-fiddy-brain="surp"]',
+    ) as HTMLElement;
+    expect(surp.textContent?.toLowerCase()).toContain('pay as you go');
+
+    fireEvent.click(surp);
+    expect(loadFiddySetup().brain).toBe('surp');
+    const panel = document.querySelector('[data-fiddy="surp"]');
+    expect(panel).toBeTruthy();
+    // It says why it cannot show a price, and never invents one.
+    expect(
+      await screen.findByText(/blocked this page from reading Surp directly/i),
+    ).toBeTruthy();
+    expect(document.querySelector('[data-fiddy-surp="savings"]')).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it('uses no infrastructure words anywhere on the sheet', () => {

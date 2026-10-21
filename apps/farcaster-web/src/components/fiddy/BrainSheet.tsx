@@ -5,6 +5,9 @@
  *   Fiddy        built in, nothing to plug in
  *   Claude       your own subscription, not wired yet — tagged, not implied
  *   Gemini       the same
+ *   Surp         pay as you go, wired: the live price, a key made in this
+ *                browser, and the panel that says what a month would cost
+ *                (see SurpBrainPanel — the numbers come from surp.ivc.lol)
  *   Another AI   one address + one key, and this one really connects today
  *                (it pairs with an agent service you run, through the same
  *                module and the same validation the agent surface uses)
@@ -32,6 +35,8 @@ import {
   saveFiddySetup,
   useFiddySetup,
 } from '~/lib/fiddySetup';
+
+import { SurpBrainPanel } from './SurpBrainPanel';
 
 interface BrainCard {
   id: BrainId;
@@ -64,6 +69,13 @@ export const BRAIN_CARDS: BrainCard[] = [
     line: 'Use the Gemini account you already have. Fiddy will drive it for you.',
   },
   {
+    id: 'surp',
+    title: 'Surp',
+    tag: 'pay as you go',
+    tagKind: 'live',
+    line: 'Pay only for the requests you actually make. Fiddy shows you the live price before you spend anything.',
+  },
+  {
     id: 'other',
     title: 'Another AI service',
     tag: 'you bring it',
@@ -83,6 +95,8 @@ export const brainSummary = (setup: FiddySetup): string => {
       return setup.brainServiceUrl
         ? `Your own service (${setup.brainServiceUrl.replace('https://', '')})`
         : 'Your own service — not connected yet';
+    case 'surp':
+      return 'Surp — pay as you go';
     case 'fiddy':
     default:
       return 'Fiddy, built in';
@@ -282,6 +296,8 @@ export const BrainSheet = memo(() => {
           ) : null}
         </div>
       ) : null}
+
+      {setup.brain === 'surp' && !otherOpen ? <SurpBrainPanel /> : null}
 
       <div className="fiddy-advanced">
         <button
