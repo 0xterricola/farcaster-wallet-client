@@ -16,6 +16,12 @@
 //
 //   NODE_BACKED_SERVER=https://localhost:5202 node scripts/verify-cast-submit.mjs
 //
+// RESTART THE DEV SERVER BEFORE BELIEVING A RED RUN. MEASURED 2026-10-21: a
+// server left up for five hours (HMR churn over the whole working clone) answered
+// this probe 4/12 — the shell painted, the feed stayed empty and no Cast control
+// was there to click — while the same tree on a server started seconds earlier
+// answered 12/12. The app was never the difference; the server was.
+//
 // Only the SIWF relay is stubbed (with a REAL SIWE message signed by a throwaway
 // key, so the app's own verifier accepts the sign-in for real), exactly as
 // scripts/verify-media-upload.mjs and scripts/verify-node-backed-client.mjs do.
@@ -91,7 +97,13 @@ const check = (name, ok, detail = '') => {
 
 const readSurface = (page) =>
   page.evaluate(() => {
-    const text = document.body.innerText.replace(/\s+/g, ' ').trim();
+    // A read can land on a document that is mid-navigation, and a fresh document
+    // has no body yet. Signing in IS a navigation. MEASURED 2026-10-21: without
+    // this guard the read right after the "Go social" click threw
+    // `Cannot read properties of null (reading 'innerText')` before check 1 could
+    // be recorded — and, with no browser close on the throw path, the probe
+    // process stayed alive for hours and blocked the shell that started it.
+    const text = (document.body?.innerText ?? '').replace(/\s+/g, ' ').trim();
     return {
       path: window.location.pathname,
       text,
@@ -132,10 +144,13 @@ const safeReadSurface = async (page) => {
   throw lastError;
 };
 
+/** The launched browser, kept where the throw path can close it too. */
+let browser;
+
 const run = async () => {
   const consoleErrors = [];
 
-  const browser = await chromium.launch({
+  browser = await chromium.launch({
     channel: 'chrome',
     ignoreHTTPSErrors: true,
     args: ['--ignore-certificate-errors'],
@@ -377,7 +392,7 @@ const run = async () => {
       }
     }
     const onScreen = await page.evaluate((root) => ({
-      body: document.body.innerText.replace(/\s+/g, ' '),
+      body: (document.body?.innerText ?? '').replace(/\s+/g, ' '),
       modal: (document.querySelector(root)?.innerText ?? '').replace(
         /\s+/g,
         ' ',
@@ -537,4 +552,11 @@ try {
     );
   }
   process.exitCode = 1;
+} finally {
+  // A probe that throws must still let go of its browser. MEASURED 2026-10-21:
+  // with the close on the success path only, a thrown read left a Chrome-less
+  // node process alive for five hours and the shell that started it blocked for
+  // the whole of it — the run that timed this card out died that way.
+  await browser?.close().catch(() => {});
+  console.log('probe done');
 }
