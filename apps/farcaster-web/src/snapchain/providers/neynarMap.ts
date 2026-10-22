@@ -30,6 +30,7 @@ import type {
   ApiChannel,
   ApiFrame,
   ApiOpenGraphMetadata,
+  ApiQuoteCastEmbed,
   ApiUser,
 } from 'farcaster-client-data';
 
@@ -294,7 +295,7 @@ const embedsFromNeynar = (embeds: unknown): ApiCast['embeds'] => {
     alt: string;
   }[] = [];
   const urls: { type: 'url'; openGraph: ApiOpenGraphMetadata }[] = [];
-  const quotes: unknown[] = [];
+  const quotes: ApiQuoteCastEmbed[] = [];
 
   for (const embed of embeds) {
     const record = embed as {
@@ -305,7 +306,7 @@ const embedsFromNeynar = (embeds: unknown): ApiCast['embeds'] => {
     const url = asString(record?.url);
     if (url === undefined) {
       if (record?.cast) {
-        quotes.push(record.cast);
+        quotes.push(apiQuoteCastFromNeynar(record.cast as NeynarCast));
       }
       continue;
     }
@@ -324,8 +325,29 @@ const embedsFromNeynar = (embeds: unknown): ApiCast['embeds'] => {
   return {
     images,
     urls,
-    ...(quotes.length > 0 ? { casts: quotes as never } : {}),
+    ...(quotes.length > 0 ? { casts: quotes } : {}),
     unknowns: [],
+  };
+};
+
+/**
+ * One quoted cast, as a quote embed carries it.
+ *
+ * MEASURED (the 501 sweep, 2026-10-22): this embed's `cast` used to be handed on
+ * exactly as Neynar sent it — `object: 'user_dehydrated'`, `thread_hash`, an
+ * author with no `profile` — and the row that draws a quote reads the author's
+ * level, so the whole surface fell to "This page couldn't load". A quote is now
+ * mapped like every other cast: the quote shape's own fields
+ * (`ApiQuoteCastEmbed`), from Neynar's answer, and nothing Neynar-only.
+ */
+const apiQuoteCastFromNeynar = (cast: NeynarCast): ApiQuoteCastEmbed => {
+  const hash = asString(cast.hash) ?? '';
+  return {
+    hash,
+    threadHash: asString(cast.thread_hash) ?? hash,
+    author: apiUserFromNeynar(cast.author ?? {}),
+    text: asString(cast.text) ?? '',
+    timestamp: timestampMs(cast.timestamp),
   };
 };
 

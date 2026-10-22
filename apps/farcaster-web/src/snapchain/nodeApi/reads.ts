@@ -278,6 +278,22 @@ const heldHash = (hashes: Set<string>, hash: string): string | undefined => {
 };
 
 /**
+ * The snaps channel, as the network actually carries it.
+ *
+ * MEASURED (2026-10-22, a live public read node):
+ *
+ *   GET /v1/castsByParent?url=https://warpcast.com/~/channel/snaps → casts
+ *   GET /v1/castsByParent?url=https://farcaster.xyz/~/channel/snaps → none
+ *
+ * A snap is an ordinary cast whose parent URL is this channel, so an account's
+ * snaps are its own casts with this parent — the same `castsByFid` page every
+ * other cast list on a profile comes from, filtered. `channelParentUrlFor`
+ * would spell the same channel the farcaster.xyz way, which answers empty, so
+ * the spelling is written down here rather than derived.
+ */
+export const SNAPS_CHANNEL_PARENT_URL = 'https://warpcast.com/~/channel/snaps';
+
+/**
  * Reads the hosted API's answers out of a Snapchain node, with the caches a
  * browser client needs (one page of feed asks for ~25 authors).
  */
@@ -1652,6 +1668,91 @@ export class NodeBackedReads {
   }
 
   /**
+   * The accounts one account follows that also follow a second — a "followers
+   * you know" tab.
+   *
+   * WHY THIS EXISTS: both halves are already node state — the reader's own
+   * follow edges (`linksByFid`) and the other account's followers
+   * (`linksByTargetFid`) — so a tab that said a node kept nothing for this read
+   * was wrong about the node. MEASURED (2026-10-22, a live public read node):
+   * one page of `linksByFid?link_type=follow` for the seeded account is 79
+   * edges of exactly the shape `readFollowing` reads.
+   *
+   * BOUND, SAID OUT LOUD: each side is ONE page (`pageSizeFor`), newest first,
+   * so this is the intersection of the pages the node gave rather than of two
+   * unbounded sets. `totalCount` is the number of rows in this answer, counted
+   * — never a total inferred from a page, which would be a number nobody
+   * measured.
+   */
+  async readFollowersYouKnow({
+    fid,
+    limit,
+  }: {
+    fid: number;
+    limit?: number;
+  }): Promise<{ users: ApiUser[]; totalCount: number }> {
+    const viewerFid = this.requireFid();
+    const [mine, theirs] = await Promise.all([
+      this.node.linksByFid({
+        fid: viewerFid,
+        linkType: 'follow',
+        pageSize: this.pageSizeFor(limit),
+      }),
+      this.node.linksByTargetFid({
+        targetFid: fid,
+        linkType: 'follow',
+        pageSize: this.pageSizeFor(limit),
+      }),
+    ]);
+    const followed = new Set(
+      mine.messages.flatMap((message) => {
+        const target = message.link?.targetFid;
+        return target === undefined ? [] : [target];
+      }),
+    );
+    const known = theirs.messages.filter((message) =>
+      followed.has(message.fid),
+    );
+    const profiles = await this.profilesOf(known.map((message) => message.fid));
+    // The page's order is the node's order, and an account that could not be
+    // read is dropped rather than drawn with an invented name.
+    const users = known.flatMap((message) => {
+      const user = profiles.get(message.fid);
+      return user === undefined ? [] : [user];
+    });
+    return { users, totalCount: users.length };
+  }
+
+  /**
+   * `GET /v2/profile-snap-casts`: one account's casts to the snaps channel.
+   *
+   * The node holds them (see `SNAPS_CHANNEL_PARENT_URL`): this is the same
+   * `castsByFid` page `/v2/user-casts` serves, kept to the casts whose parent
+   * URL is that channel. The page asks for more than it draws, because most of
+   * an account's casts are not snaps.
+   */
+  async readSnapCasts({
+    fid,
+    limit = 15,
+  }: {
+    fid: number;
+    limit?: number;
+  }): Promise<ApiCast[]> {
+    const page = await this.node.castsByFid({
+      fid,
+      pageSize: Math.min(limit * 4, 100),
+      reverse: true,
+    });
+    const messages = page.messages
+      .filter((message) => message.castAdd)
+      .filter(
+        (message) => message.castAdd?.parentUrl === SNAPS_CHANNEL_PARENT_URL,
+      )
+      .slice(0, limit);
+    return await this.buildCasts(messages);
+  }
+
+  /**
    * The accounts that liked one cast — its own reaction messages.
    *
    * MEASURED (a live public read node, 2026-10-22):
@@ -1934,13 +2035,19 @@ export class NodeBackedReads {
    * The hosted API also sends invites, wallet activity, streak updates, tips
    * and mini-app news; none of those are protocol messages, so they cannot be
    * derived here and are simply absent rather than faked.
+   *
+   * `previewLimit` is how many items each group carries. The tab draws three,
+   * and a group's own page asks for the group itself
+   * (`readNotificationGroup`) — same build, deeper list.
    */
   async readNotifications({
     fid,
     limit = 15,
+    previewLimit = 3,
   }: {
     fid?: number;
     limit?: number;
+    previewLimit?: number;
   } = {}): Promise<ApiNotificationGroup[]> {
     const accountFid = fid ?? this.requireFid();
     const myHashes = await this.myRecentCastHashes(accountFid);
@@ -1999,7 +2106,7 @@ export class NodeBackedReads {
     if (mentionMessages.length > 0) {
       this.rememberCasts(mentionMessages);
       const items = await mapWithConcurrency(
-        mentionMessages.slice(0, 3),
+        mentionMessages.slice(0, previewLimit),
         RESOLVE_CONCURRENCY,
         async (message) => {
           const cast = await this.buildCast({ message, withCounts: false });
@@ -2036,7 +2143,7 @@ export class NodeBackedReads {
     if (replyMessages.length > 0) {
       this.rememberCasts(replyMessages);
       const items = await mapWithConcurrency(
-        replyMessages.slice(0, 3),
+        replyMessages.slice(0, previewLimit),
         RESOLVE_CONCURRENCY,
         async (message) => {
           const cast = await this.buildCast({ message, withCounts: false });
@@ -2075,7 +2182,7 @@ export class NodeBackedReads {
       .filter((entry) => entry.messages.length > 0);
     if (reactionMessages.length > 0) {
       const items: ApiNotificationCastReaction[] = [];
-      for (const entry of reactionMessages.slice(0, 3)) {
+      for (const entry of reactionMessages.slice(0, previewLimit)) {
         const target = castAuthorOf(entry.hash);
         const targetMessage =
           target !== undefined
@@ -2130,7 +2237,7 @@ export class NodeBackedReads {
     const followMessages = follows.messages.filter((message) => message.link);
     if (followMessages.length > 0) {
       const items = await mapWithConcurrency(
-        followMessages.slice(0, 3),
+        followMessages.slice(0, previewLimit),
         RESOLVE_CONCURRENCY,
         async (message) => {
           const actor = await this.readAuthor(message.fid);
@@ -2157,6 +2264,48 @@ export class NodeBackedReads {
     }
 
     return groups.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+  }
+
+  /**
+   * `GET /v2/notification-group`: the items of one group the notifications tab
+   * drew.
+   *
+   * WHY THIS EXISTS: the groups this client shows ARE the node's own messages,
+   * and each carries the id this reader made for it (`mentions:<fid>`,
+   * `replies:<fid>`, `reactions:<fid>`, `follows:<fid>`) — so a group a reader
+   * opened is a group this reader can fill. The tab asks for three-item
+   * previews; a group's own page asks for the group, so the same build runs with
+   * a deeper preview limit rather than a second implementation.
+   *
+   * The kinds a node holds nothing for — frame and mini-app notifications,
+   * channel role invites — are refused in words that name the missing service,
+   * never as an empty list that would read as "there is nothing here".
+   */
+  async readNotificationGroup({
+    groupId,
+    limit = 25,
+  }: {
+    groupId: string;
+    limit?: number;
+  }): Promise<ApiNotificationGroup['previewItems']> {
+    if (groupId.length === 0) {
+      throw new NodeCannotAnswerError(
+        'This read needs a notification group id: open a group from your notifications and its items load from your node.',
+      );
+    }
+    const fid = this.requireFid();
+    const groups = await this.readNotifications({
+      fid,
+      limit: Math.max(limit, 25),
+      previewLimit: limit,
+    });
+    const group = groups.find((candidate) => candidate.id === groupId);
+    if (group === undefined) {
+      throw new NodeCannotAnswerError(
+        `Your node has no group “${groupId}” to open. It carries mentions, replies, likes and follows; the other kinds of notification group come from Warpcast’s own notification service, which a read node does not hold.`,
+      );
+    }
+    return group.previewItems;
   }
 
   /**

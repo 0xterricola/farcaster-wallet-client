@@ -62,8 +62,23 @@ const NONCE = 'f'.repeat(128);
 const CHANNEL_TOKEN = 'SWEEPTOK1';
 const SIGNED_IN_FID = 3;
 
-/** The sentence the adapter writes when nobody has classified the endpoint. */
-const SHRUG = /no node-backed reader has been written/i;
+/**
+ * The sentences that mean "nobody classified this endpoint" — the adapter's own
+ * fallback, in both of the flavours it has ever had. The old wording is kept in
+ * the pattern on purpose: the string this sweep is famous for (2026-10-22) is
+ * the one it was reported with, and a surface that still says it is a miss.
+ *
+ * The two extra rows are what the fallback says AFTER the first pass of this
+ * fix: `hostedRoutes.ts`'s last resort for an endpoint no table names, and
+ * `nodeBackedFetch.ts`'s sentence for a route a node carries but this build has
+ * no reader for. Both of those are the same bug to a reader — a page that says
+ * "this isn't on your node" because a programmer has not been here yet — so
+ * they are asserted here, not reasoned away. A DELIBERATE refusal names a real
+ * reason (the routing table's own sentence: whose job the read is), and is not
+ * matched by any of these.
+ */
+const SHRUG =
+  /no node-backed reader has been written|isn’t something your node keeps, and no reader here answers it|this read has no reader wired up in this app/i;
 
 /**
  * Concrete values for the route table's parameters, so a route like
@@ -124,7 +139,8 @@ const surfacesFromRouteTable = () => {
       return PREFIXES[name] ?? '';
     });
     if (!known || !route.startsWith('/')) continue;
-    for (const [pattern, value] of PARAMS) route = route.replace(pattern, value);
+    for (const [pattern, value] of PARAMS)
+      route = route.replace(pattern, value);
     route = route.replace(/\/+$/, '') || '/';
     if (route.includes(':')) continue;
     if (SKIP.some((pattern) => pattern.test(route))) continue;
@@ -292,9 +308,12 @@ const run = async () => {
 
   const page = await ctx.newPage();
   page.on('console', (m) => {
-    if (m.type() === 'error') consoleErrors.push(flatten(m.text()).slice(0, 400));
+    if (m.type() === 'error')
+      consoleErrors.push(flatten(m.text()).slice(0, 400));
   });
-  page.on('pageerror', (e) => pageErrors.push(flatten(String(e)).slice(0, 300)));
+  page.on('pageerror', (e) =>
+    pageErrors.push(flatten(String(e)).slice(0, 300)),
+  );
 
   await page.route('https://relay.farcaster.xyz/**', async (route) => {
     const method = route.request().method();
@@ -371,7 +390,9 @@ const run = async () => {
       url: window.location.pathname,
       text: document.body.innerText.replace(/\s+/g, ' ').trim().slice(0, 400),
       controls: [...document.querySelectorAll('button, a, [role=button]')]
-        .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40))
+        .map((el) =>
+          (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40),
+        )
         .slice(0, 20),
     }));
     console.log('SIGN-IN FAILED', JSON.stringify(state, null, 1));
@@ -426,9 +447,13 @@ const run = async () => {
           navigationNote = flatten(String(error)).slice(0, 200);
         });
       await page
-        .waitForFunction(() => document.body.innerText.trim().length > 40, null, {
-          timeout: 45000,
-        })
+        .waitForFunction(
+          () => document.body.innerText.trim().length > 40,
+          null,
+          {
+            timeout: 45000,
+          },
+        )
         .catch(() => {});
       await settle(page, logMark);
 
@@ -450,8 +475,14 @@ const run = async () => {
       }
 
       const shrugOnScreen = now.panels.some((panel) => SHRUG.test(panel.body));
-      const expectation = expectations.surfaces?.[route];
-      proposed[route] = expectation ?? {
+      // What this run SAW is what gets recorded — `--record` re-baselines the
+      // gate, it does not merely fill in the surfaces nobody wrote a verdict
+      // for. (Until 2026-10-22 it kept an existing verdict and only filled the
+      // gaps, so a surface recorded as `refused-shrug` during the broken build
+      // could never be tightened by a run that proved it fixed: the file the
+      // probe compares against would have been write-only in the same
+      // direction as the bug. Review the diff before checking it in.)
+      proposed[route] = {
         verdict: shrugOnScreen
           ? 'refused-shrug'
           : refusals.length > 0
@@ -459,9 +490,18 @@ const run = async () => {
             : now.panels.length > 0
               ? 'degraded'
               : 'works',
-        refusals: refusals.map((refusal) => `${refusal.method} ${refusal.path}`),
+        refusals: refusals.map(
+          (refusal) => `${refusal.method} ${refusal.path}`,
+        ),
         panels: now.panels.map((panel) => panel.title),
       };
+
+      // A line per visit: a full sweep is 312 navigations and takes tens of
+      // minutes on a loaded machine, and a run that prints nothing until the end
+      // cannot be told from one that has hung.
+      console.log(
+        `  ${width}px ${route} → ${now.path}  ${now.panels.length > 0 ? `[${now.panels.map((panel) => panel.title).join(' | ')}]` : ''}${shrugOnScreen ? '  ← FALLBACK' : ''}`,
+      );
 
       report.push({
         width,
@@ -474,11 +514,15 @@ const run = async () => {
         genericErrorCopy: now.genericErrorCopy,
         refusals,
         requests: entries.map(
-          (entry) => `${entry.method} ${entry.path} → ${entry.kind}/${entry.status ?? 200}`,
+          (entry) =>
+            `${entry.method} ${entry.path} → ${entry.kind}/${entry.status ?? 200}`,
         ),
         ...(navigationNote === undefined ? {} : { navigationNote }),
         pageErrors: newPageErrors,
-        consoleErrors: newErrors.filter((line) => /501|HandledFetchError/.test(line)),
+        // EVERY console error this surface raised, not only the 501s: a surface
+        // that breaks in another way (an error boundary, a thrown component)
+        // says so here, and the first pass's filter hid exactly that.
+        consoleErrors: newErrors.slice(0, 6),
         column: now.column.slice(0, 240),
       });
     }
@@ -487,6 +531,7 @@ const run = async () => {
   await browser.close();
 
   const reportFile = path.join(OUT, 'node-501-sweep-report.json');
+  fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(reportFile, JSON.stringify(report, null, 1));
 
   const shrugs = report.filter((entry) => entry.shrugOnScreen);

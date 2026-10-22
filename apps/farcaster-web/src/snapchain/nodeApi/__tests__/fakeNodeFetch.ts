@@ -80,7 +80,12 @@ export interface FakeNodeRequest {
 }
 
 export interface FixtureNodeOptions {
-  /** Answer for a route with no fixture. `undefined` → 404. */
+  /**
+   * A page the test states, consulted BEFORE the recordings: a case that needs
+   * a page the recording does not contain (one account's snaps, or user data
+   * for every account in an intersection) has no other way to say so.
+   * `undefined` → fall through; a route nothing answers → 404.
+   */
   fallback?: (request: FakeNodeRequest) => Json | undefined;
   /** Records every route served, for assertions about what was read. */
   log?: string[];
@@ -125,6 +130,14 @@ export const createFixtureNodeFetch = ({
     // One page per route: later pages are empty and terminal.
     if (served.has(key)) {
       return { messages: [], nextPageToken: TERMINAL_PAGE_TOKEN };
+    }
+
+    // A page the test stated wins over the recording below (see
+    // `FixtureNodeOptions.fallback`). The page-token and one-page rules above
+    // still hold first, so a reader that pages a stated route terminates.
+    const stated = fallback?.(request);
+    if (stated !== undefined) {
+      return stated;
     }
 
     // The captured pages are one account's (fid 3). Anything else is answered
@@ -177,7 +190,8 @@ export const createFixtureNodeFetch = ({
       case '/v1/reactionsByCast':
         return read('reactionsByCast.sample.json');
       default:
-        return fallback?.(request);
+        // Already consulted above, before the recordings.
+        return undefined;
     }
   };
 

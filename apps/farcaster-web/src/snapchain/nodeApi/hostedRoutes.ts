@@ -168,11 +168,6 @@ const NODE_ROUTES: { method: string; path: string; why: string }[] = [
   },
   {
     method: 'GET',
-    path: '/v2/channel-followers-you-know',
-    why: 'the channel followers you know are your follow links intersected with the channel’s follower list',
-  },
-  {
-    method: 'GET',
     path: '/v2/cast-likes',
     why: 'the likes on a cast are the reactions to it (reactionsByCast), which a node keeps',
   },
@@ -184,7 +179,7 @@ const NODE_ROUTES: { method: string; path: string; why: string }[] = [
   {
     method: 'GET',
     path: '/v2/notification-group',
-    why: 'a notification group is the same mention/reaction/follow messages the notifications tab draws',
+    why: 'a notification group is the same mention/reply/reaction/follow messages the notifications tab draws; the other group kinds are Warpcast’s own notification service and are refused by name',
   },
   {
     method: 'GET',
@@ -578,6 +573,45 @@ const HOSTED_ROUTES: { method: string; path: string; why: string }[] = [
     method: 'GET',
     path: '/v1/dev-tools/managed-apps',
     why: 'the apps registered with a developer platform are that platform’s own records, not protocol messages — your node keeps no registry of them',
+  },
+  // ── the six endpoints the second sweep pass (2026-10-22) found still wearing
+  // the adapter's own fallback sentence. Each one is named here for the same
+  // reason as the row above: an endpoint nobody classified is a sentence written
+  // for a programmer, shown to a reader.
+  {
+    method: 'GET',
+    path: '/v2/channel-followers-you-know',
+    why: 'channel membership is not a protocol link a node holds — MEASURED (2026-10-22): a read node’s link state carries only `follow` and `block` between FIDs, so a channel’s follower list is an index’s, and no reader here joins that roster with your follow graph',
+  },
+  {
+    method: 'GET',
+    path: '/v2/starter-packs/suggested',
+    why: 'a suggested starter pack is Warpcast’s own editorial pick — not a protocol message, and Neynar’s index has none either',
+  },
+  {
+    method: 'GET',
+    path: '/v2/rent-storage-offerings',
+    why: 'what storage costs to rent is Warpcast’s pricing of the storage contract, not a read your node serves',
+  },
+  {
+    method: 'GET',
+    path: '/v1/audio-room',
+    why: 'an audio room is a hosted live product, not a protocol message',
+  },
+  {
+    method: 'GET',
+    path: '/v1/domain-manifest',
+    why: 'a domain manifest is served by that domain’s own web server, which is not your node',
+  },
+  {
+    method: 'PATCH',
+    path: '/v2/user-preferences',
+    why: 'these preferences are Farcaster account state on Warpcast’s servers — a node can’t carry them, so nothing is signed and nothing is sent (the read is answered locally: this client has none)',
+  },
+  {
+    method: 'POST',
+    path: '/v1/analytics-events',
+    why: 'product analytics beacons are the app’s own telemetry, and this build has no analytics endpoint to receive them — nothing is sent',
   },
 ];
 

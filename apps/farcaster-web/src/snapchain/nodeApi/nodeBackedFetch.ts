@@ -770,6 +770,47 @@ export const createNodeBackedFetch = ({
           });
         }
 
+        // The accounts one account follows that also follow another — the
+        // "followers you know" tab. Both halves are the node's own follow links
+        // (`readFollowersYouKnow`), so this is not a hosted read at all.
+        case '/v2/followers-you-know': {
+          const fid = Number(searchParams.get('fid'));
+          const limit = Number(searchParams.get('limit') ?? 20);
+          const { users, totalCount } = await reader.readFollowersYouKnow({
+            fid,
+            limit,
+          });
+          return jsonResponse({ result: { users, totalCount }, next: {} });
+        }
+
+        // One group of the notifications tab, filled from the same node
+        // messages the tab itself is built from (`readNotificationGroup`).
+        case '/v2/notification-group': {
+          const groupId = searchParams.get('groupId') ?? '';
+          const limit = Number(searchParams.get('limit') ?? 25);
+          return jsonResponse({
+            result: {
+              notifications: await reader.readNotificationGroup({
+                groupId,
+                limit,
+              }),
+            },
+            next: {},
+          });
+        }
+
+        // One account's snaps: its own casts, kept to the snaps channel's
+        // parent URL (`readSnapCasts`). MEASURED (2026-10-22): the channel is
+        // `https://warpcast.com/~/channel/snaps` on the network.
+        case '/v2/profile-snap-casts': {
+          const fid = Number(searchParams.get('fid'));
+          const limit = Number(searchParams.get('limit') ?? 15);
+          return jsonResponse({
+            result: { casts: await reader.readSnapCasts({ fid, limit }) },
+            next: {},
+          });
+        }
+
         // Who liked, and who recast, one cast — the node's own reaction
         // messages. MEASURED (2026-10-22, a live public read node):
         // `reactionsByCast` with `reaction_type=Like`/`Recast`.

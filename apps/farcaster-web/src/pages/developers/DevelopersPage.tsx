@@ -155,11 +155,19 @@ const DevelopersPage: React.FC = React.memo(() => {
       !doOnce.current
     ) {
       doOnce.current = true;
-      setUserPreferences({
-        preferences: {
-          enableDeveloperMode: true,
-        },
-      });
+      // A refused write is a fact about this build, not a crash: a node-backed
+      // client has no Warpcast account to keep `enableDeveloperMode` in, and
+      // the adapter says so (`PATCH /v2/user-preferences`, refused in words).
+      // MEASURED (the 501 sweep, 2026-10-22): this promise had no handler, so
+      // the refusal reached the page as an unhandled rejection and the sweep
+      // recorded this surface as a crash.
+      Promise.resolve(
+        setUserPreferences({
+          preferences: {
+            enableDeveloperMode: true,
+          },
+        }),
+      ).catch(() => undefined);
     }
   }, [userPreferences, setUserPreferences]);
 
