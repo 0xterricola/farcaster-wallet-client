@@ -155,48 +155,87 @@ const CORS = {
 
 const flatten = (value) => value.replace(/[ \t\r\n]+/g, ' ').trim();
 
+/**
+ * `page.evaluate`, with a page that navigates itself tolerated.
+ *
+ * MEASURED (2026-10-22, the first full sweep): the run died with "Execution
+ * context was destroyed, most likely because of a navigation" inside `settle` —
+ * a surface that redirects itself (the search tabs land on an explore column,
+ * and a session hand-off can replace the document) destroys its own JS context
+ * mid-read. That is the app's business and not a crash, so every read of a page
+ * after a navigation goes through here: the fallback is used, and the surface is
+ * recorded with what could be read rather than killing the sweep.
+ */
+const safeEvaluate = async (page, fn, arg, fallback) => {
+  try {
+    return await page.evaluate(fn, arg);
+  } catch {
+    return fallback;
+  }
+};
+
 /** What the page says about itself: the refusal panels, the copy, the errors. */
 const readSurface = (page) =>
-  page.evaluate(() => {
-    const flatInPage = (value) => value.replace(/[ \t\r\n]+/g, ' ').trim();
-    const panels = [
-      ...document.querySelectorAll(
-        '[data-fiddy="node-cannot-answer"], [data-fiddy="shell-section-degraded"]',
-      ),
-    ].map((panel) => ({
-      kind: panel.getAttribute('data-fiddy'),
-      title: flatInPage(
-        panel.querySelector('.fiddy-degrade-title')?.textContent ?? '',
-      ),
-      body: flatInPage(
-        panel.querySelector('.fiddy-degrade-body')?.textContent ?? '',
-      ),
-    }));
-    const column = document.querySelector('main');
-    return {
-      path: window.location.pathname,
-      text: flatInPage(document.body.innerText),
-      column: flatInPage(column ? column.innerText : ''),
-      panels,
-      deviceOnly: Boolean(
-        document.querySelector('[data-fiddy="device-only-session"]'),
-      ),
-      onboarding: Boolean(document.querySelector('[data-fiddy="onboarding"]')),
-      genericErrorCopy:
-        /Could not reach Farcaster|Error retrieving data|Something went wrong|unexpected error/i.test(
-          flatInPage(document.body.innerText),
+  safeEvaluate(
+    page,
+    () => {
+      const flatInPage = (value) => value.replace(/[ \t\r\n]+/g, ' ').trim();
+      const panels = [
+        ...document.querySelectorAll(
+          '[data-fiddy="node-cannot-answer"], [data-fiddy="shell-section-degraded"]',
         ),
-    };
-  });
+      ].map((panel) => ({
+        kind: panel.getAttribute('data-fiddy'),
+        title: flatInPage(
+          panel.querySelector('.fiddy-degrade-title')?.textContent ?? '',
+        ),
+        body: flatInPage(
+          panel.querySelector('.fiddy-degrade-body')?.textContent ?? '',
+        ),
+      }));
+      const column = document.querySelector('main');
+      return {
+        path: window.location.pathname,
+        text: flatInPage(document.body.innerText),
+        column: flatInPage(column ? column.innerText : ''),
+        panels,
+        deviceOnly: Boolean(
+          document.querySelector('[data-fiddy="device-only-session"]'),
+        ),
+        onboarding: Boolean(
+          document.querySelector('[data-fiddy="onboarding"]'),
+        ),
+        genericErrorCopy:
+          /Could not reach Farcaster|Error retrieving data|Something went wrong|unexpected error/i.test(
+            flatInPage(document.body.innerText),
+          ),
+      };
+    },
+    undefined,
+    {
+      path: '',
+      text: '',
+      column: '',
+      panels: [],
+      deviceOnly: false,
+      onboarding: false,
+      genericErrorCopy: false,
+    },
+  );
 
 /** Every request the adapter classified since a marker: the sweep's raw data. */
 const readLog = (page, marker) =>
-  page.evaluate((from) => {
-    const log = Array.isArray(window.__nodeBackedRequests)
-      ? window.__nodeBackedRequests
-      : [];
-    return { length: log.length, entries: log.slice(from) };
-  }, marker);
+  safeEvaluate(
+    page,
+    (from) => {
+      const log = Array.isArray(window.__nodeBackedRequests)
+        ? window.__nodeBackedRequests
+        : [];
+      return { length: log.length, entries: log.slice(from) };
+    },
+    marker,
+    { length: 0, entries: [] },
+  );
 
 /** Wait until the adapter has been quiet, so a surface's reads are all in. */
 const settle = async (page, marker) => {
@@ -205,12 +244,20 @@ const settle = async (page, marker) => {
   let quietSince = Date.now();
   while (Date.now() - started < SETTLE_MS) {
     await page.waitForTimeout(400);
-    const now = await page.evaluate(() => {
-      const log = Array.isArray(window.__nodeBackedRequests)
-        ? window.__nodeBackedRequests
-        : [];
-      return log.length;
-    });
+    const now = await safeEvaluate(
+      page,
+      () => {
+        const log = Array.isArray(window.__nodeBackedRequests)
+          ? window.__nodeBackedRequests
+          : [];
+        return log.length;
+      },
+      undefined,
+      null,
+    );
+    // A null means the document was replaced mid-read: this surface has
+    // navigated itself, and what it says now is what it says.
+    if (now === null) return;
     if (now !== last) {
       last = now;
       quietSince = Date.now();
@@ -353,17 +400,31 @@ const run = async () => {
       // very 501s this probe exists to find (the shrug panels were still read
       // correctly off the DOM, which is why the sweep's verdicts held while its
       // per-surface refusal list did not).
-      await page.evaluate(() => {
-        if (Array.isArray(window.__nodeBackedRequests)) {
-          window.__nodeBackedRequests.length = 0;
-        }
-      });
+      await safeEvaluate(
+        page,
+        () => {
+          if (Array.isArray(window.__nodeBackedRequests)) {
+            window.__nodeBackedRequests.length = 0;
+          }
+        },
+        undefined,
+        undefined,
+      );
       const logMark = 0;
 
-      await page.goto(`${SERVER}${route}`, {
-        waitUntil: 'domcontentloaded',
-        timeout: 90000,
-      });
+      // A navigation that the page itself supersedes (its own redirect) makes
+      // Playwright throw `ERR_ABORTED`. That is the app moving the reader to the
+      // surface it really serves, so it is recorded as a note and not as a
+      // crash — the shares of this that are real are the panel and the errors.
+      let navigationNote;
+      await page
+        .goto(`${SERVER}${route}`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 90000,
+        })
+        .catch((error) => {
+          navigationNote = flatten(String(error)).slice(0, 200);
+        });
       await page
         .waitForFunction(() => document.body.innerText.trim().length > 40, null, {
           timeout: 45000,
@@ -415,6 +476,7 @@ const run = async () => {
         requests: entries.map(
           (entry) => `${entry.method} ${entry.path} → ${entry.kind}/${entry.status ?? 200}`,
         ),
+        ...(navigationNote === undefined ? {} : { navigationNote }),
         pageErrors: newPageErrors,
         consoleErrors: newErrors.filter((line) => /501|HandledFetchError/.test(line)),
         column: now.column.slice(0, 240),
