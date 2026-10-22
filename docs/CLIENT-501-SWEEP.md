@@ -98,6 +98,64 @@ reader for:
 > Fiddy can't read `/v2/…` yet: this read has no reader wired up in this app.
 > Nothing was faked and nothing was sent — your account is untouched.
 
+## The second pass (2026-10-22): the assertion was blind
+
+A third measurement — the same probe, over the route table as it stands now,
+**156 surfaces × 2 widths = 312 visits** — found **13 visits still showing the
+fallback**, from six endpoints. They had been wearing it since the first pass:
+the probe asserted **only the old sentence**
+(`/no node-backed reader has been written/i`), and the fix had introduced two new
+ones while leaving `works` verdicts in the checked-in file behind it. So a run
+could print `shrug sentences on screen: 0` over a page that shrugged in new
+words. The probe now asserts **every flavour** of the fallback — including the
+two the fix itself introduced — and `--record` writes what the run **saw** rather
+than keeping a verdict the run just disproved.
+
+| endpoint still shrugging | surfaces |
+| --- | --- |
+| `GET /v2/followers-you-know` | `/dwr/followers-you-know`, `/~/profiles/3/followers-you-know` |
+| `GET /v2/channel-followers-you-know` | `/~/channel/<key>/followers-you-know` |
+| `GET /v2/notification-group` | `/~/notifications/mini-apps`, `/frames`, `/channel-role-invites` |
+| `GET /v2/rent-storage-offerings` | `/~/settings/storage` |
+| `GET /v2/starter-packs/suggested` | `/~/suggested-starter-packs` |
+| `GET /v2/profile-snap-casts` | the snaps tab of a profile |
+
+Wired from the node in this pass (implementations in `nodeApi/reads.ts`, each a
+read the node really makes):
+
+| route | source | why it is the node's read |
+| --- | --- | --- |
+| `GET /v2/followers-you-know` | `linksByFid?link_type=follow` ∩ `linksByTargetFid?link_type=follow` | both halves are the node's own follow edges — the first pass's "a node keeps nothing for this" row was wrong about the node |
+| `GET /v2/notification-group` | the same mention/reply/reaction/follow messages the notifications tab is built from, at the group's own depth | the group ids the tab draws are this client's own (`mentions:<fid>`, `replies:<fid>`, `reactions:<fid>`, `follows:<fid>`) |
+| `GET /v2/profile-snap-casts` | `castsByFid`, kept to the casts whose parent is the snaps channel | a snap is an ordinary cast with that parent. MEASURED: the network spells the channel `https://warpcast.com/~/channel/snaps`; the `farcaster.xyz` spelling answers empty, so the URL is written down rather than derived |
+
+Bounded, and said out loud: the intersection is taken over **one page** from each
+side (`pageSizeFor`), so `totalCount` is the number of rows in the answer,
+counted — never a total inferred from a page. A group a node cannot hold (frame
+and mini-app notifications, channel role invites) is refused in words naming the
+missing service, and a group page opened with no group id says which id it needs.
+
+Reclassified, with the measurement that settled it:
+`GET /v2/channel-followers-you-know` leaves the node table entirely. MEASURED
+(2026-10-22, a live public read node): a read node's link state carries only
+`follow` and `block` **between FIDs**, so channel membership is not node state at
+all — it is an index's roster, and no reader here joins it with your follow
+graph. The first pass's table row claimed otherwise.
+
+Six more endpoints the second pass watched were classified for the first time:
+`/v2/rent-storage-offerings`, `/v2/starter-packs/suggested`, `/v1/audio-room`,
+`/v1/domain-manifest`, `PATCH /v2/user-preferences`, `POST /v1/analytics-events`.
+
+Two real bugs came out of the run, both invisible to the old probe's log:
+
+- a Neynar **quote cast embed** was passed through raw (`object:
+  'user_dehydrated'`, an author with no `profile`). The row that draws a quote
+  reads the author's level, so it threw and the whole surface fell to "This page
+  couldn't load". It is now mapped like every other cast
+  (`apiQuoteCastFromNeynar`, `providers/neynarMap.ts`).
+- `DevelopersPage`'s `PATCH /v2/user-preferences` had no rejection handler, so
+  the adapter's honest refusal arrived as an unhandled rejection on every visit.
+
 ## What still refuses, and why
 
 These surfaces show a panel naming what is missing. None of them show the shrug.
@@ -113,12 +171,13 @@ These surfaces show a panel naming what is missing. None of them show the shrug.
 registry), `/dwr/assets` (wallet positions), `/~/inbox`, every surface's feed
 summaries / trending topics / channel streaks / highlighted channels.
 
-**Node-derivable, but no reader yet** — the honest gap sentence, not the shrug:
-`/v2/followers-you-know`, `/v2/channel-followers-you-know` (an intersection this
-client does not assemble yet), `/v2/notification-group` (the frames/mini-apps
-notification tabs), `/v2/profile-snap-casts` (the snaps tab). Each of these is a
-read a node *can* make; what is missing is a reader, and the panel says exactly
-that.
+**A read the node does not hold, refused by name**: `/~/settings/storage` (what
+storage costs to rent is Warpcast's pricing of the storage contract, not a read
+your node serves), `/~/suggested-starter-packs` and `/~/starter-packs/<id>` (an
+editorial pick, not a protocol message), `/~/channel/<key>/followers-you-know`
+(channel membership is not a node link — MEASURED: a node's link state is
+`follow`/`block` between FIDs), and a notification-group page opened with no
+group id, which says which id it needs.
 
 ## Re-running it
 
@@ -136,4 +195,5 @@ settle rather than "fixing" the product.
 `--record` writes fresh expectations to `$SWEEP_OUT`; review them before checking
 them in. A surface whose verdict is `works` must render content, `refused` must
 name its reason, `degraded` must be a deliberate device-only degradation — and
-the shrug fails the run everywhere.
+the shrug fails the run everywhere. A full sweep is 312 visits (156 surfaces ×
+390/1440) and takes about an hour on this machine.
