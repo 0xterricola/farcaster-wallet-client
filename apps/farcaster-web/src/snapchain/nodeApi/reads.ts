@@ -27,6 +27,7 @@
  */
 
 import {
+  ApiBlockedUser,
   ApiCast,
   ApiCastReaction,
   ApiFeedItemsResult,
@@ -36,6 +37,7 @@ import {
   ApiNotificationCastReply,
   ApiNotificationFollow,
   ApiNotificationGroup,
+  ApiStorageUtilization,
   ApiThreadResult,
   ApiUser,
   ApiVerification,
@@ -47,6 +49,7 @@ import {
   mapWithConcurrency,
   type NodeCastAddBody,
   type NodeMessage,
+  type NodeMessagesPage,
   SnapchainNodeClient,
 } from 'farcaster-node-client';
 
@@ -70,6 +73,7 @@ import {
   exactCount,
   floorCount,
   NodeCount,
+  userMinimalFrom,
 } from './fromNode';
 
 /** Raised when the node genuinely cannot answer a request the app made. */
@@ -95,6 +99,17 @@ const COUNT_PAGE_SIZE = 1000;
 const RESOLVE_CONCURRENCY = 24;
 /** Walk at most this far up a thread looking for its root. */
 const MAX_ANCESTOR_HOPS = 20;
+/**
+ * How far a hash-prefix lookup walks one account's casts before it gives up.
+ *
+ * A node can only be asked for a cast by its author, so a page that carries a
+ * hash prefix (a cast permalink) has to be resolved by walking that account's
+ * casts. Four pages of 100 is deep enough for the prefix of a cast that was
+ * posted in the last few months, and bounded on purpose: a prefix that is not
+ * there must cost a page walk, not an unbounded crawl.
+ */
+const PREFIX_SEARCH_PAGES = 4;
+const PREFIX_SEARCH_PAGE_SIZE = 100;
 
 /**
  * hash → the FID that authored it: the index that makes a hash-only page
@@ -703,6 +718,170 @@ export class NodeBackedReads {
         },
       ];
     });
+  }
+
+  // ---------------------------------------------------------------- settings reads
+
+  /**
+   * The accounts this one has blocked, read from the node's own block links.
+   *
+   * MEASURED (a live public read node, 2026-10-22) — a block is a protocol
+   * message, not a hosted list:
+   *
+   *   GET /v1/linksByFid?fid=3&link_type=block
+   *     → MESSAGE_TYPE_LINK_ADD, linkBody { type: 'block', targetFid: 15156 }
+   *
+   * So the settings page's blocked list is answerable from your own node: the
+   * links ARE the list, and each blocked account's profile is read the way every
+   * other profile in this client is. Before this reader existed the page asked
+   * for a reader that had never been written and said so on screen.
+   */
+  async readBlockedUsers({
+    fid,
+    limit,
+  }: {
+    fid: number;
+    limit: number;
+  }): Promise<{ blockedUsers: ApiBlockedUser[]; cursor?: string }> {
+    const pageSize = Math.min(
+      Math.max(Math.trunc(limit) || 1, 1),
+      COUNT_PAGE_SIZE,
+    );
+    const url = `${this.nodeBaseUrl}/v1/linksByFid?fid=${fid}&link_type=block&pageSize=${pageSize}`;
+    const response = await this.fetchImpl(url, { method: 'GET' });
+    if (!response.ok) {
+      throw new NodeCannotAnswerError(
+        `Your node refused the blocked-accounts read (${response.status}).`,
+      );
+    }
+
+    const body = (await response.json()) as {
+      messages?: {
+        data?: {
+          timestamp?: number;
+          linkBody?: { type?: string; targetFid?: number };
+        };
+      }[];
+      nextPageToken?: string;
+    };
+
+    // One row per block link this account wrote. A link of any other type in
+    // this page is not a block and is not claimed as one.
+    const blocks = (body.messages ?? []).flatMap((message) => {
+      const link = message.data?.linkBody;
+      if (link?.type !== 'block' || link.targetFid === undefined) {
+        return [];
+      }
+      return [
+        { targetFid: link.targetFid, timestamp: message.data?.timestamp ?? 0 },
+      ];
+    });
+
+    const profiles = new Map(
+      (
+        await mapWithConcurrency(
+          [...new Set(blocks.map((block) => block.targetFid))],
+          RESOLVE_CONCURRENCY,
+          async (targetFid) => {
+            try {
+              return [targetFid, await this.readUser(targetFid)] as const;
+            } catch {
+              return undefined;
+            }
+          },
+        )
+      ).filter(
+        (entry): entry is readonly [number, ApiUser] => entry !== undefined,
+      ),
+    );
+
+    const blockedUsers: ApiBlockedUser[] = blocks.flatMap((block) => {
+      const user = profiles.get(block.targetFid);
+      // A block whose account could not be read is still a real block: the
+      // fid is the fact, the profile is decoration. The page renders a row
+      // only when it has the profile, so the row is dropped rather than
+      // drawn with an invented name.
+      if (!user) {
+        return [];
+      }
+      return [
+        {
+          blockerFid: fid,
+          blockedFid: block.targetFid,
+          blockedUser: userMinimalFrom(user),
+          createdAt: fcTimestampToMs(block.timestamp),
+        },
+      ];
+    });
+
+    const nextPageToken = body.nextPageToken;
+    return {
+      blockedUsers,
+      ...(nextPageToken && !isTerminalPageToken(nextPageToken)
+        ? { cursor: nextPageToken }
+        : {}),
+    };
+  }
+
+  /**
+   * What this account may store, and what it is using — the node's own numbers.
+   *
+   * MEASURED (2026-10-22, `GET /v1/storageLimitsByFid?fid=3` on a live read
+   * node):
+   *
+   *   casts  limit 108000  used 51340
+   *   links  limit  54000  used  4660
+   *   reactions limit 54000 used 53162     … plus `units: 30`
+   *
+   * Two honest translations, and no invented ones:
+   *
+   *   - `used` is the node's own count of this account's messages in that store;
+   *   - `rented` is the node's own allowance for the store. The hosted page
+   *     draws that column as "used / rented" with the percentage in use, and
+   *     the allowance is exactly the denominator a reader cares about. It is the
+   *     protocol's base plus whatever units this account has bought — the node
+   *     computed it, this client did not guess it.
+   *
+   * `rentedUnits` is the node's `units`, the same storage-unit count the hosted
+   * page shows next to "Buy more storage".
+   */
+  async readStorageUtilization({
+    fid,
+  }: {
+    fid: number;
+  }): Promise<ApiStorageUtilization> {
+    const url = `${this.nodeBaseUrl}/v1/storageLimitsByFid?fid=${fid}`;
+    const response = await this.fetchImpl(url, { method: 'GET' });
+    if (!response.ok) {
+      throw new NodeCannotAnswerError(
+        `Your node refused the storage read (${response.status}).`,
+      );
+    }
+
+    const body = (await response.json()) as {
+      limits?: {
+        name?: string;
+        storeType?: string;
+        limit?: number;
+        used?: number;
+      }[];
+      units?: number;
+    };
+
+    const store = (name: string) => {
+      const entry = (body.limits ?? []).find(
+        (candidate) =>
+          (candidate.name ?? candidate.storeType ?? '').toLowerCase() === name,
+      );
+      return { used: entry?.used ?? 0, rented: entry?.limit ?? 0 };
+    };
+
+    return {
+      rentedUnits: typeof body.units === 'number' ? body.units : 0,
+      casts: store('casts'),
+      reactions: store('reactions'),
+      links: store('links'),
+    };
   }
 
   // ---------------------------------------------------------------- cast reads
@@ -1405,6 +1584,290 @@ export class NodeBackedReads {
       )
       .slice(0, limit);
     return await this.buildCasts(messages);
+  }
+
+  // -------------------------------------------------------- the follow graph
+
+  /**
+   * The accounts that follow this one — the node's own follow links.
+   *
+   * MEASURED (a live public read node, 2026-10-22):
+   *
+   *   GET /v1/linksByTargetFid?target_fid=3&link_type=follow&pageSize=2
+   *     → MESSAGE_TYPE_LINK_ADD, data.fid 6, linkBody { type: 'follow', targetFid: 3 }
+   *
+   * The *author* of the edge is the follower, so the page's edges are the page's
+   * accounts: each one is read the way every other account in this client is.
+   * Before this reader existed the profile's Followers tab asked for a reader
+   * that had never been written and said so on screen.
+   */
+  async readFollowers({
+    fid,
+    limit,
+    cursor,
+  }: {
+    fid: number;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ users: ApiUser[]; cursor?: string }> {
+    const page = await this.node.linksByTargetFid({
+      targetFid: fid,
+      linkType: 'follow',
+      pageSize: this.pageSizeFor(limit),
+      ...(cursor === undefined ? {} : { pageToken: cursor }),
+    });
+    // The edge's author is the follower; the link's own target is the account
+    // that was followed, which is already known.
+    return await this.usersOfLinks(page, (message) => message.fid);
+  }
+
+  /**
+   * The accounts this one follows — the same edges, read from the other side.
+   *
+   * MEASURED (a live public read node, 2026-10-22):
+   *
+   *   GET /v1/linksByFid?fid=3&link_type=follow&pageSize=2
+   *     → MESSAGE_TYPE_LINK_ADD, linkBody { type: 'follow', targetFid: 3 }
+   *
+   * The account is the *target* of the edge here, so each row's profile is the
+   * one the link points at. A link of another type in the same page is not a
+   * follow and is never claimed as one.
+   */
+  async readFollowing({
+    fid,
+    limit,
+    cursor,
+  }: {
+    fid: number;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ users: ApiUser[]; cursor?: string }> {
+    const page = await this.node.linksByFid({
+      fid,
+      linkType: 'follow',
+      pageSize: this.pageSizeFor(limit),
+      ...(cursor === undefined ? {} : { pageToken: cursor }),
+    });
+    return await this.usersOfLinks(page, (message) => message.link?.targetFid);
+  }
+
+  /**
+   * The accounts that liked one cast — its own reaction messages.
+   *
+   * MEASURED (a live public read node, 2026-10-22):
+   *
+   *   GET /v1/reactionsByCast?target_fid=37&target_hash=0x5018…&reaction_type=Like
+   *     → MESSAGE_TYPE_REACTION_ADD, reactionBody { type: REACTION_TYPE_LIKE,
+   *       targetCastId { fid: 37, hash: 0x5018… } }
+   *
+   * A node addresses a reaction at its target cast by *author and hash*, so the
+   * author has to be known before the node can be asked. That memo is filled by
+   * every cast this reader has served; when the hash has never been seen, this
+   * says so in plain words rather than guessing an author (the same rule
+   * `readThread` follows).
+   */
+  async readCastLikes({
+    castHash,
+    limit,
+    cursor,
+  }: {
+    castHash: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ likes: ApiCastReaction[]; cursor?: string }> {
+    const page = await this.reactionsOnCast({
+      castHash,
+      reactionType: 'Like',
+      limit,
+      cursor,
+    });
+    const reactors = await this.reactorsOf(page.messages);
+    const likes = page.messages.flatMap((message) => {
+      const reactor = reactors.get(message.fid);
+      const target = message.reaction?.targetCastId;
+      // A reaction whose account or cast could not be read is not drawn as a
+      // row: the fact is the fid, and nothing is invented to fill the gap.
+      if (reactor === undefined || target === undefined) {
+        return [];
+      }
+      return [
+        {
+          type: 'like' as const,
+          hash: message.hash,
+          reactor,
+          timestamp: fcTimestampToMs(message.timestamp),
+          castHash: target.hash,
+        },
+      ];
+    });
+    return { likes, ...this.cursorOf(page) };
+  }
+
+  /**
+   * The accounts that recast one cast — the same read, the other reaction type.
+   *
+   * MEASURED (2026-10-22, `reaction_type=Recast` against the same node): the
+   * message shape is identical apart from the variant, so the two reads share
+   * one implementation and differ only in what they return — this one answers
+   * with accounts, which is what the recasts surface draws.
+   */
+  async readCastRecasters({
+    castHash,
+    limit,
+    cursor,
+  }: {
+    castHash: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ users: ApiUser[]; cursor?: string }> {
+    const page = await this.reactionsOnCast({
+      castHash,
+      reactionType: 'Recast',
+      limit,
+      cursor,
+    });
+    const reactors = await this.reactorsOf(page.messages);
+    const users = page.messages.flatMap((message) => {
+      const reactor = reactors.get(message.fid);
+      return reactor === undefined ? [] : [reactor];
+    });
+    return { users, ...this.cursorOf(page) };
+  }
+
+  /**
+   * One account's cast, found by the first characters of its hash.
+   *
+   * The hosted route takes a username and a hash prefix, and a node cannot
+   * answer either on its own: `castsByFid` is the only way in, so the account's
+   * pages are walked (bounded) until a hash with that prefix is found. Nothing
+   * is guessed from a near miss — a prefix that matches nothing is reported as
+   * not found, and the caller says so in its own words.
+   */
+  async readUserCastByHashPrefix({
+    fid,
+    hashPrefix,
+  }: {
+    fid: number;
+    hashPrefix: string;
+  }): Promise<ApiCast | undefined> {
+    const wanted = hashPrefix.toLowerCase();
+    if (wanted.length === 0) {
+      return undefined;
+    }
+    let pageToken: string | undefined;
+    for (let page = 0; page < PREFIX_SEARCH_PAGES; page += 1) {
+      const casts = await this.node.castsByFid({
+        fid,
+        pageSize: PREFIX_SEARCH_PAGE_SIZE,
+        reverse: true,
+        ...(pageToken === undefined ? {} : { pageToken }),
+      });
+      const match = casts.messages.find(
+        (message) =>
+          message.castAdd && message.hash.toLowerCase().startsWith(wanted),
+      );
+      if (match) {
+        return (await this.buildCasts([match])).at(0);
+      }
+      pageToken = casts.nextPageToken;
+      if (casts.messages.length === 0 || isTerminalPageToken(pageToken)) {
+        break;
+      }
+    }
+    return undefined;
+  }
+
+  /** The page size a paged read asks a node for. */
+  private pageSizeFor(limit: number | undefined): number {
+    return Math.min(Math.max(Math.trunc(limit ?? 25) || 1, 1), COUNT_PAGE_SIZE);
+  }
+
+  /** The next-page cursor, or nothing when the node's page was the last. */
+  private cursorOf(page: { nextPageToken?: string }): { cursor?: string } {
+    const next = page.nextPageToken;
+    return next && !isTerminalPageToken(next) ? { cursor: next } : {};
+  }
+
+  /**
+   * One reaction page on one cast, with the author resolved from the memo.
+   *
+   * Shared by the likes and the recasts read: both ask the same node route with
+   * a different `reaction_type`, and both are refused in the same plain words
+   * when the cast's author is not known to this reader yet.
+   */
+  private async reactionsOnCast({
+    castHash,
+    reactionType,
+    limit,
+    cursor,
+  }: {
+    castHash: string;
+    reactionType: 'Like' | 'Recast';
+    limit?: number;
+    cursor?: string;
+  }): Promise<NodeMessagesPage> {
+    const author = castAuthorOf(castHash);
+    if (author === undefined) {
+      throw new NodeCannotAnswerError(
+        'Your node addresses a cast by its author and its hash, and this page only has the hash. Open the cast from your feed or a profile and its reactions will load.',
+      );
+    }
+    return await this.node.reactionsByCast({
+      targetFid: author,
+      targetHash: castHash,
+      reactionType,
+      pageSize: this.pageSizeFor(limit),
+      ...(cursor === undefined ? {} : { pageToken: cursor }),
+    });
+  }
+
+  /** The accounts behind a page of reaction messages, one read each. */
+  private async reactorsOf(
+    messages: NodeMessage[],
+  ): Promise<Map<number, ApiUser>> {
+    return await this.profilesOf([
+      ...new Set(messages.map((message) => message.fid)),
+    ]);
+  }
+
+  /** The accounts a page of follow edges points at, with the page's cursor. */
+  private async usersOfLinks(
+    page: NodeMessagesPage,
+    accountFid: (message: NodeMessage) => number | undefined,
+  ): Promise<{ users: ApiUser[]; cursor?: string }> {
+    const profiles = await this.profilesOf([
+      ...new Set(
+        page.messages.flatMap((message) => {
+          const fid = accountFid(message);
+          return fid === undefined ? [] : [fid];
+        }),
+      ),
+    ]);
+    // The page's order is the node's order, and a row without a profile is
+    // dropped rather than drawn with an invented name.
+    const users = page.messages.flatMap((message) => {
+      const fid = accountFid(message);
+      const user = fid === undefined ? undefined : profiles.get(fid);
+      return user === undefined ? [] : [user];
+    });
+    return { users, ...this.cursorOf(page) };
+  }
+
+  /** Read a set of accounts, once each, tolerating the ones that cannot be read. */
+  private async profilesOf(fids: number[]): Promise<Map<number, ApiUser>> {
+    return new Map(
+      (
+        await mapWithConcurrency(fids, RESOLVE_CONCURRENCY, async (fid) => {
+          try {
+            return [fid, await this.readUser(fid)] as const;
+          } catch {
+            return undefined;
+          }
+        })
+      ).filter(
+        (entry): entry is readonly [number, ApiUser] => entry !== undefined,
+      ),
+    );
   }
 
   // -------------------------------------------------- notifications, derived

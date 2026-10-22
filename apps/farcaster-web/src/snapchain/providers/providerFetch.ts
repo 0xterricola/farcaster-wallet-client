@@ -710,6 +710,33 @@ export const createProviderBackedFetch = ({
       return refusal;
     }
 
+    // A read only an INDEX can answer, on a list that holds no index that serves
+    // it: the honest answer is the routing table's own sentence for the route
+    // ("search runs on an index — a read node keeps no search index"), not a
+    // provider's generic note about itself. MEASURED (the 501 sweep,
+    // 2026-10-22): before this, an index route with no capable server fell
+    // through to whichever provider was live and came back with that provider's
+    // own list of what it covers — true, but about the server rather than about
+    // the read the reader asked for.
+    if (provider !== null && route.kind === 'index') {
+      const capable = firstCapableProvider({
+        kind: route.kind,
+        path,
+        preferred: provider,
+      });
+      if (capable === null) {
+        const refusal = hostedRefusal(route);
+        recordSelfAnswered(
+          requestLog,
+          parsed,
+          route,
+          refusal,
+          bodyPreviewOf(parsed),
+        );
+        return refusal;
+      }
+    }
+
     // A request no server in this catalog answers is refused in one set of words,
     // before any provider sees it — an unclassified write says "no writer has been
     // written", a read says "no reader". Both name the real gap instead of a

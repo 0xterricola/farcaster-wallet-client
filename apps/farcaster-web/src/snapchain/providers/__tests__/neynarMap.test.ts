@@ -328,3 +328,171 @@ describe('answerFromNeynar', () => {
     expect(body.errors[0]!.message).toContain('did not answer within 0.02s');
   });
 });
+
+/**
+ * The reads only an index can answer — the ones the 501 sweep found shrugging.
+ *
+ * Measured live (2026-10-22, this build's own key): Neynar answers all four, so
+ * a shrug was never the honest answer for them. What is pinned here is the
+ * shape each one must arrive in (the surfaces read `result.quotes`,
+ * `result.casts`, `result.users`, `result.channels`) and that a request with
+ * nothing to look up never becomes a call at all.
+ */
+describe('the reads an index answers, and a node cannot', () => {
+  const asFetch = (body: unknown) =>
+    (async () => jsonResponse(body)) as unknown as typeof fetch;
+
+  it('asks Neynar with the route’s own parameters', () => {
+    const quotes = neynarCallFor({
+      path: '/v2/cast-quotes',
+      searchParams: new URLSearchParams({
+        castHash: NEYNAR_CAST.hash,
+        limit: '10',
+      }),
+    });
+    expect(quotes?.kind).toBe('index');
+    expect(quotes?.shape).toBe('cast-quotes');
+    expect(quotes?.url).toContain('/v2/farcaster/cast/quotes?identifier=');
+    expect(quotes?.url).toContain('type=hash');
+
+    const liked = neynarCallFor({
+      path: '/v2/user-liked-casts',
+      searchParams: new URLSearchParams({ fid: '3' }),
+    });
+    expect(liked?.shape).toBe('liked-casts');
+    expect(liked?.url).toContain(
+      '/v2/farcaster/reactions/user?fid=3&type=likes',
+    );
+
+    // Both spellings of the search term reach the same call: the surface's box
+    // sends `q`, the fork's generated client sends `query`.
+    const users = neynarCallFor({
+      path: '/v2/search-users',
+      searchParams: new URLSearchParams({ query: 'dwr' }),
+    });
+    expect(users?.shape).toBe('search-users');
+    expect(users?.url).toContain('/v2/farcaster/user/search?q=dwr');
+
+    const channels = neynarCallFor({
+      path: '/v2/search-channels',
+      searchParams: new URLSearchParams({ q: 'ai' }),
+    });
+    expect(channels?.shape).toBe('search-channels');
+    expect(channels?.url).toContain('/v2/farcaster/channel/search?q=ai');
+  });
+
+  it('makes no call at all for a question with nothing in it', () => {
+    for (const path of [
+      '/v2/cast-quotes',
+      '/v2/user-liked-casts',
+      '/v2/search-users',
+      '/v2/search-channels',
+    ]) {
+      expect(
+        neynarCallFor({ path, searchParams: new URLSearchParams() }),
+      ).toBeNull();
+    }
+  });
+
+  it('shapes each answer into the envelope its surface reads', async () => {
+    const quotes = await answerFromNeynar({
+      path: '/v2/cast-quotes',
+      searchParams: new URLSearchParams({ castHash: NEYNAR_CAST.hash }),
+      signedInFid: 3,
+      apiKey: 'test-key',
+      fetchImpl: asFetch({
+        casts: [NEYNAR_CAST],
+        next: { cursor: 'page-2' },
+      }),
+    });
+    const quoteBody = (await quotes.json()) as {
+      result: { quotes: { hash: string }[] };
+      next?: { cursor?: string };
+    };
+    expect(quotes.status).toBe(200);
+    expect(quoteBody.result.quotes[0]!.hash).toBe(NEYNAR_CAST.hash);
+    expect(quoteBody.next).toEqual({ cursor: 'page-2' });
+
+    const liked = await answerFromNeynar({
+      path: '/v2/user-liked-casts',
+      searchParams: new URLSearchParams({ fid: '3' }),
+      signedInFid: 3,
+      apiKey: 'test-key',
+      fetchImpl: asFetch({
+        reactions: [{ reaction_type: 'like', cast: NEYNAR_CAST }],
+      }),
+    });
+    const likedBody = (await liked.json()) as {
+      result: { casts: { hash: string }[] };
+    };
+    expect(likedBody.result.casts[0]!.hash).toBe(NEYNAR_CAST.hash);
+
+    const users = await answerFromNeynar({
+      path: '/v2/search-users',
+      searchParams: new URLSearchParams({ q: 'dwr' }),
+      signedInFid: 3,
+      apiKey: 'test-key',
+      fetchImpl: asFetch({ result: { users: [NEYNAR_USER] } }),
+    });
+    const usersBody = (await users.json()) as {
+      result: { users: { fid: number; username?: string }[] };
+    };
+    expect(usersBody.result.users[0]).toMatchObject({
+      fid: 3,
+      username: 'dwr',
+    });
+
+    const channels = await answerFromNeynar({
+      path: '/v2/search-channels',
+      searchParams: new URLSearchParams({ q: 'ai' }),
+      signedInFid: 3,
+      apiKey: 'test-key',
+      fetchImpl: asFetch({
+        channels: [
+          {
+            id: 'ai',
+            name: 'AI',
+            image_url: 'https://example.com/ai.png',
+            description: 'the AI channel',
+            follower_count: 1234,
+          },
+        ],
+      }),
+    });
+    const channelBody = (await channels.json()) as {
+      result: {
+        channels: {
+          key: string;
+          name: string;
+          imageUrl?: string;
+          followerCount?: number;
+          // Nothing about this reader is claimed: no membership, no unnotified
+          // state, no join button that would promise a write nobody made.
+          viewerContext: { following: boolean; isMember: boolean };
+        }[];
+      };
+    };
+    expect(channelBody.result.channels[0]).toMatchObject({
+      key: 'ai',
+      name: 'AI',
+      imageUrl: 'https://example.com/ai.png',
+      followerCount: 1234,
+      viewerContext: { following: false, isMember: false },
+    });
+  });
+
+  it('answers an empty result as an empty list, not as a refusal', async () => {
+    const response = await answerFromNeynar({
+      path: '/v2/search-channels',
+      searchParams: new URLSearchParams({ q: 'no-such-channel' }),
+      signedInFid: 3,
+      apiKey: 'test-key',
+      fetchImpl: asFetch({ channels: [] }),
+    });
+    const body = (await response.json()) as {
+      result: { channels: unknown[] };
+    };
+    expect(response.status).toBe(200);
+    expect(body.result.channels).toEqual([]);
+  });
+});

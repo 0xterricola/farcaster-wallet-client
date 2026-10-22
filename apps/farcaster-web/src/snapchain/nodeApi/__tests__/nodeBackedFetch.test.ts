@@ -353,9 +353,12 @@ describe('the node-backed fetch', () => {
         'https://farcaster.xyz/~api/v1/creator-rewards',
       );
       expect(response.status).toBe(501);
-      expect(JSON.stringify(await json(response))).toContain(
-        'no node-backed reader',
-      );
+      // The sentence is the routing table's own, and it is written for a reader:
+      // it names what is missing and why, and never reads like a note to a
+      // programmer (the sweep that found 48 shrug surfaces is what changed it).
+      const body = JSON.stringify(await json(response));
+      expect(body).toContain('Fiddy can’t read /v1/creator-rewards yet');
+      expect(body).toContain('Nothing was faked');
     });
   });
 

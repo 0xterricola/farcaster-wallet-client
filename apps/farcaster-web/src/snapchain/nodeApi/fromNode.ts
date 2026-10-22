@@ -47,6 +47,7 @@ import {
   ApiChannelMinimal,
   ApiQuoteCastEmbed,
   ApiUser,
+  ApiUserMinimal,
 } from 'farcaster-client-data';
 import {
   type NodeCastAddBody,
@@ -301,6 +302,21 @@ export const mentionFloorUser = (fid: number): ApiUser => ({
   followerCount: 0,
   followingCount: 0,
   profile: { bio: { text: '', mentions: [] } },
+});
+
+/**
+ * A full profile as the minimal one a list row carries.
+ *
+ * Used by the reads that return a list of accounts — a block list is the first:
+ * the hosted shapes carry `ApiUserMinimal` next to the fid, and the page turns
+ * that back into a row. Nothing is added that the profile read did not have: an
+ * account with no picture has no picture.
+ */
+export const userMinimalFrom = (user: ApiUser): ApiUserMinimal => ({
+  fid: user.fid,
+  ...(user.username === undefined ? {} : { username: user.username }),
+  displayName: user.displayName,
+  ...(user.pfp === undefined ? {} : { pfp: user.pfp }),
 });
 
 const HANDLE_CHARACTER = /[a-zA-Z0-9_.-]/;

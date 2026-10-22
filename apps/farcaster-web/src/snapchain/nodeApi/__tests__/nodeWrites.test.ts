@@ -616,7 +616,7 @@ describe('the classification this all hangs off', () => {
     ).toMatchObject({ kind: 'hosted' });
     expect(
       classifyHostedRequest({ method: 'PUT', path: '/v2/unheard-of' }).why,
-    ).toContain('no node-backed writer has been written');
+    ).toContain('nothing was signed and nothing was sent');
   });
 });
 

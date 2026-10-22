@@ -27,6 +27,7 @@
 
 import type {
   ApiCast,
+  ApiChannel,
   ApiFrame,
   ApiOpenGraphMetadata,
   ApiUser,
@@ -43,7 +44,14 @@ import { NEYNAR_BASE_URL } from './catalog';
 export interface NeynarCall {
   url: string;
   /** Which hosted shape to build out of the answer. */
-  kind: 'user' | 'user-list' | 'casts' | 'thread' | 'verifications' | 'frames';
+  kind:
+    | 'user'
+    | 'user-list'
+    | 'casts'
+    | 'thread'
+    | 'verifications'
+    | 'frames'
+    | 'index';
   /**
    * Which hosted envelope a `frames` answer becomes. The app catalog has four
    * endpoints with four different envelopes (`ApiGetTopMiniApps200Response`,
@@ -55,7 +63,18 @@ export interface NeynarCall {
     | 'top-mini-apps'
     | 'new-frames'
     | 'favorite-frames'
-    | 'search-miniapps';
+    | 'search-miniapps'
+    /**
+     * …and the same for the reads an index answers and a node cannot: each one
+     * has its own hosted envelope (`ApiGetCastQuotes200Response`,
+     * `ApiGetUserLikedCasts200Response`, `ApiGetSearchUsers200Response`,
+     * `ApiGetSearchChannels200Response`) and its own place in the answer, so
+     * which one it is travels with the call.
+     */
+    | 'cast-quotes'
+    | 'liked-casts'
+    | 'search-users'
+    | 'search-channels';
 }
 
 /** The hosted API's error envelope, same as the node-backed adapter's. */
@@ -844,6 +863,69 @@ export const neynarCallFor = ({
       };
     }
 
+    // ── the reads only an index can answer ─────────────────────────────────
+    //
+    // MEASURED (2026-10-22, this build's own key against api.neynar.com): each
+    // one of these answers 200 with the fields the surface draws, from the
+    // index that keeps what a read node does not — an index of what embeds
+    // what, a join from a like to the cast it points at, a search index.
+    //
+    //  GET /v2/farcaster/cast/quotes?identifier=<hash>&type=hash&limit=2 → 200
+    //    {"casts":[{"hash":"0x361f…","author":{"fid":16098,…}}]}
+    //  GET /v2/farcaster/reactions/user?fid=3&type=likes&limit=2 → 200
+    //    {"reactions":[{"reaction_type":"like","cast":{"hash":"0x5c5b…"}}]}
+    //  GET /v2/farcaster/user/search?q=dwr&limit=1 → 200 {"result":{"users":[…]}}
+    //  GET /v2/farcaster/channel/search?q=ai&limit=2 → 200 {"channels":[…]}
+    case '/v2/cast-quotes': {
+      const castHash = searchParams.get('castHash');
+      if (!castHash) {
+        return null;
+      }
+      return {
+        url: `${base}/cast/quotes?identifier=${encodeURIComponent(castHash)}&type=hash&limit=${encodeURIComponent(limit('25'))}${cursor}`,
+        kind: 'index',
+        shape: 'cast-quotes',
+      };
+    }
+
+    case '/v2/user-liked-casts': {
+      const fid = searchParams.get('fid');
+      if (!fid) {
+        return null;
+      }
+      return {
+        url: `${base}/reactions/user?fid=${encodeURIComponent(fid)}&type=likes&limit=${encodeURIComponent(limit('25'))}${cursor}`,
+        kind: 'index',
+        shape: 'liked-casts',
+      };
+    }
+
+    case '/v2/search-users': {
+      // Two spellings reach this route: the surface's own box sends `q`, and the
+      // fork's generated client sends `query`. Both mean the same thing.
+      const query = searchParams.get('q') ?? searchParams.get('query');
+      if (!query) {
+        return null;
+      }
+      return {
+        url: `${base}/user/search?q=${encodeURIComponent(query)}&limit=${encodeURIComponent(limit('20'))}${cursor}`,
+        kind: 'index',
+        shape: 'search-users',
+      };
+    }
+
+    case '/v2/search-channels': {
+      const query = searchParams.get('q') ?? searchParams.get('query');
+      if (!query) {
+        return null;
+      }
+      return {
+        url: `${base}/channel/search?q=${encodeURIComponent(query)}&limit=${encodeURIComponent(limit('20'))}${cursor}`,
+        kind: 'index',
+        shape: 'search-channels',
+      };
+    }
+
     default:
       return null;
   }
@@ -1004,6 +1086,144 @@ export const fetchCastAuthorFromNeynar = async ({
 };
 
 /**
+ * The next-page cursor a Neynar answer carries, in the hosted API's spelling.
+ *
+ * Neynar pages with `next.cursor` on the reads that page at all; a read that
+ * does not page carries nothing, and the caller is told nothing rather than an
+ * empty cursor that would look like a page token.
+ */
+const neynarNext = (body: unknown): { next?: { cursor?: string } } => {
+  const cursor = (body as { next?: { cursor?: unknown } } | null)?.next?.cursor;
+  return typeof cursor === 'string' && cursor.length > 0
+    ? { next: { cursor } }
+    : {};
+};
+
+/** The accounts in a Neynar payload, whatever envelope it used. */
+const asNeynarUsers = (value: unknown): NeynarUser[] =>
+  Array.isArray(value) ? (value as NeynarUser[]) : [];
+
+/** One channel as Neynar's index publishes it. */
+interface NeynarChannel {
+  id?: unknown;
+  name?: unknown;
+  image_url?: unknown;
+  header_image_url?: unknown;
+  description?: unknown;
+  follower_count?: unknown;
+  member_count?: unknown;
+}
+
+const asNeynarChannels = (value: unknown): NeynarChannel[] =>
+  Array.isArray(value) ? (value as NeynarChannel[]) : [];
+
+/**
+ * One channel, in the shape the channel surfaces draw.
+ *
+ * Neynar's channel record has the identity and the numbers a list row needs —
+ * key, name, art, description, follower count — and nothing about *this*
+ * reader's relationship to the channel. So the viewer's own row is neutral
+ * (`following: false`, `isMember: false`, no notification state) rather than
+ * guessed: a channel a reader has joined must never be drawn as one they have
+ * not, and the honest neutral value is the one that claims nothing.
+ */
+export const apiChannelFromNeynar = (channel: NeynarChannel): ApiChannel => {
+  const key = asString(channel.id) ?? '';
+  const imageUrl = asString(channel.image_url);
+  const headerImageUrl = asString(channel.header_image_url);
+  const description = asString(channel.description);
+  const followerCount = channel.follower_count;
+  const memberCount = channel.member_count;
+  return {
+    type: 'channel',
+    key,
+    name: asString(channel.name) ?? key,
+    ...(imageUrl === undefined ? {} : { imageUrl }),
+    ...(headerImageUrl === undefined ? {} : { headerImageUrl }),
+    ...(description === undefined ? {} : { description }),
+    ...(typeof followerCount === 'number' ? { followerCount } : {}),
+    ...(typeof memberCount === 'number' ? { memberCount } : {}),
+    // Nothing here is editorial state this client can know: a channel that
+    // arrives from a search result is shown as a channel, with no badge and no
+    // join button that would promise a membership write nobody made.
+    showCastSourceLabels: false,
+    showCastTags: false,
+    sectionRank: 0,
+    subscribable: false,
+    viewerContext: {
+      following: false,
+      isMember: false,
+      hasUnseenItems: false,
+    },
+  };
+};
+
+/**
+ * A read only an index can answer, in the hosted envelope its surface reads.
+ *
+ * Four routes, four envelopes, one rule: what Neynar returned is what is
+ * handed on, mapped into the hosted shapes (`ApiCast`/`ApiUser`/`ApiChannel`)
+ * and never invented. An answer with no rows is an empty list — which is a
+ * fact about the query, and the surface draws it as one.
+ */
+const indexEnvelope = (
+  shape: NonNullable<NeynarCall['shape']> | undefined,
+  body: unknown,
+): unknown => {
+  const next = neynarNext(body);
+  switch (shape) {
+    case 'cast-quotes':
+      return {
+        result: {
+          quotes: asNeynarArray((body as { casts?: unknown }).casts).map(
+            apiCastFromNeynar,
+          ),
+        },
+        ...next,
+      };
+
+    case 'liked-casts':
+      return {
+        result: {
+          // `/v2/farcaster/reactions/user?type=likes` answers with the reader's
+          // own like messages, each carrying the cast it points at.
+          casts: asNeynarArray(
+            (
+              (body as { reactions?: unknown }).reactions as
+                | { cast?: unknown }[]
+                | undefined
+            )?.map((reaction) => reaction.cast),
+          ).map(apiCastFromNeynar),
+        },
+        ...next,
+      };
+
+    case 'search-users':
+      return {
+        result: {
+          users: asNeynarUsers(
+            (body as { result?: { users?: unknown } }).result?.users,
+          ).map(apiUserFromNeynar),
+        },
+        ...next,
+      };
+
+    case 'search-channels':
+      return {
+        result: {
+          channels: asNeynarChannels(
+            (body as { channels?: unknown }).channels,
+          ).map(apiChannelFromNeynar),
+        },
+        ...next,
+      };
+
+    default:
+      return { result: {}, ...next };
+  }
+};
+
+/**
  * Make the call and shape the answer.
  *
  * The key travels in the `x-api-key` header and never in a URL: a key in a
@@ -1140,6 +1360,13 @@ export const answerFromNeynar = async ({
       return jsonResponse(
         appCatalogEnvelope(call.shape ?? 'search-miniapps', body),
       );
+    }
+
+    case 'index': {
+      // A read only an index can answer (the quotes of a cast, the casts one
+      // account liked, people and channel search). The envelope is the one the
+      // surface asked for, built from Neynar's own answer and nothing else.
+      return jsonResponse(indexEnvelope(call.shape, body));
     }
 
     case 'thread':

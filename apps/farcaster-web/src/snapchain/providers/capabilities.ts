@@ -141,6 +141,7 @@ export type ServeableRouteKind =
   | 'local'
   | 'media'
   | 'catalog'
+  | 'index'
   | 'hosted';
 
 /**
@@ -220,6 +221,25 @@ export const providerCanServe = ({
     };
   }
 
+  // An INDEX read is one only an index can answer — the quotes of a cast, casts
+  // addressed by hash alone, the mute list, people and channel search. A node is
+  // the wrong machine for all of them (and says so in its own words when it is
+  // asked), so the provider that answers is the one that keeps an index. Which
+  // paths this client's index really answers is the same fact as the `node`
+  // branch above: `NEYNAR_READ_PATHS`, pinned by a test to the mapper.
+  if (kind === 'index') {
+    if (provider.kind === 'neynar' && NEYNAR_READ_PATHS.includes(path)) {
+      return { can: true };
+    }
+    return {
+      can: false,
+      why:
+        provider.kind === 'snapchain'
+          ? 'A node keeps no index: this read is assembled by an indexer, so it cannot come from your node.'
+          : `${provider.label} keeps no index for this read.`,
+    };
+  }
+
   if (provider.kind === 'neynar' && !NEYNAR_READ_PATHS.includes(path)) {
     return {
       can: false,
@@ -252,6 +272,13 @@ export const NEYNAR_READ_PATHS: readonly string[] = [
   '/v1/new-frameapps',
   '/v1/favorite-frames',
   '/v1/search-miniapps',
+  // The reads an INDEX answers — the ones a node is honestly the wrong machine
+  // for. MEASURED (2026-10-22, this build's own key): all four answer 200 and
+  // `neynarMap.ts` shapes each into the envelope its surface reads.
+  '/v2/cast-quotes',
+  '/v2/user-liked-casts',
+  '/v2/search-users',
+  '/v2/search-channels',
 ];
 
 export interface ServeDecision {

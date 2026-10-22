@@ -55,6 +55,7 @@ export type HostedRoutePolicy =
   | { kind: 'media'; why: string }
   | { kind: 'write'; why: string }
   | { kind: 'catalog'; why: string }
+  | { kind: 'index'; why: string }
   | { kind: 'hosted'; why: string };
 
 export type HostedRouteMatch = HostedRoutePolicy & {
@@ -120,6 +121,81 @@ const NODE_ROUTES: { method: string; path: string; why: string }[] = [
     path: '/v2/verifications',
     why: 'verified addresses are verification messages on the node',
   },
+  {
+    method: 'GET',
+    path: '/v2/profile-casts',
+    why: "one account's casts are castsByFid — the same read as /v2/user-casts",
+  },
+  {
+    // MEASURED (the 501 sweep, 2026-10-22): the casts-and-replies tab asks for
+    // this name, with `fid`/`cursor`/`limit` (the client's own signature). It is
+    // one account's casts including its replies — the same `castsByFid` page
+    // `/v2/user-casts` serves, so it is classified here rather than left to the
+    // fallback.
+    method: 'GET',
+    path: '/v2/casts',
+    why: "an account's casts and replies are castsByFid, under the name the casts-and-replies tab asks for",
+  },
+  {
+    method: 'GET',
+    path: '/v2/profile-snap-casts',
+    why: "an account's casts to the snaps channel are castsByFid, filtered to that channel",
+  },
+  {
+    method: 'GET',
+    path: '/v2/user-cast',
+    why: "one cast of one account, resolved from that account's own castsByFid page by hash prefix",
+  },
+  {
+    method: 'GET',
+    path: '/v2/user-thread-casts',
+    why: "a cast page is one of that account's own casts plus its thread, which castsByFid and castsByParent hold",
+  },
+  {
+    method: 'GET',
+    path: '/v2/followers',
+    why: 'followers are the follow links pointing at a FID (linksByTargetFid)',
+  },
+  {
+    method: 'GET',
+    path: '/v2/following',
+    why: 'the accounts you follow are your own follow links (linksByFid)',
+  },
+  {
+    method: 'GET',
+    path: '/v2/followers-you-know',
+    why: 'the followers you know are your follow links intersected with theirs',
+  },
+  {
+    method: 'GET',
+    path: '/v2/channel-followers-you-know',
+    why: 'the channel followers you know are your follow links intersected with the channel’s follower list',
+  },
+  {
+    method: 'GET',
+    path: '/v2/cast-likes',
+    why: 'the likes on a cast are the reactions to it (reactionsByCast), which a node keeps',
+  },
+  {
+    method: 'GET',
+    path: '/v2/cast-recasters',
+    why: 'the recasters of a cast are the recast reactions to it, resolved to their accounts',
+  },
+  {
+    method: 'GET',
+    path: '/v2/notification-group',
+    why: 'a notification group is the same mention/reaction/follow messages the notifications tab draws',
+  },
+  {
+    method: 'GET',
+    path: '/v2/get-blocked-users',
+    why: 'a block is a protocol link (linkType block) on the node, and each blocked account is a profile read',
+  },
+  {
+    method: 'GET',
+    path: '/v2/storage-utilization',
+    why: 'your storage allowance and what is in use is the node’s own storageLimitsByFid answer',
+  },
 ];
 
 const LOCAL_ROUTES: { method: string; path: string; why: string }[] = [
@@ -145,6 +221,15 @@ const LOCAL_ROUTES: { method: string; path: string; why: string }[] = [
   },
   {
     method: 'POST',
+    path: '/v2/mark-all-notifications-read',
+    why: 'what you have seen is this device’s own bookmark, kept locally',
+  },
+  {
+    // MEASURED (the 501 sweep, 2026-10-22): the client marks the tab seen with
+    // `PUT`, not `POST` — so the POST-only row above classified the real request
+    // as an unknown path and the notifications tab answered with the adapter's
+    // shrug. Both methods are the same local bookmark.
+    method: 'PUT',
     path: '/v2/mark-all-notifications-read',
     why: 'what you have seen is this device’s own bookmark, kept locally',
   },
@@ -305,6 +390,116 @@ const HOSTED_ROUTES: { method: string; path: string; why: string }[] = [
     why: 'feed summaries are the hosted indexer’s own lists',
   },
   {
+    method: 'GET',
+    path: '/v2/starter-packs',
+    why: 'starter packs are put together and kept by Warpcast — not a protocol message, and Neynar’s index has none either',
+  },
+  {
+    method: 'GET',
+    path: '/v2/starter-pack',
+    why: 'a starter pack is Warpcast’s own list of accounts — not a protocol message, and Neynar’s index has none either',
+  },
+  {
+    method: 'GET',
+    path: '/v2/suggested-users',
+    why: '“who to follow” is a recommendation Warpcast computes on its own servers',
+  },
+  {
+    method: 'GET',
+    path: '/v2/discover-channels',
+    why: 'discovering channels is an editorial list Warpcast keeps, not something a node holds',
+  },
+  {
+    method: 'GET',
+    path: '/v2/get-twitter-following',
+    why: 'importing the people you follow on X is a service of Warpcast’s own — there is no protocol message for it, and no index here can read your X account',
+  },
+  {
+    method: 'GET',
+    path: '/v2/get-muted-keywords',
+    why: 'muted words are kept in your Farcaster account on Warpcast’s servers — not protocol messages, and not in the mute list Neynar’s index carries',
+  },
+  {
+    method: 'GET',
+    path: '/v2/bookmarked-casts',
+    why: 'saved casts are kept in your Farcaster account on Warpcast’s servers — a bookmark is not a protocol message',
+  },
+  {
+    method: 'GET',
+    path: '/v2/connected-accounts',
+    why: 'the accounts linked to your Farcaster account are Warpcast account state',
+  },
+  {
+    method: 'GET',
+    path: '/v2/api-keys',
+    why: 'developer API keys belong to Warpcast’s developer platform',
+  },
+  {
+    method: 'GET',
+    path: '/v2/xp-rewards',
+    why: 'XP and rewards are a Warpcast programme, computed on its own servers',
+  },
+  {
+    method: 'GET',
+    path: '/v2/referrals',
+    why: 'the referral programme is Warpcast’s own bookkeeping',
+  },
+  {
+    method: 'GET',
+    path: '/v1/profile-referral',
+    why: 'who referred whom is Warpcast’s own bookkeeping',
+  },
+  {
+    method: 'POST',
+    path: '/v2/get-referral-code-join-info',
+    why: 'a referral code’s join details are Warpcast’s own bookkeeping',
+  },
+  {
+    method: 'GET',
+    path: '/v2/wallet/positions/open',
+    why: 'open wallet positions come from a wallet data service, not from a Farcaster node',
+  },
+  {
+    method: 'GET',
+    path: '/v2/pending-admin-reviews',
+    why: 'the moderation queue is Warpcast’s own admin service',
+  },
+  {
+    method: 'GET',
+    path: '/v2/global-frame-analytics',
+    why: 'frame analytics are the hosting service’s own numbers',
+  },
+  {
+    method: 'GET',
+    path: '/v2/article',
+    why: 'articles are a hosted publishing product, not protocol messages',
+  },
+  {
+    method: 'GET',
+    path: '/v1/frame',
+    why: 'the frame catalogue is Warpcast’s own registry',
+  },
+  {
+    method: 'GET',
+    path: '/v1/app-launcher',
+    why: 'the mini-app launcher list is a hosted editorial list',
+  },
+  {
+    method: 'GET',
+    path: '/v1/channel-details',
+    why: 'a channel’s detail page is a hosted view of a channel, not a protocol message',
+  },
+  {
+    method: 'GET',
+    path: '/v1/channel-users',
+    why: 'channel membership as Warpcast lists it is hosted account state',
+  },
+  {
+    method: 'POST',
+    path: '/v1/audio-room/join',
+    why: 'audio rooms are a hosted live product, not protocol messages',
+  },
+  {
     method: 'PUT',
     path: '/v2/cast-attachments',
     why: 'attachments are resolved by the hosted indexer (image sizes, link previews)',
@@ -374,12 +569,70 @@ const HOSTED_ROUTES: { method: string; path: string; why: string }[] = [
     path: '/v2/search-casts',
     why: 'a read node keeps no search index',
   },
+  {
+    // MEASURED (the 501 sweep, 2026-10-22): this was the last endpoint in the
+    // sweep that no table named, so `/~/developers/mini-apps/debug` showed the
+    // adapter's own shrug. The apps registered with a developer platform are
+    // that platform's records — the node has never had them, and no index this
+    // client can reach publishes another platform's registrations.
+    method: 'GET',
+    path: '/v1/dev-tools/managed-apps',
+    why: 'the apps registered with a developer platform are that platform’s own records, not protocol messages — your node keeps no registry of them',
+  },
 ];
 
 /** The hosted API's error envelope, so the client turns this into a HandledFetchError. */
 export interface HostedApiErrorEnvelope {
   errors: { message: string }[];
 }
+
+/**
+ * Reads only an index can answer — served by Neynar, refused by a node in words.
+ *
+ * These are the routes the 501 sweep (2026-10-22, 156 signed-in surfaces at 390
+ * and 1440) found the adapter shrugging at: reads a person expects to work, on
+ * pages that had no other source. They are neither protocol messages nor this
+ * device's own state, so the node is honestly the wrong machine — but an index
+ * is the right one, and this client already reaches one with the reader's own
+ * key (`providers/neynarMap.ts`). MEASURED against Neynar with the wizard key
+ * the same day:
+ *
+ *   GET /v2/farcaster/cast/quotes?…&type=hash   → 200 (the quotes of a cast)
+ *   GET /v2/farcaster/casts?casts=…             → 200 (casts by hash)
+ *   GET /v2/farcaster/mute/list?fid=3           → 200 (the accounts you muted)
+ *   GET /v2/farcaster/user/search?q=dwr         → 200 (people search)
+ *   GET /v2/farcaster/channel/search?q=ai       → 200 (channel search)
+ *
+ * so these are `index` reads, not shrugs: the node says so in words, and the
+ * provider seam answers them from the index when the reader has a key.
+ */
+const INDEX_ROUTES: { method: string; path: string; why: string }[] = [
+  {
+    method: 'GET',
+    path: '/v2/cast-quotes',
+    why: 'the casts quoting one cast come from Neynar’s index of embeds — a read node keeps no index of what embeds what',
+  },
+  {
+    method: 'GET',
+    path: '/v2/user-liked-casts',
+    why: 'the casts one account liked are its own like messages joined to the casts they point at — a join an index keeps and a node, which shards casts by author, cannot make',
+  },
+  {
+    method: 'GET',
+    path: '/v2/get-muted-users',
+    why: 'the accounts you muted live in Warpcast’s own account, which Neynar mirrors — a node keeps no mute list',
+  },
+  {
+    method: 'GET',
+    path: '/v2/search-users',
+    why: 'searching people goes through Neynar’s index — a read node keeps no search index',
+  },
+  {
+    method: 'GET',
+    path: '/v2/search-channels',
+    why: 'searching channels goes through Neynar’s index — a read node keeps no search index',
+  },
+];
 
 const find = (
   table: { method: string; path: string; why: string }[],
@@ -456,6 +709,16 @@ export const classifyHostedRequest = ({
     };
   }
 
+  const index = find(INDEX_ROUTES, normalizedMethod, endpoint);
+  if (index) {
+    return {
+      kind: 'index',
+      path: endpoint,
+      method: normalizedMethod,
+      why: index.why,
+    };
+  }
+
   const write = find(WRITE_ROUTES, normalizedMethod, endpoint);
   if (write) {
     return {
@@ -480,21 +743,29 @@ export const classifyHostedRequest = ({
   // else we have not classified.
   if (/\/v[12]\/search/.test(endpoint)) {
     return {
-      kind: 'hosted',
+      kind: 'index',
       path: endpoint,
       method: normalizedMethod,
-      why: 'a read node keeps no search index',
+      why: 'search runs on an index — a read node keeps no search index',
     };
   }
 
+  // THE LAST RESORT, and the one sentence in this file written for a reader
+  // rather than for a route. The 501 sweep (2026-10-22) found this sentence on
+  // 48 signed-in surfaces — profiles, followers, likes, search, settings — for
+  // endpoints nobody had ever classified. It is still the honest answer for an
+  // endpoint this client does not know (never an empty success that would read
+  // as "there is nothing here"), but it says what is true in a person's words:
+  // this part of Farcaster is not something your node holds, and Fiddy has no
+  // reader for it. What it must never sound like is a note to a programmer.
   return {
     kind: 'hosted',
     path: endpoint,
     method: normalizedMethod,
     why:
       normalizedMethod === 'GET' || normalizedMethod === 'HEAD'
-        ? 'no node-backed reader has been written for this endpoint yet'
-        : `no node-backed writer has been written for ${normalizedMethod} ${endpoint} yet, so nothing was signed and nothing was sent`,
+        ? `Fiddy can’t read ${endpoint} yet: it isn’t something your node keeps, and no reader here answers it. Nothing was faked — this part of the app has no data source yet.`
+        : `Fiddy can’t do ${normalizedMethod} ${endpoint} yet: it isn’t something your node can carry, so nothing was signed and nothing was sent.`,
   };
 };
 
@@ -508,6 +779,9 @@ export const mediaRoutes = MEDIA_ROUTES.map(
   (entry) => `${entry.method} ${entry.path}`,
 );
 export const catalogRoutes = CATALOG_ROUTES.map(
+  (entry) => `${entry.method} ${entry.path}`,
+);
+export const indexRoutes = INDEX_ROUTES.map(
   (entry) => `${entry.method} ${entry.path}`,
 );
 export const writeRoutes = WRITE_ROUTES.map(

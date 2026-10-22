@@ -74,7 +74,7 @@ describe('the app catalog is its own kind of request', () => {
     });
 
     expect(route.kind).not.toBe('catalog');
-    expect(route.why).toContain('no node-backed writer');
+    expect(route.why).toContain('nothing was signed and nothing was sent');
   });
 
   it('finds the endpoint behind the relay prefix a build puts in front of it', () => {

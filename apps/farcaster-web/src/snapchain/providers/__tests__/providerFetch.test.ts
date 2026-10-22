@@ -164,6 +164,49 @@ describe('createProviderBackedFetch: Farcaster’s own public server', () => {
     expect(reads).toEqual([{ providerId: node.id, ok: true }]);
   });
 
+  it('reads the sweep’s other node routes from a node too, and never asks this server', async () => {
+    // The 501 sweep (2026-10-22) found these surfaces shrugging for want of a
+    // reader. They are routes only a node assembles — follow links, reaction
+    // messages, one account's cast and its thread — so a live server that is
+    // not a node must not be asked for them, and the node behind it answers.
+    const routes = [
+      '/v2/followers?fid=3&limit=25',
+      '/v2/following?fid=3&limit=25',
+      '/v2/cast-likes?castHash=0x5018&limit=25',
+      '/v2/cast-recasters?castHash=0x5018&limit=25',
+      '/v2/user-thread-casts?username=dwr&castHashPrefix=0x5018',
+    ];
+
+    for (const route of routes) {
+      const { calls, factory } = stubNodeAdapter();
+      const node = publicNodeProvider('https://relay.example');
+      const direct: string[] = [];
+      const handle = createProviderBackedFetch({
+        getActiveProvider: () => farcasterPublicProvider(),
+        getSignedInFid: () => 3,
+        nodeBaseUrl: '/snapchain-api',
+        fetchImpl: (async (url: string) => {
+          direct.push(String(url));
+          return jsonResponse({ result: {} });
+        }) as unknown as typeof fetch,
+        createNodeAdapter: factory,
+        getProviderOrder: () => [farcasterPublicProvider(), node],
+      });
+
+      const response = await handle.fetch(`https://farcaster.xyz/~api${route}`);
+      const path = route.split('?')[0]!;
+
+      expect(response.status).toBe(200);
+      expect(calls[0]).toContain(path);
+      expect(direct).toEqual([]);
+      expect(handle.log[0]).toEqual({
+        path,
+        providerId: node.id,
+        kind: 'snapchain',
+      });
+    }
+  });
+
   it('does not ask it for a hosted feature either — the classification already says whose job it is', async () => {
     const calls: string[] = [];
     const handle = handleWith((async (url: string) => {
@@ -308,12 +351,17 @@ describe('createProviderBackedFetch: Farcaster’s own public server', () => {
       '/v2/feeds',
       '/v2/channel-streaks?fid=3',
       '/v2/user-following-channels?forComposer=true&limit=50',
-      '/v2/user-thread-casts?castHashPrefix=0x2c45b3e3&username=borodutch&limit=15',
       // `/v2/unseen` was the eleventh of these, and it is not here any more: it
       // is a route the table classifies `node` (counts derived from mentions,
       // reactions and follows), so it is read from a node now rather than
       // refused — see the node-route test above. The ten left are the ones this
       // client has no other source for.
+      //
+      // `/v2/user-thread-casts` came off the same list in the 501 sweep
+      // (2026-10-22): it is a cast page, and a cast page is one of that
+      // account's own casts (`castsByFid`) plus its thread (`castsByParent`) —
+      // the node has both, and the adapter now has a reader for it, so the
+      // reader behind this server answers it instead of this server refusing.
     ];
 
     for (const path of measured) {

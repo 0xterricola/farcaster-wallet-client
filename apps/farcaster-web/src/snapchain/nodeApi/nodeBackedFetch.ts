@@ -579,6 +579,14 @@ export const createNodeBackedFetch = ({
         // index to read from. See `hostedRoutes.ts` and `capabilities.ts`.
         return errorResponse(501, NODE_CANNOT_LIST_APPS);
 
+      case 'index':
+        // A read only an index can answer (the quotes of a cast, casts by hash
+        // alone, the mute list, search). The node is honestly the wrong machine,
+        // and the sentence the routing table wrote for this route is the one a
+        // person reads — the provider seam asks the index first, and only a
+        // reader with no index reaches this.
+        return hostedRefusal(route);
+
       case 'write': {
         // The write half of this seam: this device signs it and the node
         // carries it, then the node's own state is read back before the answer
@@ -652,7 +660,16 @@ export const createNodeBackedFetch = ({
           return jsonResponse({ result: userProfile(user, user.fid) });
         }
 
-        case '/v2/user-casts': {
+        case '/v2/user-casts':
+        case '/v2/profile-casts':
+        case '/v2/casts': {
+          // Three names, one read. `/v2/profile-casts` is what the profile
+          // surfaces ask for and `/v2/casts` what the casts-and-replies tab
+          // asks for (`fid`, `cursor`, `limit` — the client's own signature,
+          // `ApiGetUserCastsAndRepliesQueryParams`); the node serves all three
+          // from `castsByFid`. MEASURED (the 501 sweep, 2026-10-22): those pages
+          // were showing the adapter's shrug because nobody had classified the
+          // second and third names for the same reader.
           const fid = Number(searchParams.get('fid'));
           const limit = Number(searchParams.get('limit') ?? 25);
           const casts = await reader.readUserCasts({ fid, limit });
@@ -688,6 +705,135 @@ export const createNodeBackedFetch = ({
           });
         }
 
+        case '/v2/get-blocked-users': {
+          const fid = reader.requireFid();
+          const limit = Number(searchParams.get('limit') ?? 25);
+          const { blockedUsers, cursor } = await reader.readBlockedUsers({
+            fid,
+            limit,
+          });
+          return jsonResponse({
+            result: { blockedUsers },
+            ...(cursor ? { next: { cursor } } : { next: {} }),
+          });
+        }
+
+        case '/v2/storage-utilization': {
+          const fid = reader.requireFid();
+          return jsonResponse({
+            result: {
+              storageUtilization: await reader.readStorageUtilization({ fid }),
+            },
+          });
+        }
+
+        // The follow graph, both ways, from this node's own follow links —
+        // MEASURED (2026-10-22): `linksByTargetFid` and `linksByFid` with
+        // `link_type=follow` answer the two tabs that were showing the adapter's
+        // shrug for want of a reader. The cursor is the node's own page token,
+        // passed straight through: a client that pages asks the next question
+        // with it, and nothing is re-numbered on the way.
+        case '/v2/followers': {
+          const fid = Number(searchParams.get('fid'));
+          const limit = Number(searchParams.get('limit') ?? 25);
+          const cursor = searchParams.get('cursor') ?? undefined;
+          const { users, cursor: next } = await reader.readFollowers({
+            fid,
+            limit,
+            ...(cursor === undefined ? {} : { cursor }),
+          });
+          return jsonResponse({
+            result: { users },
+            ...(next ? { next: { cursor: next } } : { next: {} }),
+          });
+        }
+
+        case '/v2/following': {
+          const fid = Number(searchParams.get('fid'));
+          const limit = Number(searchParams.get('limit') ?? 25);
+          const cursor = searchParams.get('cursor') ?? undefined;
+          const { users, cursor: next } = await reader.readFollowing({
+            fid,
+            limit,
+            ...(cursor === undefined ? {} : { cursor }),
+          });
+          return jsonResponse({
+            result: {
+              users,
+              // Who you interact with *least* is a ranking this client does not
+              // compute and the node does not keep, so the summary is empty
+              // rather than invented — the list above is the honest answer, and
+              // no surface is told a number nobody measured.
+              leastInteractedWith: { count: 0, users: [] },
+            },
+            ...(next ? { next: { cursor: next } } : { next: {} }),
+          });
+        }
+
+        // Who liked, and who recast, one cast — the node's own reaction
+        // messages. MEASURED (2026-10-22, a live public read node):
+        // `reactionsByCast` with `reaction_type=Like`/`Recast`.
+        case '/v2/cast-likes': {
+          const castHash = searchParams.get('castHash') ?? '';
+          const limit = Number(searchParams.get('limit') ?? 25);
+          const cursor = searchParams.get('cursor') ?? undefined;
+          const { likes, cursor: next } = await reader.readCastLikes({
+            castHash,
+            limit,
+            ...(cursor === undefined ? {} : { cursor }),
+          });
+          return jsonResponse({
+            result: { likes },
+            ...(next ? { next: { cursor: next } } : { next: {} }),
+          });
+        }
+
+        case '/v2/cast-recasters': {
+          const castHash = searchParams.get('castHash') ?? '';
+          const limit = Number(searchParams.get('limit') ?? 25);
+          const cursor = searchParams.get('cursor') ?? undefined;
+          const { users, cursor: next } = await reader.readCastRecasters({
+            castHash,
+            limit,
+            ...(cursor === undefined ? {} : { cursor }),
+          });
+          return jsonResponse({
+            result: { users },
+            ...(next ? { next: { cursor: next } } : { next: {} }),
+          });
+        }
+
+        // A cast page reached by its own address (a username and the first
+        // characters of a hash). A node shards casts by author, so the account
+        // is resolved first and its casts walked — bounded, and a prefix that
+        // matches nothing is a 404 in plain words rather than an invented cast.
+        case '/v2/user-cast': {
+          const cast = await userCastFromAddress(reader, searchParams);
+          if (cast === undefined) {
+            return errorResponse(
+              404,
+              'Your node has no cast of that account starting with those characters.',
+            );
+          }
+          return jsonResponse({ result: { cast } });
+        }
+
+        // The thread a cast page draws: the same cast, its ancestors and its
+        // replies. Resolving the cast by its address fills the hash → author
+        // memo `readThread` needs, which is why the two reads are one call apart.
+        case '/v2/user-thread-casts': {
+          const cast = await userCastFromAddress(reader, searchParams);
+          if (cast === undefined) {
+            return errorResponse(
+              404,
+              'Your node has no cast of that account starting with those characters.',
+            );
+          }
+          return jsonResponse({
+            result: await reader.readThread({ castHash: cast.hash }),
+          });
+        }
+
         case '/v2/feed-items': {
           const requestBody = (body ?? {}) as {
             feedKey?: string;
@@ -713,9 +859,15 @@ export const createNodeBackedFetch = ({
         }
 
         default:
+          // The one sentence a read that reached the node and has no reader says.
+          // It must be true (nothing was faked, and no source was invented) and
+          // it must read as a state of the app rather than as a note to a
+          // programmer — the 501 sweep found the old wording ("No node-backed
+          // reader has been written for this endpoint yet") on 48 signed-in
+          // surfaces a person reaches deliberately.
           return errorResponse(
             501,
-            `No node-backed reader has been written for ${route.path} yet.`,
+            `Fiddy can’t read ${route.path} yet: this read has no reader wired up in this app. Nothing was faked and nothing was sent — your account is untouched.`,
           );
       }
     } catch (error) {
@@ -851,6 +1003,32 @@ const userProfile = (
   // than invented; nothing in the signed-in surfaces renders it.
   extras: { fid, custodyAddress: '' },
 });
+
+/**
+ * A cast addressed the way a cast page addresses it: `@username` + a hash prefix.
+ *
+ * A node cannot be asked for a cast by hash alone (it shards by author), so the
+ * account is resolved first and its own casts are walked for a hash with that
+ * prefix. Undefined means this node has no such cast — the caller says so in
+ * plain words rather than rendering an empty page that reads as "nothing here".
+ */
+const userCastFromAddress = async (
+  reader: NodeBackedReads,
+  searchParams: URLSearchParams,
+): Promise<
+  Awaited<ReturnType<NodeBackedReads['readUserCastByHashPrefix']>>
+> => {
+  const username = searchParams.get('username') ?? '';
+  const hashPrefix = searchParams.get('castHashPrefix') ?? '';
+  if (username.length === 0 || hashPrefix.length === 0) {
+    return undefined;
+  }
+  const user = await reader.readUserByUsername(username);
+  if (!user) {
+    return undefined;
+  }
+  return await reader.readUserCastByHashPrefix({ fid: user.fid, hashPrefix });
+};
 
 /**
  * A channel object from its key.
