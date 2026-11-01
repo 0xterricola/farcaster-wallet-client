@@ -36,6 +36,9 @@ export function CastAuthorLine({
 }) {
   const trackCastClick = useTrackCastClick();
   const isProUser = useUserLevel(cast.author) === 'pro';
+  // A quote embed carries no attribution (only a real cast read does), so the
+  // label is drawn from a read cast's own client and nothing else.
+  const client = 'client' in cast ? cast.client : undefined;
 
   return (
     <div
@@ -106,6 +109,49 @@ export function CastAuthorLine({
           }
         />
       </LinkToConversation>
+      {client && (
+        <Tooltip
+          trigger={
+            <span
+              className={classNames(
+                'truncate text-base text-faint',
+                variant === 'direct-cast' && '!text-default',
+              )}
+              data-fiddy="cast-client-label"
+            >
+              via {client.displayName}
+            </span>
+          }
+          content={
+            <div className="px-1 text-sm text-light">
+              {clientTooltip(client)}
+            </div>
+          }
+        />
+      )}
     </div>
   );
 }
+
+/**
+ * What the label means, in one line.
+ *
+ * A named app is the app account's own name (or the reader's own label for it);
+ * `own` and `onchain` are descriptions, because for those there is no app to
+ * name and inventing one would be a lie. Every string here is about the app, not
+ * about the account: the account is already on the line above.
+ */
+const clientTooltip = (client: NonNullable<ApiCast['client']>): string => {
+  switch (client.kind) {
+    case 'self':
+      return 'Posted through this app';
+    case 'own':
+      return 'Posted with a key this account set up itself';
+    case 'onchain':
+      return 'Posted with an on-chain key that names no app';
+    case 'unknown':
+      return `Posted by an app whose account names itself nowhere (app fid ${client.fid})`;
+    default:
+      return 'The app this cast was posted from, per its own profile';
+  }
+};

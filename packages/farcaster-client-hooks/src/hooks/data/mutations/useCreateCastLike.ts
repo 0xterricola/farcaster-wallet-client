@@ -3,7 +3,10 @@ import { useCallback } from 'react';
 
 import { UpdateCastLikeError } from '../../../errors';
 import { useFarcasterApiClient } from '../../../providers/FarcasterApiClientProvider';
-import { useOptimisticallyUpdateCast } from '../optimistic/useOptimisticallyUpdateCast';
+import {
+  optimisticallySteppedCount,
+  useOptimisticallyUpdateCast,
+} from '../optimistic';
 
 const useCreateCastLike = () => {
   const { apiClient } = useFarcasterApiClient();
@@ -14,18 +17,22 @@ const useCreateCastLike = () => {
       const revertOptimisticUpdates = optimisticallyUpdateCast({
         updates: {
           hash: cast.hash,
-          reactions: {
-            count: cast.reactions.count + 1,
-          },
+          // Nothing when the count has not been read yet (see the helper): the
+          // heart fills either way, and no number is invented.
+          reactions: optimisticallySteppedCount({
+            count: cast.reactions?.count,
+            delta: 1,
+          }),
           viewerContext: {
             reacted: true,
           },
         },
         revertUpdates: {
           hash: cast.hash,
-          reactions: {
-            count: cast.reactions.count,
-          },
+          reactions: optimisticallySteppedCount({
+            count: cast.reactions?.count,
+            delta: 0,
+          }),
           viewerContext: {
             reacted: cast.viewerContext?.reacted,
           },

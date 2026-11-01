@@ -48,6 +48,14 @@ const siwfLog = (...args: unknown[]) => {
 };
 
 interface WalletContextType {
+  /**
+   * Whether a wallet surface exists in this layout at all. False outside the
+   * layouts that mount one (a signed-out layout has no dialog to raise), which
+   * is what lets a page say that plainly instead of offering a button that
+   * cannot work.
+   */
+  available: boolean;
+
   // Connect Wallet
   connectors: readonly Connector[];
   openConnectModal: (family?: WalletFamily) => void;
@@ -73,6 +81,7 @@ interface WalletContextType {
 }
 
 const WalletContext = createContext<WalletContextType>({
+  available: false,
   connectors: [],
   openConnectModal: () => undefined,
   closeConnectModal: () => undefined,
@@ -441,6 +450,9 @@ const WalletProvider = ({ children }: WalletProviderProps) => {
   // Build context value
   const value = useMemo<WalletContextType>(
     () => ({
+      // This layout mounts the connect dialog below, so the surface is real here.
+      available: true,
+
       // Connectors
       connectors: connectors.toReversed(),
 

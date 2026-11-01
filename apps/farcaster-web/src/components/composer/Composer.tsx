@@ -55,6 +55,10 @@ import { useUserAppContext } from '~/contexts/UserAppContextProvider';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { useOptimisticUploadCloudflareImage } from '~/hooks/data/useOptimisticUploadCloudflareImage';
 import { useNavigateToConversation } from '~/hooks/navigation/useNavigateToConversation';
+import {
+  asSentence,
+  nodeCannotAnswer,
+} from '~/snapchain/nodeApi/nodeCannotAnswer';
 import { CastComposerIntent } from '~/types';
 import { trackError } from '~/utils/errorUtils';
 import { toast } from '~/utils/toast';
@@ -1172,7 +1176,6 @@ const ComposerInner = React.forwardRef<
                   onClick={() => {
                     navigateToConversation({
                       castHash: firstResult.cast.hash,
-                      authorUsername: firstResult.cast.author.username,
                     });
                   }}
                 >
@@ -1198,10 +1201,21 @@ const ComposerInner = React.forwardRef<
               toastId: 'create-cast-failed',
             });
           } else {
+            // Plain words, plus the reason when the adapter knows one. MEASURED
+            // before this (2026-10-21, headless Chrome): the whole copy was
+            // "Failed to create cast" — a sentence with no subject, no reason
+            // and no way to act. Every write this app cannot make says why
+            // (501 + a sentence in the hosted error envelope); when one of
+            // those is the failure, the person gets it verbatim after the one
+            // line that matters.
+            const refusal = nodeCannotAnswer(e);
+            const savedNote = hasAutoSavedDraft
+              ? ' Your text is saved on this device as a draft.'
+              : '';
             toast({
-              message: hasAutoSavedDraft
-                ? 'Failed to create cast. Saved as draft.'
-                : 'Failed to create cast',
+              message: refusal
+                ? `The cast didn't post. ${asSentence(refusal.message)}${savedNote}`
+                : `The cast didn't post — try again.${savedNote}`,
               type: 'error',
               toastId: 'create-cast-failed',
             });

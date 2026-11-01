@@ -2158,7 +2158,21 @@ export type ApiCastCollectibleArtifactResolution = 'sm' | 'md' | 'lg';
 
 export type ApiCastCollectibleArtifactVariant = 'full' | 'thumbnail';
 
-export type ApiCastClient = ApiUserMinimal;
+export type ApiCastClient = ApiUserMinimal & {
+  /**
+   * How the attribution was established, when it came from the protocol:
+   * `self` (this client's own app key), `known` (a named app), `own` (the
+   * account requested the key for itself), `unknown` (an app FID with no
+   * profile) or `onchain` (an on-chain key whose metadata names no app).
+   */
+  kind?: 'self' | 'known' | 'own' | 'unknown' | 'onchain';
+  /**
+   * Stable id for the reader's client filter (`self`, `app:9152`, `own`).
+   * Absent when nothing resolved the client, in which case the cast carries no
+   * client at all.
+   */
+  clientId?: string;
+};
 
 export type ApiCastTranslationStatus = 'PENDING' | 'READY';
 
@@ -2193,10 +2207,29 @@ export interface ApiCast {
     count: ApiNonNegativeInteger;
     casts?: ApiCast[];
   };
-  reactions: {
+  /**
+   * A cast's own like count — or, when it is ABSENT, the fact that this client
+   * has not read it yet.
+   *
+   * It is optional because a count really can be missing now: the node-backed
+   * client answers a feed page as soon as the page's own reads are done and
+   * reads the engagement counts in a second pass *behind* it (`reads.ts`,
+   * `readCastCounts`), because a first cast used to wait ~5.5 s on the slowest
+   * per-cast count read of the page. So between the paint and that pass the
+   * number genuinely does not exist, and writing `0` there would be a claim
+   * nobody made.
+   *
+   * The rule that follows, and the reason this is a type and not a comment:
+   * a surface that renders a count must handle the absence — render nothing
+   * (a count that is 0 renders nothing today anyway) or wait — and must never
+   * treat "not read" as "none". `0` here still means what it always meant: the
+   * count was read, and it is zero.
+   */
+  reactions?: {
     count: ApiNonNegativeInteger;
   };
-  recasts: {
+  /** A cast's own recast count — absent means not read yet, exactly as above. */
+  recasts?: {
     count: ApiNonNegativeInteger;
     recasters?: ApiRecaster[];
   };

@@ -4,8 +4,6 @@ import {
   ApiCastVideoEmbed,
   ApiMediaV2,
   ApiQuoteCastEmbed,
-  CastHashPrefix,
-  getCastHashPrefix,
 } from 'farcaster-client-data';
 import {
   CastClickType,
@@ -13,7 +11,7 @@ import {
   getCastSnap,
   processMediasForRendering,
   useHydratedQuoteCast,
-  usePrefetchUserThreadCasts,
+  usePrefetchThread,
   useTrackCastClick,
 } from 'farcaster-client-hooks';
 import { PlayIcon } from 'lucide-react';
@@ -26,8 +24,10 @@ import {
 import { Avatar } from '~/components/avatar/Avatar';
 import { CastAuthorLine } from '~/components/casts/CastAuthorLine';
 import { Image } from '~/components/images/Image';
-import { LinkToConversationWithUsername } from '~/components/links/LinkToConversationWithUsername';
+import { LinkToConversationWithoutUsername } from '~/components/links/LinkToConversationWithoutUsername';
 import { useUserAppContext } from '~/contexts/UserAppContextProvider';
+import { mutedAuthorInUse, mutedWordInUse } from '~/snapchain/mutePreferences';
+import { useActiveMutes } from '~/snapchain/useMutePreferences';
 
 import { SnapEmbedAttachment } from './SnapEmbedAttachment';
 
@@ -46,26 +46,18 @@ const QuoteCast: FC<QuoteCastProps> = memo(
     variant = 'default',
   }) => {
     const trackCastClick = useTrackCastClick();
-    const prefetchUserThreadCasts = usePrefetchUserThreadCasts();
+    const prefetchThread = usePrefetchThread();
     const hydratedCast = useHydratedQuoteCast({ cast });
 
     const { regularCastByteLimit } = useUserAppContext();
 
-    const params = useMemo(() => {
-      if (typeof cast.author.username === 'undefined') {
-        return undefined;
-      }
-
-      const castHashPrefix = getCastHashPrefix({ castHash: cast.hash });
-
-      return {
-        username: cast.author.username,
-        castHashPrefix: castHashPrefix,
-      } as {
-        username: string;
-        castHashPrefix: CastHashPrefix;
-      };
-    }, [cast.author.username, cast.hash]);
+    /**
+     * Where this card's overlay goes: the quoted cast's own page, by full hash.
+     * A quote of a cast this app holds carries the whole hash, so it does not
+     * need — and must not use — the `/<handle>/<0x prefix>` route, which the
+     * node-backed client cannot read (card t_5068bb26).
+     */
+    const params = useMemo(() => ({ castHash: cast.hash }), [cast.hash]);
 
     const quotedCastImageEmbeds = useMemo(() => {
       return hydratedCast.embeds?.images || [];
@@ -168,16 +160,51 @@ const QuoteCast: FC<QuoteCastProps> = memo(
     ]);
 
     const optimisticallyPrefetchQuoteCast = useCallback(() => {
-      if (typeof params === 'undefined') {
-        return;
-      }
-
-      prefetchUserThreadCasts({
-        castHashPrefix: params.castHashPrefix,
-        username: params.username,
+      prefetchThread({
+        castHash: cast.hash,
         shouldAvoidUpdatingGlobalCache: true,
       });
-    }, [params, prefetchUserThreadCasts]);
+    }, [cast.hash, prefetchThread]);
+
+    /**
+     * A quote of somebody this reader hides is REPLACED, not left blank: a hole
+     * where a card should be reads as a bug, while the sentence names the
+     * reader's own decision. `mutes` is the subscription, so a mute saved a
+     * moment ago redraws this card.
+     *
+     * This is the only place a mute is honoured inside a conversation, and
+     * deliberately so: the quote is part of THIS cast's own body, not a second
+     * item in the view. A conversation itself stays whole (see `reads.ts`).
+     */
+    const mutes = useActiveMutes();
+    // Recomputed on every render on purpose: it is two small array scans and one
+    // regex test, and `mutes` is the subscription that redraws this card when
+    // the reader hides somebody — a memo would only fight the hook.
+    const hiddenByMutes =
+      mutes !== null &&
+      (mutedAuthorInUse(cast.author?.fid) || mutedWordInUse(cast.text));
+
+    if (hiddenByMutes) {
+      return (
+        <div
+          className={classNames(
+            'relative flex w-full flex-col pt-2',
+            disabled && 'mt-2',
+          )}
+        >
+          <div
+            className={classNames(
+              'px-3 py-2 text-faint',
+              !skipBorderStyles &&
+                'rounded-[12px] border bg-[#00000005] border-default dark:bg-[#ffffff05]',
+            )}
+            data-fiddy="quote-hidden-by-mutes"
+          >
+            Hidden by your mutes.
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -226,8 +253,8 @@ const QuoteCast: FC<QuoteCastProps> = memo(
             <QuoteCastImageEmbeds images={quotedCastImageEmbeds} />
           </div>
         )}
-        {typeof params !== 'undefined' && !disabled && (
-          <LinkToConversationWithUsername
+        {!disabled && (
+          <LinkToConversationWithoutUsername
             className="absolute inset-0"
             params={params}
             title={''}

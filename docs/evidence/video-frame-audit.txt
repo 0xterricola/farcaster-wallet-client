@@ -1,0 +1,34 @@
+Video frame audit — decoded back out of fiddy-59s.mp4 (kanban t_a02d39fc)
+
+Method: ffmpeg -ss <t> -i fiddy-59s.mp4 -frames:v 1 on 16 timestamps, then per frame count
+"bright ink" pixels (max(r,g,b) > 150) per row to (a) prove content grows as each step is typed,
+(b) prove the caption band is painted on every frame that should carry one, and (c) prove nothing
+is drawn outside the 80 px safe margins.
+
+  t     text row-bands  panel ink  caption ink  rail ink  ink outside safe margins
+  1.5               11      26217        12931         0      0
+  4.0                4       1208        14615       395      0
+  7.0                7       4888        14615       395      0
+  9.0                8       7469        14631       397      0
+ 13.0               13      13473        14631       397      0
+ 17.0                8       4072        12907       689      0
+ 22.0               11       8759        12907       689      0
+ 26.0               17      12521        12908       689      0
+ 31.0                7       3023        12447       983      0
+ 36.0               11       9312        12430       982      0
+ 40.0               14      13777        12430       982      0
+ 44.0                1       3530        10438       917      0
+ 48.0                5      31278        10437       917      0
+ 51.0                3       8141         5147       913      0
+ 55.0                6      15282         1201       983      0
+ 57.0                6      15282         1201       983      0
+
+Reading it:
+- Steps grow monotonically inside each shot (4 -> 13 bands in step 0, 8 -> 17 in step 1, 7 -> 14 in
+  step 2): the typed lines are actually appearing in the encoded file, not just in the render pass.
+- Caption ink is 10k-15k on every frame except the end card (t=55, 57: 1.2k = the end-card text
+  itself, no caption band by design).
+- Rail ink appears only from t=4 (the three-step progress rail is lit from step 0 onward; the title
+  card has none).
+- t=44 (the "what you get" card) is 1 band / 3.5k ink: that shot is a few large sans lines by design.
+- 0 bright pixels outside the safe margins at all 16 timestamps.

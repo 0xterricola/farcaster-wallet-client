@@ -7,7 +7,7 @@ const neutrals = {
   },
   dark: {
     white: '#ffffff',
-    black: '#101010',
+    black: '#161715',
   },
 };
 
@@ -131,6 +131,33 @@ const green = {
   },
 };
 
+const chartreuse = {
+  light: {
+    chartreuse100: '#f4ffe0',
+    chartreuse200: '#e6ffb8',
+    chartreuse300: '#d9ff8a',
+    chartreuse400: '#ccff5c',
+    chartreuse500: '#d4ff3f',
+    chartreuse600: '#b8e618',
+    chartreuse700: '#9bc600',
+    chartreuse800: '#7ea600',
+    chartreuse900: '#628500',
+    chartreuse950: '#1a1c10',
+  },
+  dark: {
+    chartreuse100: '#f4ffe0',
+    chartreuse200: '#e6ffb8',
+    chartreuse300: '#d9ff8a',
+    chartreuse400: '#ccff5c',
+    chartreuse500: '#d4ff3f',
+    chartreuse600: '#b8e618',
+    chartreuse700: '#9bc600',
+    chartreuse800: '#7ea600',
+    chartreuse900: '#628500',
+    chartreuse950: '#1a1c10',
+  },
+};
+
 const yellow = {
   light: {
     yellow100: '#fffbeb',
@@ -239,10 +266,10 @@ const background = {
     secondary: gray.dark.gray850,
     tertiary: gray.dark.gray600,
     quaternary: gray.dark.gray50,
-    brand: violet.dark.violet500,
-    brandLight: violet.dark.violet200,
-    brandMedium: violet.dark.violet400,
-    brandDisabled: violet.dark.violet200,
+    brand: chartreuse.dark.chartreuse500,
+    brandLight: chartreuse.dark.chartreuse400,
+    brandMedium: chartreuse.dark.chartreuse600,
+    brandDisabled: chartreuse.dark.chartreuse800,
     danger: red.dark.red1000,
     warning: yellow.dark.yellow1000,
     success: green.dark.green1000,
@@ -296,8 +323,8 @@ const text = {
     secondary: gray.dark.gray350,
     tertiary: gray.dark.gray500,
     quaternary: gray.dark.gray600,
-    brand: violet.dark.violet500,
-    brandLight: violet.dark.violet200,
+    brand: chartreuse.dark.chartreuse500,
+    brandLight: chartreuse.dark.chartreuse200,
     danger: red.dark.red500,
     warning: yellow.dark.yellow400,
     success: green.dark.green450,
@@ -460,6 +487,19 @@ module.exports = {
         'overlay-show': 'overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
       colors: {
+        /* Fiddy brand tokens, same values as src/styles/fiddy-shell.css and
+           the design's tokens.css. Flat, dark-only: no light variant exists. */
+        fiddy: {
+          bg: '#161715',
+          raise: '#1d1e1c',
+          ink: '#eef0e8',
+          dim: '#9ba193',
+          accent: '#d4ff3f',
+          'on-accent': '#1a1c10',
+          'accent-deep': '#7cb518',
+          glass: 'rgba(255,255,255,0.04)',
+          'glass-border': 'rgba(255,255,255,0.09)',
+        },
         ['action-green']: {
           light: text.light.success,
           dark: text.dark.success,
@@ -708,8 +748,8 @@ module.exports = {
           name: 'action-primary',
           light: text.light.brand,
           dark: text.dark.brand,
-          lightHover: violet.light.violet700,
-          darkHover: violet.dark.violet300,
+          lightHover: chartreuse.light.chartreuse600,
+          darkHover: chartreuse.dark.chartreuse400,
         }),
         ...bgColor({
           name: 'action-primary-disabled',

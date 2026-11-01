@@ -38,6 +38,7 @@ import { DirectCastRichAnnouncementCTA } from './DirectCastRichAnnouncementCTA';
 import { DirectCastCastEmbeds } from './embeds/DirectCastCastEmbeds';
 import { DirectCastGroupInvites } from './embeds/DirectCastGroupInvites';
 import { DirectCastImageEmbed } from './embeds/DirectCastImageEmbed';
+import { DirectCastMessageImages } from './embeds/DirectCastMessageImages';
 import { DirectCastURLEmbeds } from './embeds/DirectCastURLEmbeds';
 import { DirectCastVideoEmbed } from './embeds/DirectCastVideoEmbed';
 import { NewMessagesMarker } from './NewMessagesMarker';
@@ -91,7 +92,7 @@ const DirectCast: React.FC<DirectCastProps> = React.memo(
       muted: false,
     });
 
-    const { text } = useDirectCastText({
+    const { text, imageUrls } = useDirectCastText({
       conversation,
       directCast,
       applyInboxStyles: false,
@@ -578,6 +579,17 @@ const DirectCast: React.FC<DirectCastProps> = React.memo(
                   )}
                   {renderEmbedType === 'group-invite' && (
                     <DirectCastGroupInvites groupInvites={groupInviteEmbeds} />
+                  )}
+                  {/*
+                    The picture links this message carried, drawn in the order it
+                    carried them — above the text they were taken out of, the
+                    same place an embed's image goes.
+                  */}
+                  {imageUrls.length > 0 && (
+                    <DirectCastMessageImages
+                      imageUrls={imageUrls}
+                      onExpandedStateChange={setImageExpanded}
+                    />
                   )}
                   {!shouldNotRenderTheDirectCastBody && (
                     <div className={classNames(['flex flex-row p-2'])}>

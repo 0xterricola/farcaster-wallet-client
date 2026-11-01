@@ -32,7 +32,6 @@ const RecastNotificationGroup: FC<RecastNotificationGroupProps> = memo(
           const cast = notificationGroup.previewItems[0].content.recastedCast;
           navigateToConversation({
             castHash: cast.hash,
-            authorUsername: cast.author.username,
           });
         }}
       >

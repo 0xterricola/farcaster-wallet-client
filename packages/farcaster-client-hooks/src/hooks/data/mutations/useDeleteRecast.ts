@@ -2,7 +2,10 @@ import { ApiCast } from 'farcaster-client-data';
 import { useCallback } from 'react';
 
 import { useFarcasterApiClient } from '../../../providers/FarcasterApiClientProvider';
-import { useOptimisticallyUpdateCast } from '../optimistic';
+import {
+  optimisticallySteppedCount,
+  useOptimisticallyUpdateCast,
+} from '../optimistic';
 import { useInvalidateUserCasts } from '../queries/userCasts/useInvalidateUserCasts';
 
 const useUndoRecast = () => {
@@ -17,8 +20,13 @@ const useUndoRecast = () => {
         updates: {
           hash: cast.hash,
           recasts: {
-            count: Math.max(0, cast.recasts.count - 1),
-            recasters: cast.recasts.recasters?.filter(
+            // Nothing when the count has not been read yet (see the helper):
+            // the recasters list moves, no number is invented.
+            ...optimisticallySteppedCount({
+              count: cast.recasts?.count,
+              delta: -1,
+            }),
+            recasters: cast.recasts?.recasters?.filter(
               (recaster) => recaster.fid !== viewerFid,
             ),
           },
@@ -33,8 +41,11 @@ const useUndoRecast = () => {
         revertUpdates: {
           hash: cast.hash,
           recasts: {
-            count: cast.recasts.count,
-            recasters: cast.recasts.recasters?.slice(),
+            ...optimisticallySteppedCount({
+              count: cast.recasts?.count,
+              delta: 0,
+            }),
+            recasters: cast.recasts?.recasters?.slice(),
           },
           viewerContext: {
             recast: cast.viewerContext?.recast,

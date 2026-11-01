@@ -6,9 +6,10 @@ import {
   ApiUser,
 } from 'farcaster-client-data';
 import { useFetchContractAddress } from 'farcaster-client-hooks';
-import React, { FC, ReactNode, useCallback, useMemo } from 'react';
+import React, { FC, ReactNode, Suspense, useCallback, useMemo } from 'react';
 import { matchPath, PathMatch } from 'react-router-dom';
 
+import { CashtagChip } from '~/components/casts/CashtagChip';
 import { useOptionalEmbeddedWalletBridge } from '~/components/EmbeddedWallet';
 import { ExternalLink } from '~/components/links/ExternalLink';
 import { Link } from '~/components/links/Link';
@@ -19,6 +20,8 @@ import { routes } from '~/constants/routes';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useLinkify } from '~/contexts/LinkifyProvider';
 import { useNavigate } from '~/hooks/navigation/useNavigate';
+import { SealedCastView, SealedKeyNotice } from '~/lazy/components';
+import { isSealedCastBody, keyShareCandidates } from '~/lib/sealed/markers';
 import {
   BASE_CHAIN_URI_PREFIX,
   channelLinkPrefix,
@@ -77,8 +80,8 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
     return removeCustomRuleTokens(text);
   }, []);
 
-  return useMemo(() => {
-    const bodyWithLinks = [] as ReactNode[];
+  const bodyWithLinks = useMemo(() => {
+    const nodes = [] as ReactNode[];
     const preparedBody = prepareBodyForCustomRuleTokens(content.trim());
 
     const mentionsSet = new Set(
@@ -104,7 +107,7 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
           const text = sanitizedBodyText(
             preparedBody.substring(cursor, match.index),
           );
-          bodyWithLinks.push(text);
+          nodes.push(text);
         }
 
         let resolvedTokenLinkFromMatchedUrl: PathMatch<'ticker'> | null = null;
@@ -251,7 +254,11 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
                     });
                   }}
                 >
-                  {match.text}
+                  <CashtagChip
+                    ticker={match.text}
+                    address={token.ca}
+                    chain={token.chain}
+                  />
                 </div>
               );
             }
@@ -275,7 +282,7 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
                   trackEvent(AnalyticsEvent.ClickTokenLink, { ticker });
                 }}
               >
-                {match.text}
+                <CashtagChip ticker={match.text} />
               </Link>
             );
           }
@@ -369,17 +376,17 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
           );
         }
 
-        bodyWithLinks.push(link);
+        nodes.push(link);
         cursor = match.lastIndex;
       },
     );
 
     if (cursor <= preparedBody.length - 1) {
       const text = sanitizedBodyText(preparedBody.substring(cursor));
-      bodyWithLinks.push(text);
+      nodes.push(text);
     }
 
-    return <>{bodyWithLinks}</>;
+    return <>{nodes}</>;
   }, [
     castAuthorFid,
     channelMentions,
@@ -398,6 +405,42 @@ const LinkifiedText: FC<LinkifiedTextProps> = ({
     trackEvent,
     ignoreMentionsArray,
   ]);
+
+  /*
+   * A sealed cast is not text to linkify: the body *is* the envelope, and
+   * rendering it as words would be rendering ciphertext. The renderer for it is
+   * imported the moment one appears in a feed.
+   */
+  if (isSealedCastBody(content)) {
+    return (
+      <Suspense fallback={null}>
+        <SealedCastView body={content} />
+      </Suspense>
+    );
+  }
+
+  /*
+   * A key someone shared stays in the text exactly as it was written — nothing
+   * of a reader's cast is ever swallowed — and the offer to keep it is a card
+   * below. `SealedKeyNotice` renders the text back unchanged if the string is
+   * only shaped like a key.
+   */
+  const sharedKeys = keyShareCandidates(content);
+
+  if (sharedKeys.length === 0) {
+    return bodyWithLinks;
+  }
+
+  return (
+    <>
+      {bodyWithLinks}
+      {sharedKeys.map((token) => (
+        <Suspense key={token} fallback={null}>
+          <SealedKeyNotice token={token} />
+        </Suspense>
+      ))}
+    </>
+  );
 };
 
 export { LinkifiedText };

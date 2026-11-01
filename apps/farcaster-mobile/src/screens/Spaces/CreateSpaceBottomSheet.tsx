@@ -55,9 +55,8 @@ type CreateSpaceBottomSheetProps = {
 };
 
 /**
- * Bottom-sheet modal for starting or scheduling a Space (mobile parity with
- * web `CreateSpaceModal`). "Start now" creates + joins + navigates.
- * "Schedule" creates a future-dated room and dismisses.
+ * Bottom-sheet modal for starting or scheduling a Space. "Start now" creates +
+ * joins + navigates. "Schedule" creates a future-dated room and dismisses.
  */
 const CreateSpaceBottomSheet: React.FC<CreateSpaceBottomSheetProps> =
   React.memo(({ open, onClose, initialMode = 'now' }) => {

@@ -24,8 +24,18 @@ import {
 } from '~/hooks/useLifiWallet';
 import { parseTransferAmount } from '~/utils/baseWalletTransfer';
 import { truncateAddress } from '~/utils/ethereumUtils';
-import { fetchLifiQuote, LifiQuote, toLifiSwapAsset } from '~/utils/lifiSwap';
 import {
+  fetchLifiQuote,
+  fetchLifiTransferStatus,
+  lifiMoveErrorMessage,
+  LifiMoveState,
+  LifiQuote,
+  readLifiQuoteCost,
+  toLifiSwapAsset,
+} from '~/utils/lifiSwap';
+import {
+  createLifiNativeToken,
+  fetchLifiToken,
   isNativeWalletAsset,
   LifiAsset,
   LifiToken,
@@ -37,6 +47,7 @@ import {
   recordPendingWalletActivity,
   settleLocalWalletActivity,
 } from '~/utils/walletActivity';
+import { MOVE_DESTINATION_CHAINS } from '~/utils/walletNetwork';
 
 type Review = {
   quote: LifiQuote;
@@ -45,6 +56,32 @@ type Review = {
   units: bigint;
   allowance?: bigint;
 };
+
+// A move that has not landed yet. `unfinished` is where the polling stops
+// without an answer — the honest end of "we do not know", never a guess.
+type Move = {
+  toChainId: number;
+  toChainName: string;
+  state: LifiMoveState | 'unfinished';
+  sendingTxHash?: Hash;
+  receivingTxHash?: Hash;
+};
+
+// How often a sent move asks whether it arrived, and for how long. Ten minutes
+// is past every route this sheet quotes; after that the explorer link is the
+// only honest answer left.
+const MOVE_POLL_MS = 10_000;
+const MOVE_POLL_ATTEMPTS = 60;
+
+// Money in the words the sheet uses. A sub-cent number is "under $0.01", never a
+// rounded-up claim about a cent nobody reported.
+const usdCopy = (value: number, prefix = 'about ') =>
+  value < 0.01
+    ? 'under $0.01'
+    : `${prefix}${value.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}`;
+
+const arrivalCopy = (seconds: number) =>
+  seconds <= 90 ? 'about a minute' : `about ${Math.ceil(seconds / 60)} minutes`;
 
 // Default stablecoin contracts for the token picker. Base, Ethereum, Arbitrum,
 // Celo and HyperEVM use Circle-issued native USDC. BNB Smart Chain uses verified
@@ -167,6 +204,10 @@ export function ExternalWalletSwap({
   const queryClient = useQueryClient();
   const client = usePublicClient({ chainId: chain.id });
   const defaultStablecoin = DEFAULT_STABLECOIN.get(chain.id);
+  const [toChainId, setToChainId] = useState(chain.id);
+  const toChain = MOVE_DESTINATION_CHAINS.get(toChainId) ?? chain;
+  const destinationStablecoin = DEFAULT_STABLECOIN.get(toChain.id);
+  const crossing = toChain.id !== chain.id;
   const [fromInput, setFromInput] = useState(chain.nativeCurrency.symbol);
   const [toInput, setToInput] = useState(initialBuyTokenAddress ?? '');
   const [amount, setAmount] = useState('');
@@ -175,6 +216,7 @@ export function ExternalWalletSwap({
   const [status, setStatus] = useState<string>();
   const [error, setError] = useState<string>();
   const [hash, setHash] = useState<Hash>();
+  const [move, setMove] = useState<Move>();
   const [replacement, setReplacement] = useState<string>();
   const [showUnverified, setShowUnverified] = useState(false);
   const generation = useRef(0);
@@ -186,6 +228,12 @@ export function ExternalWalletSwap({
     isFetching: tokensFetching,
     refetch: refetchTokens,
   } = useLifiWalletTokens(address, chain);
+  // What this wallet already holds where the move would land. Read only when the
+  // move has a destination, and never used as a sell balance.
+  const { data: destinationTokens } = useLifiWalletTokens(
+    crossing ? address : undefined,
+    toChain,
+  );
   const allTokens = (walletTokens?.tokens ?? [])
     .filter(
       (token) =>
@@ -214,12 +262,33 @@ export function ExternalWalletSwap({
       (token) => !isDefaultStablecoin(token, defaultStablecoin),
     ),
   ];
+  // A move lands on a chain this wallet may hold nothing on — that is the whole
+  // point of a move — so the destination picker offers the chain's own coin
+  // (always the first option in the picker below), its usual stablecoin, and
+  // whatever is already held there. Any other contract can still be typed in.
+  const destinationBuyOptions = [
+    ...(destinationStablecoin ? [destinationStablecoin] : []),
+    ...(destinationTokens?.tokens ?? []).filter(
+      (token) =>
+        token.chainId === toChain.id &&
+        !isNativeWalletAsset(token.address, toChain.id) &&
+        token.verificationStatus === 'verified' &&
+        !isDefaultStablecoin(token, destinationStablecoin),
+    ),
+  ];
+  const buyChoices = crossing ? destinationBuyOptions : buyTokenOptions;
   const fromBalance = useLifiAsset(
     address,
     inputAddress(fromInput, chain),
     chain,
   );
-  const toBalance = useLifiAsset(address, inputAddress(toInput, chain), chain);
+  // A destination token has no balance to read on this chain: what the sheet
+  // shows for it is what the move says it will deliver.
+  const toBalance = useLifiAsset(
+    address,
+    crossing ? undefined : inputAddress(toInput, toChain),
+    chain,
+  );
   const { data: receipt, isError: receiptError } = useWaitForTransactionReceipt(
     {
       hash,
@@ -228,10 +297,13 @@ export function ExternalWalletSwap({
       onReplaced: (transaction) => setReplacement(transaction.reason),
     },
   );
+  const moveConfirmed = receipt?.status === 'success';
   useEffect(() => {
     generation.current += 1;
     setReview(undefined);
     setStatus(undefined);
+    setMove(undefined);
+    setToChainId(chain.id);
     return () => {
       generation.current += 1;
     };
@@ -250,6 +322,61 @@ export function ExternalWalletSwap({
     }
   }, [receiptHash, receipt, hash, address, queryClient, chain.id]);
 
+  // A move finishes on another chain, so the send-side receipt is only the
+  // halfway point: once it lands, ask LI.FI whether the money arrived, and keep
+  // asking until it says so, or until the window closes and the sheet says it
+  // could not tell.
+  const moveToChainId = move?.toChainId;
+  const moveState = move?.state;
+  useEffect(() => {
+    if (!hash || moveState !== 'waiting' || moveToChainId === undefined) {
+      return;
+    }
+    if (!moveConfirmed) {
+      return;
+    }
+    let live = true;
+    let timer: number | undefined;
+    const poll = async (attempt: number) => {
+      try {
+        const progress = await fetchLifiTransferStatus(
+          hash,
+          chain.id,
+          moveToChainId,
+        );
+        if (!live) {
+          return;
+        }
+        if (progress.state !== 'waiting') {
+          setMove((current) =>
+            current ? { ...current, ...progress } : current,
+          );
+          return;
+        }
+      } catch {
+        // LI.FI could not say where the move is. Keep asking until the window
+        // closes, then say so; the explorer link stays on screen throughout.
+      }
+      if (!live) {
+        return;
+      }
+      if (attempt + 1 >= MOVE_POLL_ATTEMPTS) {
+        setMove((current) =>
+          current ? { ...current, state: 'unfinished' } : current,
+        );
+        return;
+      }
+      timer = window.setTimeout(() => void poll(attempt + 1), MOVE_POLL_MS);
+    };
+    void poll(0);
+    return () => {
+      live = false;
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [chain.id, hash, moveConfirmed, moveState, moveToChainId]);
+
   const edit = () => {
     generation.current += 1;
     setReview(undefined);
@@ -261,6 +388,40 @@ export function ExternalWalletSwap({
       throw new Error(`Connect a wallet with a ${chain.name} connection.`);
     }
     return fetchFreshLifiAsset(queryClient, client, address, token, chain);
+  };
+  const chooseDestination = (chainId: number) => {
+    edit();
+    setToChainId(chainId);
+    setToInput(
+      chainId === chain.id
+        ? (initialBuyTokenAddress ?? '')
+        : (DEFAULT_STABLECOIN.get(chainId)?.address ?? ''),
+    );
+  };
+  // The bought asset when it lives on another chain: metadata comes from the
+  // destination list, or from LI.FI's token endpoint for a contract typed in by
+  // hand. Its balance is zero because this wallet holds it there, not here.
+  const destinationAsset = async (token: Address): Promise<LifiAsset> => {
+    if (token === zeroAddress) {
+      return { ...createLifiNativeToken(toChain), balance: 0n };
+    }
+    const known =
+      destinationStablecoin &&
+      destinationStablecoin.address.toLowerCase() === token.toLowerCase()
+        ? destinationStablecoin
+        : destinationTokens?.tokens.find(
+            (entry) => entry.address.toLowerCase() === token.toLowerCase(),
+          );
+    return {
+      ...(known ??
+        (await fetchLifiToken(
+          token,
+          undefined,
+          toChain.id,
+          toChain.nativeCurrency.symbol,
+        ))),
+      balance: 0n,
+    };
   };
   const checkBalance = (asset: LifiAsset, units: bigint) => {
     if (asset.balance < units) {
@@ -288,20 +449,26 @@ export function ExternalWalletSwap({
       );
       const toAddress = normalizeLifiAddress(
         toInput,
-        chain.nativeCurrency.symbol,
+        toChain.nativeCurrency.symbol,
       );
-      if (fromAddress === toAddress) {
+      // The same contract address on two chains is two different assets, so only
+      // a same-chain swap is asked for two distinct tokens.
+      if (!crossing && fromAddress === toAddress) {
         throw new Error('Choose two different tokens.');
       }
       const [loadedFrom, loadedTo] = await Promise.all([
         load(fromAddress),
-        load(toAddress),
+        crossing ? destinationAsset(toAddress) : load(toAddress),
       ]);
       const from = toLifiSwapAsset(loadedFrom, chain);
-      const to = toLifiSwapAsset(loadedTo, chain);
+      const to = toLifiSwapAsset(loadedTo, toChain);
       const units = parseTransferAmount(amount, from.decimals);
       checkBalance(from, units);
-      const quote = await fetchLifiQuote(address, from, to, units, chain);
+      // A same-chain swap keeps the single-chain request shape; a move names the
+      // chain it lands on.
+      const quote = crossing
+        ? await fetchLifiQuote(address, from, to, units, chain, toChain)
+        : await fetchLifiQuote(address, from, to, units, chain);
       if (version !== generation.current) {
         return;
       }
@@ -326,8 +493,10 @@ export function ExternalWalletSwap({
     } catch (failure) {
       if (version === generation.current) {
         setStatus(undefined);
+        const message =
+          failure instanceof Error ? failure.message : 'Could not get a quote.';
         setError(
-          failure instanceof Error ? failure.message : 'Could not get a quote.',
+          crossing ? lifiMoveErrorMessage(message, toChain.name) : message,
         );
       }
     } finally {
@@ -569,6 +738,13 @@ export function ExternalWalletSwap({
         },
       });
       setHash(transactionHash);
+      if (crossing) {
+        setMove({
+          toChainId: toChain.id,
+          toChainName: toChain.name,
+          state: 'waiting',
+        });
+      }
       setStatus('Swap submitted. Waiting for confirmation…');
       setReview(undefined);
       void refreshLifiWallet(queryClient, address, chain.id);
@@ -598,14 +774,39 @@ export function ExternalWalletSwap({
           : receiptError
             ? `Confirmation unavailable. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'} before trying again.`
             : 'Swap submitted. Waiting for confirmation…';
+  // A move's states, in plain words. Nothing here says a move landed unless
+  // LI.FI said it did, and the in-between state names the chain it is heading
+  // for.
+  const moveStatus =
+    move === undefined
+      ? undefined
+      : receiptError
+        ? `Confirmation unavailable. Check ${chain.blockExplorers?.default.name ?? 'the block explorer'} before trying again.`
+        : !receipt
+          ? 'Waiting for the network…'
+          : receipt.status !== 'success'
+            ? `The move failed on ${chain.name}. Nothing left this wallet.`
+            : move.state === 'arrived'
+              ? `Arrived on ${move.toChainName}.`
+              : move.state === 'failed'
+                ? 'The move reported a problem. Check the transaction on the explorer before trying again.'
+                : move.state === 'unfinished'
+                  ? 'Still waiting. Check the transaction on the explorer.'
+                  : `Sent. Waiting for it to arrive on ${move.toChainName}…`;
+  const cost = review ? readLifiQuoteCost(review.quote) : undefined;
   const explorer = chain.blockExplorers?.default;
+  const arrivalExplorer = toChain.blockExplorers?.default;
+  const arrivalHash =
+    move?.state === 'arrived' ? move.receivingTxHash : undefined;
 
   return (
     <div className="flex flex-col gap-4 pt-4">
       <p className="rounded-xl p-3 text-xs text-muted bg-elevated-nohover">
-        {chain.name} only. LI.FI supplies token data and swap routes. Choose a
-        wallet token or enter {chain.nativeCurrency.symbol} / a {chain.name}{' '}
-        contract. Verify contracts before approving.
+        {crossing
+          ? `${chain.name} to ${toChain.name}, in one step. You get ${
+              toChain.nativeCurrency.symbol
+            } or a token you already hold on ${toChain.name}; check the destination before you approve.`
+          : `${chain.name} only. LI.FI supplies token data and swap routes. Choose a wallet token or enter ${chain.nativeCurrency.symbol} / a ${chain.name} contract. Verify contracts before approving.`}
       </p>
       <form className="flex flex-col gap-4" onSubmit={getQuote}>
         <fieldset className="flex min-w-0 flex-col gap-4" disabled={busy}>
@@ -671,9 +872,28 @@ export function ExternalWalletSwap({
               }}
             />
           </label>
+          <label className="flex flex-col gap-2 text-sm text-default">
+            Move to
+            <select
+              className="w-full rounded-xl border px-3 py-2 bg-app border-default"
+              value={toChainId}
+              onChange={(event) =>
+                chooseDestination(Number(event.target.value))
+              }
+            >
+              <option value={chain.id}>Stay on {chain.name}</option>
+              {[...MOVE_DESTINATION_CHAINS.values()]
+                .filter((option) => option.id !== chain.id)
+                .map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+            </select>
+          </label>
           <TokenInput
             label="Buy token"
-            tokens={buyTokenOptions}
+            tokens={buyChoices}
             value={toInput}
             asset={toBalance.isError ? undefined : toBalance.data}
             error={toBalance.isError}
@@ -681,8 +901,11 @@ export function ExternalWalletSwap({
               edit();
               setToInput(value);
             }}
-            chain={chain}
-            defaultStablecoin={defaultStablecoin}
+            chain={toChain}
+            defaultStablecoin={
+              crossing ? destinationStablecoin : defaultStablecoin
+            }
+            note={crossing ? `Arrives on ${toChain.name}` : undefined}
           />
           <DefaultButton type="submit" disabled={busy || !address || !client}>
             {busy ? 'Checking wallet…' : review ? 'Refresh quote' : 'Get quote'}
@@ -691,10 +914,16 @@ export function ExternalWalletSwap({
       </form>
       {review && (
         <section
-          aria-label={`Review ${chain.name} swap`}
+          aria-label={
+            crossing
+              ? `Review move to ${toChain.name}`
+              : `Review ${chain.name} swap`
+          }
           className="rounded-xl p-4 bg-elevated-nohover"
         >
-          <div className="text-xs text-muted">Estimated receive</div>
+          <div className="text-xs text-muted">
+            {crossing ? `You get on ${toChain.name}` : 'Estimated receive'}
+          </div>
           <div className="mt-1 break-all text-xl font-semibold text-default">
             {formatUnits(
               BigInt(review.quote.estimate.toAmount),
@@ -708,8 +937,25 @@ export function ExternalWalletSwap({
               BigInt(review.quote.estimate.toAmountMin),
               review.to.decimals,
             )}{' '}
-            {review.to.symbol} · Route: {review.quote.tool}
+            {review.to.symbol} · Route: {cost?.tool ?? review.quote.tool}
           </div>
+          {/* Only what LI.FI actually reported: no "$0.00" and no "~0 seconds"
+              standing in for a number nobody gave us. */}
+          {cost?.fromUsd !== undefined && cost.toUsd !== undefined && (
+            <div className="mt-1 text-xs text-muted">
+              {usdCopy(cost.fromUsd)} in, {usdCopy(cost.toUsd)} out
+            </div>
+          )}
+          {cost?.feesUsd !== undefined && (
+            <div className="mt-1 text-xs text-muted">
+              Network and route fees {usdCopy(cost.feesUsd, '')}
+            </div>
+          )}
+          {crossing && cost?.seconds !== undefined && cost.seconds > 0 && (
+            <div className="mt-1 text-xs text-muted">
+              Arrives in {arrivalCopy(cost.seconds)}
+            </div>
+          )}
           <div aria-label="Token approval" className="mt-3 text-xs text-muted">
             {review.from.address === zeroAddress ? (
               <p>
@@ -747,7 +993,9 @@ export function ExternalWalletSwap({
               ? 'Working…'
               : needsApproval
                 ? `Approve ${review.from.symbol}`
-                : 'Review swap'}
+                : crossing
+                  ? `Move to ${toChain.name}`
+                  : 'Review swap'}
           </DefaultButton>
         </section>
       )}
@@ -756,7 +1004,7 @@ export function ExternalWalletSwap({
           role="status"
           className="rounded-xl p-3 text-sm bg-elevated-nohover text-default"
         >
-          {hash ? transactionStatus : status}
+          {hash ? (moveStatus ?? transactionStatus) : status}
         </p>
       )}
       {error && (
@@ -775,6 +1023,16 @@ export function ExternalWalletSwap({
           rel="noopener noreferrer"
         >
           View {truncateAddress(hash, 8)} on {explorer.name}
+        </a>
+      )}
+      {arrivalHash && arrivalExplorer && (
+        <a
+          className="text-accent-primary text-sm hover:underline"
+          href={`${arrivalExplorer.url}/tx/${arrivalHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View the arrival on {arrivalExplorer.name}
         </a>
       )}
     </div>
@@ -798,6 +1056,7 @@ function TokenInput({
   onChange,
   chain,
   defaultStablecoin,
+  note,
 }: {
   label: string;
   tokens: LifiToken[];
@@ -807,6 +1066,7 @@ function TokenInput({
   onChange: (value: string) => void;
   chain: Chain;
   defaultStablecoin?: LifiToken;
+  note?: string;
 }) {
   const address = inputAddress(value, chain);
   const selected =
@@ -861,7 +1121,7 @@ function TokenInput({
           : asset
             ? `Available on ${chain.name}: ${formatUnits(asset.balance, asset.decimals)} ${asset.symbol}`
             : inputAddress(value, chain)
-              ? `Loading balance on ${chain.name}…`
+              ? (note ?? `Loading balance on ${chain.name}…`)
               : 'Enter a token contract.'}
       </span>
     </div>

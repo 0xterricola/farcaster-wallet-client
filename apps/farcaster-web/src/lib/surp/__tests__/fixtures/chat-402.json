@@ -1,0 +1,28 @@
+{
+ "x402Version": 2,
+ "error": "payment-required",
+ "resource": "POST /v1/chat/completions",
+ "combo": "value",
+ "routed_model": "glm-5.2",
+ "routing_reason": "value-aa-band",
+ "cache_status": "MISS",
+ "cache_hit_price_usd": null,
+ "surplus_price_per_1m": 2736.0,
+ "expected_tokens": 900,
+ "price_usd": "$0.0100",
+ "accepts": [
+  {
+   "scheme": "exact",
+   "network": "eip155:8453",
+   "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+   "amount": "10000",
+   "payTo": "0x2f9518019575e048320c1e7da4dc4d6d8384c2c8",
+   "maxTimeoutSeconds": 600,
+   "extra": {
+    "description": "surp.ivc.lol: value -> glm-5.2",
+    "mimeType": "application/json"
+   }
+  }
+ ],
+ "instructions": "Sign this EIP-3009 authorization with your wallet and retry the request with the `X-Payment` header set to the base64-encoded payment payload. See https://docs.x402.org for client libraries."
+}

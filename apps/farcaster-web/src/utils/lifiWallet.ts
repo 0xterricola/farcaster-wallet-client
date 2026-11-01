@@ -146,6 +146,7 @@ export function parseLifiToken(
 export async function requestLifi(
   path: string,
   signal?: AbortSignal,
+  options: { allowNotFound?: boolean } = {},
 ): Promise<unknown> {
   const controller = new AbortController();
   const cancel = () => controller.abort();
@@ -162,10 +163,22 @@ export async function requestLifi(
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as
+        | { message?: unknown }
+        | undefined;
+      // A cross-chain transfer LI.FI has not indexed yet answers 404 with no
+      // status in it: "not yet", which the caller reads as still waiting.
+      if (options.allowNotFound && response.status === 404) {
+        return body ?? {};
+      }
+      const detail =
+        typeof body?.message === 'string' && body.message.trim() !== ''
+          ? ` ${body.message.trim()}`
+          : '';
       throw new Error(
         response.status === 429
           ? 'LI.FI is rate limiting requests. Please try again shortly.'
-          : `LI.FI request failed (${response.status}). Please try again.`,
+          : `LI.FI request failed (${response.status}).${detail} Please try again.`,
       );
     }
     return await response.json();

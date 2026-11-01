@@ -39,7 +39,6 @@ const TrendingCastNotificationGroup: React.FC<TrendingCastNotificationGroupProps
           } else {
             navigateToConversation({
               castHash: firstPreviewItem.content.cast.hash,
-              authorUsername: firstPreviewItem.content.cast.author.username,
             });
           }
         }}

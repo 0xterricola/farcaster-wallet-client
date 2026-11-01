@@ -16,7 +16,11 @@ function isLocalApiEnabled(): boolean {
   return window.localStorage.getItem(STORAGE_KEY) === 'true';
 }
 
-const useLocalApi = isLocalApiEnabled();
+// Read once at import time. Exported because it is not only an escape hatch:
+// with it on, the app is served by the local mock API, so a device-only
+// session IS served (see ~/components/session/useDeviceOnlySession) — the
+// landing that says "nothing can serve this session" would be wrong here.
+const localApiEnabled = isLocalApiEnabled();
 
 const upstreamApiUrl = 'https://farcaster.xyz/~api';
 
@@ -28,7 +32,7 @@ const productionApiUrl =
     ? upstreamApiUrl
     : `${window.location.origin}/~api`;
 
-const baseApiUrl = useLocalApi
+const baseApiUrl = localApiEnabled
   ? 'http://localhost:8080'
   : isProd
     ? productionApiUrl
@@ -38,8 +42,15 @@ const parsedBaseApiUrl = new URL(baseApiUrl);
 const baseApiHost = `${parsedBaseApiUrl.host}${parsedBaseApiUrl.pathname}`;
 const baseUseHttps = parsedBaseApiUrl.protocol === 'https:';
 
-const wsUrl = useLocalApi
+const wsUrl = localApiEnabled
   ? 'ws://localhost:8080/stream'
   : 'wss://ws.farcaster.xyz/stream';
 
-export { baseApiHost, baseApiUrl, baseUseHttps, STORAGE_KEY, wsUrl };
+export {
+  baseApiHost,
+  baseApiUrl,
+  baseUseHttps,
+  localApiEnabled,
+  STORAGE_KEY,
+  wsUrl,
+};

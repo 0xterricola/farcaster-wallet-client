@@ -1,0 +1,251 @@
+/*
+ * What a LOOK reaches.
+ *
+ * A look is checked data (`~/utils/lookTheme.ts`), applied as CSS variables on
+ * <html> before the first paint (`public/shell-bootstrap.js`) and at runtime
+ * (`applyLook`). This file is the other half of that contract: it says which
+ * surfaces follow those variables.
+ *
+ * The palette is most of it, and it comes for free — the Fiddy shell is drawn
+ * from `--fiddy-bg`, `--fiddy-ink`, `--fiddy-accent`, `--fiddy-radius` and the
+ * rest in `fiddy-shell.css`, and a look re-writes exactly those. What is left,
+ * and what this file decides:
+ *
+ *   * the GROUND. `html[data-look][data-look-base]` is two attributes deep on
+ *     purpose: the document's own `<style>` paints `html.dark` (#161715), and
+ *     at equal specificity the later rule wins — which is a stylesheet-order
+ *     accident, not a decision. Two attribute selectors beat it honestly, and
+ *     the worn look's ground is the look's own.
+ *   * the GLASS. The shell draws its panel borders and subtle fills from
+ *     `--fiddy-glass-border` / `--fiddy-glass`, which are white-alpha values
+ *     that only make sense on this brand's dark ground. A worn look re-derives
+ *     both from its own `border` token and its own raise/bg pair, so a light
+ *     look is not a light page with invisible white borders.
+ *   * the CORNERS and BORDERS a look sets. A few shell details carry a literal
+ *     radius (12px, 16px, 18px) rather than `--fiddy-radius`; those follow the
+ *     look here, while pills stay pills — a look must not un-pill a pill, and
+ *     `999px` is a shape, not a corner.
+ *   * the SHELL SKELETON, which the document paints before any of this runs.
+ *     Without these rules the first frame of a worn look is the old palette,
+ *     which is the flash the whole feature exists to avoid.
+ *   * the LOOK'S OWN SURFACES: the preview a person sees in the picker, the
+ *     card a shared link unfurls to, and the mini-Fiddy drawn in those colours.
+ *
+ * Nothing here reads a value from a look directly: every number is a variable
+ * the checked lock has already clamped, and every colour is a `#rrggbb` written
+ * by the two writers above. There is no user-authored CSS anywhere in this
+ * feature, and this file is the reason there does not need to be.
+ */
+
+/* ---------- the ground ---------- */
+
+html[data-look][data-look-base] {
+  background-color: var(--fiddy-bg);
+}
+
+html[data-look][data-look-base='dark'] {
+  color-scheme: dark;
+}
+
+html[data-look][data-look-base='light'] {
+  color-scheme: light;
+}
+
+html[data-look][data-look-base] body,
+html[data-look][data-look-base] #root {
+  background-color: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+}
+
+/* ---------- the glass the shell draws with ---------- */
+
+html[data-look] {
+  /* The look's own border colour, and a subtle fill derived from its own pair
+     rather than from white. `color-mix` keeps it legible on either ground. */
+  --fiddy-glass-border: var(--fiddy-look-line);
+  --fiddy-glass: color-mix(in oklab, var(--fiddy-ink) 6%, transparent);
+}
+
+/* ---------- corners and borders the look sets ---------- */
+
+html[data-look] .fiddy-topbar {
+  border-bottom-width: var(--fiddy-look-border);
+  border-bottom-color: var(--fiddy-look-line);
+}
+
+html[data-look] .fiddy-cast,
+html[data-look] .fiddy-composer,
+html[data-look] .fiddy-agent-card,
+html[data-look] .fiddy-hatch-card,
+html[data-look] .fiddy-feat {
+  border-width: var(--fiddy-look-border);
+  border-color: var(--fiddy-look-line);
+  border-radius: var(--fiddy-radius);
+}
+
+/* Literal radii in the shell, brought onto the look's scale. Pills and circles
+   are left alone: their `999px` / `50%` is a shape the design chose. */
+html[data-look] .fiddy-nav-item,
+html[data-look] .fiddy-nav-item > div,
+html[data-look] .fiddy-nav-mark,
+html[data-look] .fiddy-brand-mark {
+  border-radius: var(--fiddy-radius);
+}
+
+/* ---------- the shell the document paints first ---------- */
+
+html[data-look] .fiddy-skeleton {
+  background: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+}
+
+html[data-look] .fiddy-skeleton-body {
+  background: var(--fiddy-bg);
+}
+
+html[data-look] .fiddy-skeleton-topbar,
+html[data-look] .fiddy-skeleton-rail,
+html[data-look] .fiddy-skeleton-mobilebar {
+  background: var(--fiddy-bg-raise);
+  border-color: var(--fiddy-glass-border);
+}
+
+html[data-look] .fiddy-skeleton-block {
+  background: color-mix(in oklab, var(--fiddy-ink) 6%, transparent);
+}
+
+html[data-look] .fiddy-skeleton-brand,
+html[data-look] .fiddy-skeleton-status {
+  color: var(--fiddy-ink);
+}
+
+/* ---------- the look's own surfaces ----------
+   A preview is a small Fiddy drawn in one look's colours: no picture, no font
+   file, nothing fetched — only the variables the look already has. Every rule
+   below reads them off the element it is drawn on, so the same markup draws a
+   worn look, a look in the picker, and a stranger's shared look. */
+
+.fiddy-look {
+  background: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+  font-family: var(--fiddy-font);
+  border: var(--fiddy-look-border, 1px) solid var(--fiddy-look-line, transparent);
+  border-radius: var(--fiddy-radius, 18px);
+  overflow: hidden;
+}
+
+.fiddy-look-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: var(--fiddy-look-border, 1px) solid var(--fiddy-look-line);
+  background: color-mix(in oklab, var(--fiddy-bg-raise), var(--fiddy-bg) 40%);
+}
+
+.fiddy-look-dot {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 6px;
+  background: var(--fiddy-accent);
+}
+
+.fiddy-look-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fiddy-ink) 22%, transparent);
+}
+
+.fiddy-look-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.fiddy-look-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fiddy-look-face {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fiddy-muted) 45%, transparent);
+}
+
+.fiddy-look-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fiddy-look-line {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fiddy-ink) 75%, transparent);
+}
+
+.fiddy-look-line-dim {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fiddy-ink-dim) 55%, transparent);
+}
+
+.fiddy-look-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--fiddy-ink-dim);
+  font-size: 12px;
+}
+
+.fiddy-look-like {
+  color: var(--fiddy-like);
+}
+
+.fiddy-look-recast {
+  color: var(--fiddy-recast);
+}
+
+.fiddy-look-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fiddy-look-chip-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: var(--fiddy-look-border, 1px) solid var(--fiddy-look-line);
+  color: var(--fiddy-ink-dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fiddy-look-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.fiddy-look-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--fiddy-ink) 25%, transparent);
+}

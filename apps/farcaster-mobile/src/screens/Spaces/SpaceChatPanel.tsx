@@ -878,8 +878,13 @@ const ChatCastActions = React.memo(function ChatCastActions({
   const globallyCachedCast = useGloballyCachedCast({ fallback: cast });
   const castRef = useRef(globallyCachedCast);
   const recastCount =
-    globallyCachedCast.combinedRecastCount ?? globallyCachedCast.recasts.count;
-  const likeCount = globallyCachedCast.reactions.count;
+    globallyCachedCast.combinedRecastCount ??
+    globallyCachedCast.recasts?.count ??
+    0;
+  // Counts are optional in `ApiCast` (a node-backed feed paints before its
+  // counts are read, which a late count fills in); this surface reads the
+  // hosted API, whose casts always carry them.
+  const likeCount = globallyCachedCast.reactions?.count ?? 0;
 
   useEffect(() => {
     castRef.current = globallyCachedCast;

@@ -18,6 +18,13 @@
 .env.test.local
 .env.production.local
 
+# a vite dev server started by the probes (scripts/probe.vite.config.mjs) keeps
+# its dep cache of its own — 100MB of machine-local state, never a source file.
+# The `*` matters: a probe that gives itself its own cache directory
+# (PROBE_VITE_CACHE_DIR) writes a sibling of this one, and an unignored 100MB
+# directory is worse than untidy — eslint walks it on every lint run.
+/.probe-vite-cache*
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

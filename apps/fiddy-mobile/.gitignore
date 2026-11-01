@@ -1,0 +1,13 @@
+# Xcode / build products
+build-ios-sim/
+build-ios-rel/
+build-ios-device/
+*.xcresult
+
+# Expo export / bundler scratch
+.export-check/
+.expo/
+
+# Local configuration (never committed): see .env.example
+.env
+.env.local

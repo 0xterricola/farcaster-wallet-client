@@ -1,6 +1,11 @@
 import { useFetchImageUploadUrl } from 'farcaster-client-hooks';
 import { useCallback } from 'react';
 
+import {
+  isOwnMediaUploadUrl,
+  uploadMedia,
+} from '~/snapchain/nodeApi/mediaUpload';
+
 import { IMAGE_UPLOAD_ANIMATION_TOO_LARGE_MESSAGE } from './useOptimisticUploadCloudflareImage';
 
 const CLOUDFLARE_ANIMATION_TOO_LARGE_ERROR_CODE = 5443;
@@ -51,6 +56,16 @@ const useUploadCloudflareImage = () => {
       }
 
       const imageUploadUrl = fetchImageUploadUrlResponse.url;
+
+      // Our own media host: the URL comes back from the upload (the file is
+      // named after its content), and there is no Cloudflare envelope to read.
+      if (isOwnMediaUploadUrl(imageUploadUrl)) {
+        const uploaded = await uploadMedia({ file, uploadUrl: imageUploadUrl });
+        return { version: 'v1', imageUrl: uploaded.url } as {
+          version: 'v1';
+          imageUrl: string;
+        };
+      }
 
       // const f = {
       //   uri: file,

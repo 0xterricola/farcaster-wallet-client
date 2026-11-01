@@ -1130,6 +1130,8 @@ enum AnalyticsEvent {
   LoggedInToWebUsingMobile = 'logged in to web using mobile',
   LoggedInToWebUsingMagicLink = 'logged in to web using magic link',
   LoggedInToWebUsingCompanion = 'logged in to web using companion',
+  ClickedOpenInFarcasterApp = 'clicked open in farcaster app',
+  LoggedInInsideMiniAppHost = 'logged in inside miniapp host',
   LoginWithMobileSyncChannelFailed = 'login with mobile sync channel failed',
   LoginWebChannelIdHrefFallback = 'login web channel id href fallback',
   SignInDialogOpened = 'sign in dialog opened',

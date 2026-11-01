@@ -1,0 +1,88 @@
+{
+  "fonts": [
+    "-apple-system",
+    "BlinkMacSystemFont",
+    "system-ui",
+    "Inter",
+    "Segoe UI",
+    "sans-serif",
+    "SF Mono",
+    "ui-monospace",
+    "JetBrains Mono",
+    "Menlo",
+    "monospace"
+  ],
+  "fontSizes": [
+    11.44,
+    11.5,
+    12,
+    12.32,
+    12.5,
+    12.76,
+    13,
+    13.2,
+    13.5,
+    14,
+    14.08,
+    14.5,
+    15,
+    16,
+    18,
+    26,
+    30,
+    46
+  ],
+  "typeRules": [
+    {
+      "selector": "h1",
+      "sizes": [
+        30,
+        46
+      ]
+    },
+    {
+      "selector": "h2, h2 .n",
+      "sizes": [
+        26,
+        15
+      ]
+    },
+    {
+      "selector": "button, [role=button]",
+      "sizes": [
+        12
+      ]
+    }
+  ],
+  "minControlSize": 15,
+  "controlSizeRules": [],
+  "minControlGap": 8,
+  "minControlInset": 8,
+  "controlContainers": [
+    "[data-ui-container]"
+  ],
+  "minLayoutGap": 8,
+  "bannedCopy": [
+    "unlock your potential",
+    "seamlessly",
+    "game-changing"
+  ],
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "colorSchemes": [
+    "dark"
+  ],
+  "exceptions": []
+}

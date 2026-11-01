@@ -1,6 +1,7 @@
 import { ChangeEvent, FC, memo, useCallback } from 'react';
 
 import { SelectInput } from '~/components/forms/SelectInput';
+import { LookPicker } from '~/components/looks/LookPicker';
 import { DefaultModalContainer } from '~/components/modals/DefaultModalContainer';
 import { DefaultModalHeader } from '~/components/modals/DefaultModalHeader';
 import { Modal } from '~/components/modals/Modal';
@@ -41,7 +42,7 @@ const ThemeSettings: FC<ThemeSettingsProps> = memo(({ onClose }) => {
       <DefaultModalContainer onClose={onClose}>
         <div className="flex size-full items-center justify-center p-4">
           <div
-            className="flex w-full max-w-md flex-col rounded-lg bg-app border-default"
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-lg bg-app border-default"
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -58,6 +59,15 @@ const ThemeSettings: FC<ThemeSettingsProps> = memo(({ onClose }) => {
               <p className="text-sm text-faint">
                 System matches your device&apos;s theme setting.
               </p>
+
+              {/* The same screen, the other half: the look Fiddy wears. It is
+                  below the light/dark choice on purpose — that choice is how
+                  dark the app is, a look is what it looks like. A worn look
+                  decides the ground (see `useWornLook`), so taking it off is
+                  what gives the choice above its say back. */}
+              <div className="mt-2 border-t pt-4 border-default">
+                <LookPicker />
+              </div>
             </div>
           </div>
         </div>

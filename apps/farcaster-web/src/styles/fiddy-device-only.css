@@ -1,0 +1,137 @@
+/*
+ * The honest degrade panel.
+ *
+ * Shown by `ShellSectionErrorBoundary` when one region of the shell cannot
+ * load: the frame, the chrome and the nav stay standing around it, and only
+ * this panel says what is missing. Values are copied from fiddy-shell.css (the
+ * shell's own tokens), not invented, so the two files cannot drift into
+ * different visual languages.
+ */
+
+.fiddy-degrade {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 13px 15px;
+  max-width: 420px;
+  border: 1px dashed color-mix(in oklab, var(--fiddy-ink-dim), transparent 58%);
+  border-radius: 14px;
+  background: var(--fiddy-glass);
+  font-family: var(--fiddy-font);
+  text-align: left;
+}
+
+.fiddy-degrade-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-degrade-body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-degrade-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fiddy-degrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+/*
+ * The same honesty, in the rail.
+ *
+ * The left nav's badges come from a read of the nav provider's own
+ * (`/v2/unseen`), and a badge that could not load is drawn exactly like a badge
+ * that is zero. This is the line that tells the two apart: it sits with the
+ * entries the badges belong to, uses the rail's own type scale
+ * (`.fiddy-nav-caption` above it, `.fiddy-nav-foot` below), and disappears as
+ * soon as a poll succeeds.
+ */
+.fiddy-nav-note {
+  margin: 2px 0 4px 12px;
+  padding: 7px 10px;
+  border-left: 2px solid
+    color-mix(in oklab, var(--fiddy-ink-dim), transparent 45%);
+  border-radius: 0 8px 8px 0;
+  background: var(--fiddy-glass);
+  font-family: var(--fiddy-font);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fiddy-ink-dim);
+}
+
+/* ---------- the frame a device-only session gets on the two account-free
+   surfaces ("Add a brain", "Connect apps") ----------
+
+   Those screens need nothing from Farcaster, so a device-only session renders
+   them for real (see ~/components/session/DeviceOnlySessionLanding). This is
+   the smallest frame that can carry one: a line saying whose session this is —
+   the account stays on screen, and there is one way back to the screen that
+   explains the session — and then the page itself. It carries no provider that
+   fetches, so nothing here can fail the way the authed shell does.
+
+   Values come from the tokens in fiddy-shell.css, not invented. */
+
+.fiddy-device-only-surface {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+  font-family: var(--fiddy-font);
+}
+
+.fiddy-device-only-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-height: 46px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--fiddy-glass-border);
+  background: color-mix(in oklab, var(--fiddy-bg), var(--fiddy-bg-raise) 30%);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.fiddy-device-only-bar .fiddy-brand {
+  font-size: 15px;
+  gap: 6px;
+}
+
+.fiddy-device-only-account {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-device-only-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-device-only-back svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fiddy-device-only-back:hover {
+  color: var(--fiddy-ink);
+}

@@ -48,12 +48,16 @@ export const ProfileCastItem: FC<ProfileCastItemProps> = ({ cast, host }) => {
         <li>
           {cast.replies.count} {cast.replies.count === 1 ? 'reply' : 'replies'}
         </li>
+        {/* Counts are optional in `ApiCast` (the node-backed client paints a
+            feed before its counts are read); this app reads the hosted API,
+            whose casts always carry them, so absent degrades to 0. */}
         <li>
-          {cast.recasts.count} {cast.recasts.count === 1 ? 'recast' : 'recasts'}
+          {cast.recasts?.count ?? 0}{' '}
+          {(cast.recasts?.count ?? 0) === 1 ? 'recast' : 'recasts'}
         </li>
         <li>
-          {cast.reactions.count}{' '}
-          {cast.reactions.count === 1 ? 'reaction' : 'reactions'}
+          {cast.reactions?.count ?? 0}{' '}
+          {(cast.reactions?.count ?? 0) === 1 ? 'reaction' : 'reactions'}
         </li>
       </ul>
     </article>

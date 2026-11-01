@@ -1,0 +1,20 @@
+WEBVTT
+
+00:00:03.300 --> 00:00:13.900
+Step 0 | fiddy provision - rent the compute. 4 vCPU, 16 GB RAM, 1.5-2 TB disk. AWS with --aws, or any server with --ssh user@host.
+
+00:00:14.100 --> 00:00:28.400
+Step 1 | fiddy node up - a Snapchain read node on your server. It answers the API at once, then catches up on history.
+
+00:00:28.600 --> 00:00:42.400
+Step 2 | fiddy client up - the web client reads and writes through your own node. Login is one gasless app key.
+
+00:00:42.600 --> 00:00:49.400
+Your feed, your casts, your reads - served by your own node. Plus the agent no other client has.
+
+00:00:49.600 --> 00:00:53.400
+Three commands. That is the whole install.
+
+00:00:53.600 --> 00:00:57.900
+Full tutorial fiddy.fun/client - source github.com/ivcained/fiddy - Chinese guide fiddy.fun/client/zh
+

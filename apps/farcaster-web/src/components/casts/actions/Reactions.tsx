@@ -73,7 +73,10 @@ const Reactions: FC<ReactionsProps> = memo(
       <CastReactionAction
         activeColor={activeColor}
         icon={icon}
-        count={cast.reactions.count}
+        // Absent means not read yet (a feed paints before its counts are), and
+        // an unread count draws no number at all — never a made-up zero.
+        count={cast.reactions?.count}
+        countMarker="likes"
         isFocused={!!isFocused}
         isActive={!!cast.viewerContext?.reacted}
         variant={variant}

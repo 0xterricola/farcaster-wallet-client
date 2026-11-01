@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "Fiddy",
+    "slug": "fiddy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "fiddy",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#161715",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "fun.fiddy.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "icon": "./assets/icon.png",
+      "infoPlist": {
+        "CFBundleDisplayName": "Fiddy",
+        "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+        "UIApplicationSceneManifest": {
+          "UIApplicationSupportsMultipleScenes": false,
+          "UISceneConfigurations": {
+            "UIWindowSceneSessionRoleApplication": [
+              {
+                "UISceneConfigurationName": "Default Configuration",
+                "UISceneDelegateClassName": "$(PRODUCT_MODULE_NAME).SceneDelegate"
+              }
+            ]
+          }
+        },
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "34.101.47.167": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": false
+            }
+          }
+        }
+      }
+    },
+    "android": {
+      "package": "fun.fiddy.app",
+      "versionCode": 1,
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#161715"
+      }
+    },
+    "plugins": [
+      "./plugins/withSceneLifecycle",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#161715",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#161715"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "fiddy": {
+        "nodeUrl": "",
+        "fid": 0
+      }
+    }
+  }
+}

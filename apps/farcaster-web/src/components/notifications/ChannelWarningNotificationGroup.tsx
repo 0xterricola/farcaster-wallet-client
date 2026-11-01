@@ -33,7 +33,6 @@ const ChannelWarningNotificationGroup: FC<ChannelWarningNotificationGroupProps> 
         onClick={() => {
           navigateToCast({
             castHash: body.hash,
-            authorUsername: body.author.username,
           });
         }}
       >

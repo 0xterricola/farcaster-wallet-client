@@ -17,6 +17,7 @@ const Cast: FC<CastProps> = memo(
     castWithContext: { cast: fallbackCast, context },
     castOpenIncludeReason,
     isAdminGatedFeedCast = false,
+    readOnly = false,
   }) => {
     const cast = useGloballyCachedCast({ fallback: fallbackCast });
     const isAdmin = useIsAdmin();
@@ -44,6 +45,7 @@ const Cast: FC<CastProps> = memo(
       <UnfocusedCast
         castWithContext={castWithContext}
         isAdminGatedFeedCast={showAdminGatedFeedCastStyling}
+        readOnly={readOnly}
       />
     );
   },

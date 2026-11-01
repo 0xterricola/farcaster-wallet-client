@@ -11,6 +11,7 @@ import {
   AdminFeedsComparisonPage,
   AdminLabeledCastsPage,
   AdminReviewsPage,
+  AgentPage,
   ApiKeysPage,
   AppsPage,
   ArticlePage,
@@ -47,6 +48,12 @@ import {
   DirectCastsInvitePage,
   DownloadPage,
   FarcasterConnectPage,
+  FiddyAccountPage,
+  FiddyAddFundsPage,
+  FiddyAppsPage,
+  FiddyBrainsPage,
+  FiddyConnectPage,
+  FiddyOnboardingPage,
   FollowersWithoutUsernamePage,
   FollowersWithUsernamePage,
   FollowersYouKnowWithoutUsernamePage,
@@ -61,6 +68,7 @@ import {
   LiveAudioRoomPage,
   LocationUsersPage,
   LoginRedirectToAppPage,
+  LookPage,
   MagicLinkPage,
   ManageAppPage,
   ManageChannelsForCategoryPage,
@@ -91,6 +99,8 @@ import {
   ProfileStarterPacksWithoutUsernamePage,
   ProfileStarterPacksWithUsernamePage,
   ProUpsellPage,
+  PublicExplorePage,
+  PublicFeedPage,
   RecentSearchPage,
   RecoveryInitiatePage,
   RecoveryPage,
@@ -102,6 +112,7 @@ import {
   ReferralWithoutUsernamePage,
   ReferralWithUsernamePage,
   SavedPage,
+  SealedCastsPage,
   SettingsAdvancedPage,
   SettingsBlockedUsersPage,
   SettingsCastsAndUsersPage,
@@ -117,6 +128,7 @@ import {
   SettingsMutedKeywordsPage,
   SettingsMutedUsersPage,
   SettingsMutesAndBlocksPage,
+  SettingsNodePage,
   SettingsNotificationsPage,
   SettingsPreferredWalletPage,
   SettingsStarterPacksPage,
@@ -132,6 +144,8 @@ import {
   SuggestedStarterPacksPage,
   SupportPage,
   TermsOfUsePage,
+  TogetherJoinPage,
+  TogetherPage,
   TokenPage,
   TopSearchPage,
   TrendingTopicPage,
@@ -141,6 +155,7 @@ import {
   VanityReferralLandingPage,
   WalletPage,
 } from '~/lazy/pages';
+import { SOCIAL_ACCOUNT_PATH } from '~/lib/socialSignUp';
 import { ChannelEditSection } from '~/types/routing';
 
 import {
@@ -175,6 +190,52 @@ export type RouteFamily =
   | 'saved';
 
 const routes = {
+  /**
+   * The public browse window, and the discovery view of the same read.
+   *
+   * `/feed` and `/explore` are ROOT paths on purpose: they are the two URLs a
+   * visitor types when they want to see what a network is saying, and both are
+   * reserved names (see `reservedRouteNames.ts`, which derives them from this
+   * table), so a bare `/feed` can never be the profile of whoever is called
+   * @feed. Real routes here are what make that reservation worth anything: the
+   * page reads real casts with no account (`publicFeedWindow.ts`).
+   */
+  publicFeed: {
+    path: '/feed',
+    params: {},
+    search: {},
+    family: family('explore'),
+    Component: PublicFeedPage,
+  },
+  /**
+   * A look someone shared, at `/look/<id>`.
+   *
+   * A root path, like `/feed` and `/explore` above, and for the same reason: the
+   * link has to work for whoever opens it. `reservedRouteNames.ts` derives the
+   * reserved set from this table, so `look` is held the moment this entry
+   * exists — a bare `/look/...` can never resolve as the profile of whoever is
+   * called @look, and `hydratePath` rewrites links to it into the `/u`
+   * namespace like any other app-owned name.
+   *
+   * The link carries the look's id and nothing else: a share id is a hash of
+   * the checked look, so the same look handed to two people is one link.
+   */
+  look: {
+    path: '/look/:id',
+    params: { id: '' } as {
+      id: string;
+    },
+    search: {},
+    family: family('home'),
+    Component: LookPage,
+  },
+  publicExplore: {
+    path: '/explore',
+    params: {},
+    search: {},
+    family: family('explore'),
+    Component: PublicExplorePage,
+  },
   homeFeed: {
     path: '/',
     params: {},
@@ -722,6 +783,13 @@ const routes = {
     family: family('settings'),
     Component: SettingsDeveloperToolsPage,
   },
+  settingsNode: {
+    path: `${appPathPrefix}/settings/node`,
+    params: {},
+    search: {},
+    family: family('settings'),
+    Component: SettingsNodePage,
+  },
   settingsCastsAndUsers: {
     path: `${appSettingsPathPrefix}/casts-and-users`,
     params: {},
@@ -893,6 +961,136 @@ const routes = {
     search: {},
     family: family('saved'),
     Component: SavedPage,
+  },
+  agent: {
+    path: `${appPathPrefix}/agent`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: AgentPage,
+  },
+  /* A cast only the people it names can read: the surface for the key it needs,
+     who it is for, and the sealed text itself. Reachable signed out, because
+     making a key and sealing something need no account. */
+  sealed: {
+    path: `${appPathPrefix}/sealed`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: SealedCastsPage,
+  },
+  /* Add a brain / Connect apps: the two sheets the positioning pivot is built
+     on. They are reachable signed in (from the agent surface) and signed out,
+     because neither needs an account. */
+  fiddyBrains: {
+    path: `${appPathPrefix}/agent/brains`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyBrainsPage,
+  },
+  fiddyApps: {
+    path: `${appPathPrefix}/agent/apps`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyAppsPage,
+  },
+  /* Connect an account you already have: one tap, no fee, no passphrase. The
+     other half of the account surface is making a *new* Farcaster account;
+     this one never asks for a phrase, and it is reachable signed out because
+     approving happens in the person's own Farcaster app. */
+  fiddyConnect: {
+    path: `${appPathPrefix}/connect-farcaster`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyConnectPage,
+  },
+  /* The way in: a greeting, one screen that does the naming and the brain, and
+     "ready" — two numbered steps. Each is still a route, so a step can be
+     linked, reloaded and re-entered, and the front door (`routes.homeFeed`
+     signed out) renders the first one. `fiddyWelcomeBrain` is a second address
+     for step 1 (where the older links and docs point); `fiddyWelcomeApps` is
+     no longer a step and redirects to `fiddyWelcomeReady` — connecting apps is
+     `fiddyApps` above, inside the client. */
+  /* Together — one project, one board, your people. `together` is where you
+     list and open spaces; `togetherJoin` is the other end of an invite link and
+     must be reachable signed out, because the person opening it has no session
+     yet. The invite links the service mints point at exactly this path. */
+  together: {
+    path: `${appPathPrefix}/together`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: TogetherPage,
+  },
+  togetherJoin: {
+    path: `${appPathPrefix}/together/join/:token`,
+    params: { token: '' } as { token: string },
+    search: {},
+    family: family('default'),
+    Component: TogetherJoinPage,
+  },
+  /* The setup flow. One route per screen: a step can be linked, reloaded and
+     re-entered, and the front door (`routes.homeFeed` signed out) renders the
+     first one. */
+  fiddyWelcome: {
+    path: '/welcome',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  fiddyWelcomeName: {
+    path: '/welcome/name',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  fiddyWelcomeBrain: {
+    path: '/welcome/brain',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  fiddyWelcomeApps: {
+    path: '/welcome/apps',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  /* Step 2 of 3: the balance, offered once the brain is picked and skippable
+     with one press. Before the last screen, because that one carries the
+     sign-in — and a balance needs a session behind it. */
+  fiddyWelcomeFunds: {
+    path: '/welcome/funds',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  fiddyWelcomeReady: {
+    path: '/welcome/ready',
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyOnboardingPage,
+  },
+  /* Where a Google or X sign-up lands. A route rather than a sheet, because it
+     is a place a person is sent to and can come back to — the account it
+     describes outlives the sign-up that made it. The path is declared in
+     `~/lib/socialSignUp` (SOCIAL_ACCOUNT_PATH) so the sign-up flow can name it
+     without importing this table. */
+  fiddyAccount: {
+    path: SOCIAL_ACCOUNT_PATH,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyAccountPage,
   },
   savedStarterPacks: {
     path: `${appPathPrefix}/saved/starter-packs`,
@@ -1536,6 +1734,16 @@ const routes = {
     search: {},
     family: family('default'),
     Component: WalletPage,
+  },
+  /* Adding funds: its own address rather than a sheet, so the link can be
+     shared, reloaded and returned to — and so the way in and the wallet page
+     can both point at one screen instead of two implementations of it. */
+  fiddyAddFunds: {
+    path: `${appPathPrefix}/wallet/add-funds`,
+    params: {},
+    search: {},
+    family: family('default'),
+    Component: FiddyAddFundsPage,
   },
   referrals: {
     path: `${appPathPrefix}/referrals`,

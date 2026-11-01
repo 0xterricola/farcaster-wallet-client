@@ -1,0 +1,32 @@
+{
+  "name": "farcaster-node-client",
+  "version": "0.0.0",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/index.js",
+  "sideEffects": false,
+  "files": [
+    "src/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json}\" --config ../../.prettierrc.js --ignore-path ../../.prettierignore",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@farcaster/core": "0.20.0",
+    "viem": "2.39.3"
+  },
+  "devDependencies": {
+    "@types/node": "20.6.5",
+    "eslint-config-custom": "workspace:*",
+    "tsconfig": "workspace:*",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^3.1.1"
+  }
+}

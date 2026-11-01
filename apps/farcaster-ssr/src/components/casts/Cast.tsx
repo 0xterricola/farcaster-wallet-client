@@ -40,12 +40,17 @@ const Cast: FC<CastProps> = ({ cast }) => {
         <div>
           {cast.replies.count} {cast.replies.count > 1 ? 'replies' : 'reply'}
         </div>
+        {/* This app renders the hosted API's casts, which always carry counts.
+            They are optional in `ApiCast` because the node-backed client paints
+            a feed before its counts are read — never the case here — so an
+            absent count degrades to 0 rather than rendering "undefined". */}
         <div>
-          {cast.recasts.count} {cast.recasts.count > 1 ? 'recasts' : 'recast'}
+          {cast.recasts?.count ?? 0}{' '}
+          {(cast.recasts?.count ?? 0) > 1 ? 'recasts' : 'recast'}
         </div>
         <div>
-          {cast.reactions.count}{' '}
-          {cast.reactions.count > 1 ? 'reactions' : 'reaction'}
+          {cast.reactions?.count ?? 0}{' '}
+          {(cast.reactions?.count ?? 0) > 1 ? 'reactions' : 'reaction'}
         </div>
         <hr />
       </div>

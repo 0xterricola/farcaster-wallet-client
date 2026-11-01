@@ -6,71 +6,87 @@
       name="ahrefs-site-verification"
       content="38f091146e9739ea28ca6ea0cfd077cfd3387a798283fd07c83e902c20c15379"
     />
-    <link rel="icon" href="/favicon-v3.png" />
+    <link rel="icon" href="/fiddy-favicon.png" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no"
     />
     <meta
       name="theme-color"
-      content="#101010"
+      content="#161715"
       media="(prefers-color-scheme: dark)"
     />
-    <meta
-      name="theme-color"
-      content="#ffffff"
-      media="(prefers-color-scheme: light)"
-    />
+    <meta name="theme-color" content="#161715" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <link rel="apple-touch-icon" href="/og-logo-v3.png" />
+    <link rel="apple-touch-icon" href="/brand/fiddy-app-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Farcaster</title>
+    <!--
+      What a crawler reads. This document is the ONLY thing a social unfurler
+      (or another Farcaster client) sees on fiddy.fun: the client is an SPA, so
+      every route — a cast, a profile, the front door — answers with this same
+      shell. Until these tags existed the shell carried no `og:` tag at all and
+      the one 1200x630 image on the host was upstream Farcaster's purple brand
+      card, so a shared fiddy.fun link unfurled as nothing, or as the wrong
+      product.
+
+      The picture is ours and drawn by us: `fiddy-share-card.png` (the 1.91:1
+      og card) and `fiddy-embed.png` (the 3:2 embed) are both rendered from
+      `fiddy-mark-poster.png` by `scripts/render-share-card.mjs`. The
+      `fc:miniapp` tag makes the same URL a launchable mini app card, matching
+      the manifest served at /.well-known/farcaster.json (whose own `imageUrl`
+      is the 3:2 /fiddy-embed.png used here, and whose `name` is `fiddy`).
+
+      Nothing here is per-page yet: a cast or profile URL unfurls with THIS
+      card, not its own. Per-page cards need a server that renders HTML for a
+      crawler (`docs/CLIENT-MINIAPP-HOST-SPEC.md` names that work and why it is
+      not a client change). The client already sets per-page `og:` tags at
+      runtime via `PageMeta` — a browser sees them, a crawler never runs the
+      JavaScript that writes them.
+    -->
+    <meta name="description" content="Read your feed, open mini apps, and post with a little agent that asks before it acts." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fiddy" />
+    <meta property="og:title" content="fiddy — a Farcaster client with an agent" />
+    <meta property="og:description" content="Read your feed, open mini apps, and post with a little agent that asks before it acts." />
+    <!-- No `og:url` here on purpose: this document answers for every route, so a
+      static `og:url` pointing at the front door would tell an unfurler that a
+      shared cast or profile link is really the front door — a platform that
+      honours it would rewrite the link. The runtime `PageMeta` sets a
+      per-page URL where one exists. -->
+    <meta property="og:image" content="https://fiddy.fun/fiddy-share-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Fiddy mascot on a dark card: “Meet your Fiddy.”" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="fiddy — a Farcaster client with an agent" />
+    <meta name="twitter:description" content="Read your feed, open mini apps, and post with a little agent that asks before it acts." />
+    <meta name="twitter:image" content="https://fiddy.fun/fiddy-share-card.png" />
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://fiddy.fun/fiddy-embed.png","button":{"title":"Open fiddy","action":{"type":"launch_miniapp","name":"fiddy","url":"https://fiddy.fun/","splashImageUrl":"https://fiddy.fun/fiddy-splash.png","splashBackgroundColor":"#161715"}}}' />
+    <title>fiddy — a Farcaster client with an agent</title>
     <!-- Preconnect to image CDN for faster LCP -->
     <link rel="preconnect" href="https://wrpcd.net" crossorigin />
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Inter, as a normal render-blocking stylesheet. It used to be loaded
+         asynchronously via `media="print" onload="this.media='all'"`, but an
+         inline event handler is inline script: it needs script-src
+         'unsafe-inline' exactly like the theme bootstrap did. The two
+         preconnects above are what keep this cheap. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
     />
-    <script>
-      (function() {
-        const STORAGE_KEY = 'user-saved-theme';
-        const DEFAULT_THEME = 'system';
-        
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          const userSavedTheme = stored || DEFAULT_THEME;
-          
-          let effective = userSavedTheme;
-          if (userSavedTheme === 'system') {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            effective = prefersDark ? 'dark' : 'light';
-          }
-          
-          const root = document.documentElement;
-          root.classList.toggle('dark', effective === 'dark');
-          root.classList.toggle('light', effective === 'light');
-          root.setAttribute('data-theme', userSavedTheme);
-        } catch (e) {
-          // Fallback if localStorage is unavailable
-          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          const root = document.documentElement;
-          root.classList.toggle('dark', prefersDark);
-          root.classList.toggle('light', !prefersDark);
-        }
-      })();
-    </script>
+    <!-- The shell bootstrap (the saved theme, on <html>, before first paint).
+         A separate same-origin file, never inline, so script-src stays 'self'. -->
+    <script src="/shell-bootstrap.js"></script>
     <style>
       html.dark {
-        background-color: #101010;
+        background-color: #161715;
         color-scheme: dark;
       }
       html.light {
@@ -81,10 +97,298 @@
         background-color: inherit;
       }
     </style>
+    <style>
+      /*
+       * The shell the document itself paints.
+       *
+       * The app's own shell is JavaScript, so before the bundle runs the body
+       * used to be empty — a signed-in reader arriving on a cold load looked at
+       * nothing (measured: the whole body was still empty four seconds in) and
+       * any reload, remount or suspension painted the same nothing. The fix is
+       * that the document ships the shell: this is the top bar, the rail, the
+       * page column and the phone's tab bar, at the sizes the app's own shell
+       * uses, from the very first paint and with no JavaScript at all.
+       *
+       * It carries no facts. No avatar, no node pill, no cast: only the brand
+       * and shapes. It is replaced by the real shell on the app's first commit,
+       * and `~/components/fiddy/ShellSkeleton` renders exactly this markup when
+       * anything above the shell suspends (a unit test holds the two together,
+       * and it reads these class names out of this file).
+       */
+      /* It sits over the app root rather than inside it: React clears its
+         container before it paints, and a skeleton inside would be cleared
+         with it. This one stays until the app has painted, and the app takes
+         it away itself (`~/components/App`, and the test holds that too). */
+      .fiddy-skeleton {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        /* It is over the app, so it must never take an input meant for it. */
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        box-sizing: border-box;
+        background: #161715;
+        color: #eef0e8;
+        font-family: 'SF Pro Rounded', ui-rounded, system-ui, -apple-system, sans-serif;
+      }
+      /* The app itself is reset by Tailwind's preflight; before that stylesheet
+         exists this has to say it, or every box measures one border and two
+         paddings wider than the shell's own (measured: 61px for a 60px bar). */
+      .fiddy-skeleton,
+      .fiddy-skeleton *,
+      .fiddy-skeleton *::before,
+      .fiddy-skeleton *::after {
+        box-sizing: border-box;
+      }
+      /* For a screen reader the shapes below are noise; this is the sentence. */
+      .fiddy-skeleton-status {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .fiddy-skeleton-topbar {
+        display: none;
+        align-items: center;
+        gap: 16px;
+        height: 60px;
+        padding: 0 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        background: #191a18;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+      }
+      @media (min-width: 640px) {
+        .fiddy-skeleton-topbar {
+          display: flex;
+        }
+      }
+      .fiddy-skeleton-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .fiddy-skeleton-mark {
+        display: block;
+        flex: none;
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+      }
+      .fiddy-skeleton-body {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        padding: 0 16px;
+        min-height: 100vh;
+      }
+      .fiddy-skeleton-nav {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+        padding: 18px 14px 14px;
+        border-right: 1px solid rgba(255, 255, 255, 0.09);
+        background: #171816;
+        position: sticky;
+        top: 60px;
+        height: calc(100vh - 60px);
+      }
+      @media (min-width: 640px) {
+        .fiddy-skeleton-nav {
+          display: flex;
+          width: 88px;
+          flex: none;
+        }
+      }
+      @media (min-width: 1280px) {
+        .fiddy-skeleton-nav {
+          width: 220px;
+        }
+      }
+      .fiddy-skeleton-nav-mark {
+        display: block;
+        width: 24px;
+        height: 24px;
+        margin: 0 0 10px 10px;
+        object-fit: contain;
+      }
+      .fiddy-skeleton-col {
+        width: 100%;
+        padding-top: 12px;
+      }
+      @media (min-width: 640px) {
+        .fiddy-skeleton-col {
+          flex: none;
+          width: 540px;
+        }
+      }
+      @media (min-width: 1024px) {
+        .fiddy-skeleton-col {
+          width: 620px;
+        }
+      }
+      .fiddy-skeleton-mobilebar {
+        height: 56px;
+        margin: 0 -16px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        background: #191a18;
+      }
+      @media (min-width: 640px) {
+        .fiddy-skeleton-mobilebar {
+          display: none;
+        }
+      }
+      .fiddy-skeleton-rail {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+        flex-grow: 1;
+        max-width: 393px;
+        padding-top: 12px;
+      }
+      @media (min-width: 1002px) {
+        .fiddy-skeleton-rail {
+          display: flex;
+        }
+      }
+      .fiddy-skeleton-tabs {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-around;
+        height: 54px;
+        padding: 7px 8px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.09);
+        background: #191a18;
+      }
+      @media (min-width: 640px) {
+        .fiddy-skeleton-tabs {
+          display: none;
+        }
+      }
+      /* One shape, no words: a placeholder that cannot claim a fact. */
+      .fiddy-skeleton-block {
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 18px;
+        animation: fiddy-skeleton-breathe 1.8s ease-in-out infinite;
+      }
+      .fiddy-skeleton-row {
+        height: 44px;
+        border: none;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+      }
+      .fiddy-skeleton-tab {
+        width: 34px;
+        height: 34px;
+        border: none;
+        border-radius: 10px;
+      }
+      .fiddy-skeleton-block-composer {
+        height: 96px;
+        margin-bottom: 12px;
+      }
+      .fiddy-skeleton-block-cast {
+        height: 132px;
+        margin-bottom: 12px;
+      }
+      .fiddy-skeleton-block-rail {
+        height: 148px;
+      }
+      @keyframes fiddy-skeleton-breathe {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.62;
+        }
+      }
+      /* A pulse is motion, and a reader who asked not to be moved gets the
+         same shapes, still. */
+      @media (prefers-reduced-motion: reduce) {
+        .fiddy-skeleton-block {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <!-- shell-skeleton:start — kept in step with ShellSkeleton.tsx by a test -->
+    <div
+      id="shell-skeleton"
+      class="fiddy-skeleton"
+      data-fiddy="shell-skeleton"
+    >
+      <span class="fiddy-skeleton-status" role="status">Loading Fiddy…</span>
+      <div aria-hidden="true">
+        <header class="fiddy-skeleton-topbar">
+          <span class="fiddy-skeleton-brand">
+            <img
+              class="fiddy-skeleton-mark"
+              src="/fiddy-mark-poster.png"
+              alt=""
+              width="36"
+              height="36"
+            />
+            fiddy
+          </span>
+        </header>
+        <div class="fiddy-skeleton-body">
+          <nav class="fiddy-skeleton-nav">
+            <img
+              class="fiddy-skeleton-nav-mark"
+              src="/fiddy-mark-poster.png"
+              alt=""
+              width="24"
+              height="24"
+            />
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-row"></div>
+          </nav>
+          <div class="fiddy-skeleton-col">
+            <div class="fiddy-skeleton-mobilebar"></div>
+            <div
+              class="fiddy-skeleton-block fiddy-skeleton-block-composer"
+            ></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-block-cast"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-block-cast"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-block-cast"></div>
+          </div>
+          <aside class="fiddy-skeleton-rail">
+            <div class="fiddy-skeleton-block fiddy-skeleton-block-rail"></div>
+            <div class="fiddy-skeleton-block fiddy-skeleton-block-rail"></div>
+          </aside>
+        </div>
+        <div class="fiddy-skeleton-tabs">
+          <div class="fiddy-skeleton-block fiddy-skeleton-tab"></div>
+          <div class="fiddy-skeleton-block fiddy-skeleton-tab"></div>
+          <div class="fiddy-skeleton-block fiddy-skeleton-tab"></div>
+          <div class="fiddy-skeleton-block fiddy-skeleton-tab"></div>
+          <div class="fiddy-skeleton-block fiddy-skeleton-tab"></div>
+        </div>
+      </div>
+    </div>
+    <!-- shell-skeleton:end -->
     <div id="modal-root"></div>
     <div id="popover-root"></div>
     <div id="hover-popover-root"></div>

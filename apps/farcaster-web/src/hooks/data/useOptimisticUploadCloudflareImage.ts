@@ -4,6 +4,11 @@ import {
 } from 'farcaster-client-hooks';
 import { useCallback } from 'react';
 
+import {
+  isOwnMediaUploadUrl,
+  uploadMedia,
+} from '~/snapchain/nodeApi/mediaUpload';
+
 const IMAGE_EMBED_MAX_DIMENSIONS = {
   // We will never render an image above this resolution on any of our clients.
   // Opportunity for another client around image being centered. (NFT feeds etc.)
@@ -188,6 +193,60 @@ const useOptimisticUploadCloudflareImage = () => {
       }
 
       const imageUploadUrl = fetchImageUploadUrlResponse.url;
+
+      // OUR OWN MEDIA HOST
+      //
+      // The hosted API hands out a Cloudflare CDN URL and the composer guesses
+      // the final image URL from `optimisticImageId` before the bytes leave the
+      // browser. Our own host names a file after its content hash, so the URL
+      // cannot be guessed - it is read back from the upload. The upload is
+      // therefore awaited here, and the embed is registered with the URL the
+      // server confirmed. The local preview still shows immediately (the
+      // composer's own optimistic media embeds paint it), so nothing looks
+      // slower than it is: only the canonical URL waits.
+      if (isOwnMediaUploadUrl(imageUploadUrl)) {
+        // NO `compressImage` HERE, and that is the point of this branch.
+        //
+        // `compressImage` writes a JPEG — it draws the picture onto a fresh
+        // canvas and encodes `image/jpeg` — so a transparent PNG or WebP picked
+        // here reached our host with an opaque box baked behind every
+        // see-through pixel (MEASURED 2026-10-23 by scripts/verify-media-upload.mjs:
+        // a sticker with a transparent border came back
+        // `corner rgba=[0,2,0,255]`, a black box, on the dark feed). It also left
+        // the embed bounded by nothing: the re-encode in `uploadMedia` after it
+        // (see ~/snapchain/nodeApi/photoPrivacy) writes its own bytes anyway, so
+        // the ≤1MB target this loop aims at was never the size that shipped.
+        //
+        // The re-encode IS the size bound now, and it does the whole job: the
+        // long edge is capped at 2048px, every metadata block the camera wrote is
+        // gone, and the format is chosen from the pixels — PNG while anything in
+        // the picture is see-through, JPEG otherwise (upstream quilcast
+        // 92d1aeead4af, MIT). A see-through picture is bounded here by the host's
+        // own 25MB photo cap instead of a quality loop, because the alternative —
+        // quantising a logo into an opaque JPEG — is the defect itself.
+        const uploaded = await uploadMedia({
+          file,
+          uploadUrl: imageUploadUrl,
+        });
+
+        return {
+          version: 'v2',
+          previewUrl: URL.createObjectURL(file),
+          imageUrl: uploaded.url,
+          uploadPromise: Promise.resolve(
+            new Response(JSON.stringify({ ok: true, url: uploaded.url }), {
+              status: 201,
+              headers: { 'content-type': 'application/json' },
+            }),
+          ),
+        } as {
+          version: 'v2';
+          previewUrl: string;
+          imageUrl: string;
+          uploadPromise: Promise<Response>;
+        };
+      }
+
       const imageUrl = `${WARPCAST_CLOUDFLARE_CDN_PREFIX}/${fetchImageUploadUrlResponse.optimisticImageId}/original`;
 
       const uploadPromise = new Promise<Response>((resolve, reject) => {

@@ -32,7 +32,7 @@ const ComposePage = memo(() => {
   return (
     <Page
       meta={{
-        title: 'Farcaster / Home',
+        title: 'Fiddy / Home',
         canonical: 'https://farcaster.xyz',
       }}
     >

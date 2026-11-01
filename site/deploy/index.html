@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy your node — Fiddy</title>
+<meta name="description" content="One click to your own Farcaster node — reads and writes — on Google Cloud.">
+<meta property="og:title" content="Deploy your own Farcaster node — reads and writes">
+<meta property="og:description" content="One click to your own node on Google Cloud — or let Fiddy run it for you.">
+<meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://fiddy.fun/client/assets/deploy-card.png","button":{"title":"Deploy my node","action":{"type":"launch_miniapp","name":"Deploy a Node","url":"https://fiddy.fun/client/deploy/","splashImageUrl":"https://fiddy.fun/client/assets/fiddy-splash.png","splashBackgroundColor":"#161715"}}}'>
+<meta property="og:image" content="https://fiddy.fun/client/assets/deploy-card.png">
+<style>
+:root {
+  --ground: #161715; --ink: #eef0e8; --ink-dim: #a7ab9e;
+  --lime: #d4ff3f; --lime-ink: #1a1c10; --lime-deep: #7cb518;
+  --pane: rgba(255 255 255 / 0.045); --card: rgba(255 255 255 / 0.075);
+  --rim: rgba(255 255 255 / 0.14); --inner: rgba(255 255 255 / 0.05);
+  --edge: rgba(0 0 0 / 0.5); --shade: rgba(0 0 0 / 0.35);
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink);
+  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 620px; margin: 0 auto; padding: 48px 20px 72px; }
+.wordmark { font: 700 13px/1 var(--mono); letter-spacing: 0.14em; color: var(--lime);
+  text-transform: uppercase; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+.wordmark .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--lime);
+  box-shadow: 0 0 10px rgba(212 255 63 / 0.6); }
+h1 { font-size: clamp(26px, 5.5vw, 36px); line-height: 1.15; letter-spacing: -0.02em; }
+p.dim, li { color: var(--ink-dim); }
+.card { background: var(--card); border-radius: 18px; padding: 22px; margin-top: 22px;
+  box-shadow: inset 0 1px 0 var(--rim), inset 0 2px 0 var(--inner), inset 0 0 0 1px var(--edge), 0 4px 16px var(--shade);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.n { font: 700 12px/1 var(--mono); color: var(--lime-ink); background: var(--lime); border-radius: 6px;
+  padding: 4px 7px; margin-right: 10px;
+  box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.45), 0 2px 6px var(--shade); }
+h2 { font-size: 17px; display: flex; align-items: center; margin-bottom: 8px; }
+pre { font: 13px/1.6 var(--mono); background: #10110f; padding: 14px 16px; border-radius: 12px;
+  overflow-x: auto; margin-top: 12px; box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.07), inset 0 0 0 1px var(--edge); }
+pre .k { color: var(--lime); }
+input { width: 100%; font: 14px var(--mono); color: var(--ink); background: #10110f; border: none;
+  border-radius: 10px; padding: 12px 14px; margin-top: 12px; outline: none;
+  box-shadow: inset 0 0 0 1px var(--edge), inset 0 2px 4px rgba(0 0 0 / 0.3); }
+input:focus { box-shadow: inset 0 0 0 1px var(--lime-deep), inset 0 2px 4px rgba(0 0 0 / 0.3); }
+.btn { display: inline-block; font: 650 14px/1 -apple-system, sans-serif; color: var(--lime-ink);
+  background: var(--lime); border: none; border-radius: 10px; padding: 12px 18px; cursor: pointer;
+  text-decoration: none; box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.45), 0 2px 8px var(--shade); }
+.btn.ghost { background: var(--pane); color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--edge); }
+#status { font: 13px var(--mono); margin-top: 12px; white-space: pre-wrap; }
+.live { color: var(--lime); } .wait { color: var(--ink-dim); }
+footer { margin-top: 40px; font-size: 13.5px; color: var(--ink-dim); }
+a { color: var(--lime); text-decoration: none; }
+.provider { border-top: 1px solid rgba(255 255 255 / 0.07); padding: 14px 0 6px; }
+.provider:first-of-type { border-top: none; }
+.phead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.price { font: 12.5px var(--mono); color: var(--lime-deep); }
+.prow { font-size: 13.5px; margin: 6px 0; }
+.pcmd { margin-top: 8px; }
+.abtn { font: 600 14px var(--sans); color: var(--ink); background: var(--glass); border: 1px solid rgba(255 255 255 / 0.12); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+.abtn:active { transform: translateY(1px); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="wordmark"><span class="dot"></span>fiddy · node deploy</div>
+  <h1>Your own Farcaster node.<br>Reads and writes. One click.</h1>
+  <p class="dim" style="margin-top:12px">Every Snapchain node now <strong>reads AND writes</strong> — your casts, follows and reactions
+  go through your own node and gossip to validators. "Read node" is just the historical name.
+  Nothing custodial — the script runs where you can read it.</p>
+
+  <div class="card">
+    <h2><span class="n">1</span>Create the machine — pick your cloud</h2>
+    <p class="dim" style="font-size:14.5px">Free first, then cheapest. Every path ends the same: a 4 vCPU / 16 GB box with a 2 TB disk,
+    Docker preinstalled, and an IP to paste below.</p>
+
+    <div class="provider">
+      <div class="phead"><strong>Your own machine</strong><span class="price">free · zero cloud</span></div>
+      <p class="dim prow">Any Mac/Linux box — the CLI installs Docker, Node and pnpm itself. The node runs right here — no account, no bill, no keys to anyone:</p>
+      <pre class="pcmd"><span class="k">curl -fsSL https://fiddy.fun/client/install.sh | FIDDY_INSTALL_NODE=1 bash</span></pre>
+      <p class="dim prow" style="font-size:13px">Bootstrap still downloads ~470 GB (overnight on home broadband). A sleeping laptop pauses the node — it catches up when it wakes. Perfect for trying everything; move to a server later if you want it always-on.</p>
+    </div>
+
+    <div class="provider">
+      <div class="phead"><strong>AWS</strong><span class="price">~$285/mo · default cloud path</span></div>
+      <p style="margin:10px 0 4px"><a class="btn" href="https://console.aws.amazon.com/cloudshell/home?region=us-east-1" target="_blank" rel="noopener">Open AWS CloudShell ↗</a></p>
+      <p class="dim prow">CloudShell opens pre-authenticated in your account. One line inside:</p>
+      <pre class="pcmd"><span class="k">curl -fsSL https://raw.githubusercontent.com/ivcained/fiddy/main/scripts/aws-deploy.sh | bash</span></pre>
+      <p class="dim prow" style="font-size:13px"><strong>New AWS account?</strong> CloudShell stays locked during account
+      verification (can take up to 2 days) — no retry helps. Same command works from your own terminal meanwhile:
+      install the <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank" rel="noopener">AWS CLI</a>,
+      run <code style="font-family:var(--mono)">aws configure</code> once, then paste the same line.</p>
+      <p class="dim prow" style="font-size:13px"><strong>Why AWS is the default:</strong> Hetzner caps new accounts at 1024 GB of volume
+      storage — a resize past that is refused with <code style="font-family:var(--mono)">resource_limit_exceeded</code>,
+      which is not enough for an unmodified node restore. A brand-new Hetzner account cannot follow this tutorial
+      to the end. AWS lets the root volume simply be 2 TB, so the default is AWS.</p>
+    </div>
+
+    <div class="provider">
+      <div class="phead"><strong>Hetzner</strong><span class="price">~€120/mo · cheapest cloud</span></div>
+      <p class="dim prow">Get an API token at <a href="https://console.hetzner.cloud" target="_blank" rel="noopener">console.hetzner.cloud</a> (project → Security → API tokens), then:</p>
+      <pre class="pcmd"><span class="k">export HCLOUD_TOKEN=…
+git clone https://github.com/ivcained/fiddy && cd fiddy && bash scripts/hetzner-deploy.sh</span></pre>
+      <p class="dim prow" style="font-size:13px">Roughly a third of AWS's price and fully supported <em>once your account's
+      volume quota has been raised past 1024 GB</em> — new accounts are capped below what the node needs
+      (see the AWS note above).</p>
+    </div>
+
+    <div class="provider">
+      <div class="phead"><strong>OVHcloud</strong><span class="price">~$190/mo</span></div>
+      <p class="dim prow">Create API credentials at <a href="https://api.ovh.com/createToken/" target="_blank" rel="noopener">api.ovh.com/createToken</a> (GET+POST on /cloud/*), then:</p>
+      <pre class="pcmd"><span class="k">export OVH_APPLICATION_KEY=… OVH_APPLICATION_SECRET=… OVH_CONSUMER_KEY=… OVH_PUBLIC_CLOUD_PROJECT=…
+git clone https://github.com/ivcained/fiddy && cd fiddy && bash scripts/ovh-deploy.sh</span></pre>
+    </div>
+
+    <div class="provider">
+      <div class="phead"><strong>Google Cloud</strong><span class="price">~$350/mo · we tested this one · $300 free credit for new accounts</span></div>
+      <p style="margin:10px 0 4px"><a class="btn" href="https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fivcained%2Ffiddy&cloudshell_tutorial=docs%2FGCP-DEPLOY.md" target="_blank" rel="noopener">Open in Cloud Shell ↗</a></p>
+      <p class="dim prow" style="margin-top:8px">True one click, from right here: Cloud Shell opens pre-authenticated, the walkthrough runs itself.
+      ~$350/mo while it runs (our own bill) — <a href="https://cloud.google.com/free" target="_blank" rel="noopener">$300 free credit</a>
+      makes it free to start. Set a reminder to delete the VM before the credit ends.</p>
+    </div>
+
+    <div class="provider">
+      <div class="phead"><strong>Budget VPS — manual order</strong><span class="price">from ~€24/mo · no API, so no one-click</span></div>
+      <p class="dim prow">Cheapest machines anywhere, but you order through their website (10 minutes of form-filling),
+      then one command does the rest: <code style="font-family:var(--mono)">bin/fiddy provision --ssh root@&lt;your-ip&gt;</code>.
+      <strong>Mind the disk:</strong> a mainnet node needs ~2 TB — most budget plans ship far under it.</p>
+      <p class="dim prow" style="font-size:13px">
+      • <a href="https://clients.mivocloud.com/cart.php?a=confproduct&i=0" target="_blank" rel="noopener">MivoCloud S8 — €40/mo</a> (Moldova): add "Disk 2 · 1TB HDD" (+€5) to reach 2 TB.<br>
+      • <a href="https://advinservers.com/vps" target="_blank" rel="noopener">Advin Servers — $24/mo</a>: 8 vCPU/16 GB but 256 GB disk — too small unless you upgrade storage.<br>
+      • <a href="https://contabo.com/en/vps/cloud-vps-core-8" target="_blank" rel="noopener">Contabo VPS 8 — €14/mo</a>: 8 vCPU/24 GB, 300 GB — needs their storage add-on to fit 2 TB.<br>
+      • <a href="https://billing.luxvps.net/cart.php?a=confproduct&i=0" target="_blank" rel="noopener">LuxVPS EPYC</a>: 6 vCPU/32 GB, 340 GB — too small as listed.<br>
+      <span class="wait">HDD is fine — bootstrap is just slower. <code style="font-family:var(--mono)">fiddy provision --ssh</code> measures the disk and refuses loudly if a box can't hold the node.</span></p>
+    </div>
+
+    <p class="dim prow" style="font-size:13px">Already have a server? Skip ahead — any Ubuntu box with 4 vCPU / 16 GB / 2 TB works.
+    Hetzner &amp; OVH paths are scripted against their API docs, not yet battle-tested; they fail loudly if anything drifts.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">✦</span>Hand it to your AI agent</h2>
+    <p class="dim" style="font-size:14.5px">Don't want to drive the terminal yourself? Tap your agent — it copies a complete,
+    self-contained setup prompt and opens the agent. Paste, send, follow along.</p>
+    <p style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px">
+      <button class="abtn" data-agent="https://claude.ai">Claude</button>
+      <button class="abtn" data-agent="https://chatgpt.com">ChatGPT</button>
+      <button class="abtn" data-agent="https://grok.com">Grok</button>
+      <button class="abtn" data-agent="https://gemini.google.com">Gemini</button>
+      <button class="abtn" data-agent="">Hermes</button>
+      <button class="abtn" data-agent="">Just copy it</button>
+    </p>
+    <p class="dim prow" id="agentNote" style="font-size:13px"></p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>Paste your node's IP</h2>
+    <p class="dim" style="font-size:14.5px">The script prints it. Paste it here — the rest of the commands build themselves.</p>
+    <input id="ip" inputmode="decimal" placeholder="34.101.…" autocomplete="off">
+    <pre id="cmds" hidden><span class="k">curl -fsSL https://fiddy.fun/client/install.sh | bash
+fiddy provision --ssh</span> <span id="sshuser">ubuntu</span>@<span id="ip2">…</span><span class="k">
+fiddy node up</span></pre>
+    <p style="margin-top:10px" id="copyrow" hidden><button class="btn ghost" id="copy">Copy commands</button></p>
+  </div>
+
+  <div class="card" id="statusCard" hidden>
+    <h2><span class="n">3</span>Watch it sync</h2>
+    <p class="dim" style="font-size:14.5px">The node downloads ~470 GB of snapshot chunks before its API answers —
+    overnight on the default HDD is normal. This polls your node directly; nothing goes through us.
+    Some browsers block the poll from an HTTPS page — the reliable check is
+    <code style="font-family:var(--mono)">bin/fiddy node status</code> from your terminal.</p>
+    <div id="status"></div>
+  </div>
+
+  <div class="card" id="managedCard">
+    <h2><span class="n">✦</span>Zero clicks — we run it for you</h2>
+    <p class="dim" style="font-size:14.5px"><strong style="color:var(--ink)">Managed by Fiddy, <span id="priceLabel">$320</span>/mo.</strong>
+    Pay from your Farcaster wallet and your machine is created on our cloud immediately — no waiting for us
+    to wake up. You get an HTTPS endpoint for your node and a terminal into it; the terminal holds no keys,
+    and your node holds none either: casts are always signed on your device.</p>
+    <p style="margin-top:14px"><button class="btn" id="payBtn">Pay $320 USDC &amp; deploy</button>
+    <span id="payStatus" style="margin-left:12px;font-size:13.5px" class="dim"></span></p>
+    <div id="subView" hidden style="margin-top:14px;font:14px/1.7 var(--mono)"></div>
+    <p class="dim" style="font-size:13px;margin:10px 0 0">Runs inside a Farcaster client (Warpcast etc.) with your wallet.
+    On the open web the button tells you how to pay instead. The machine appears in minutes; the node answers once it has
+    caught up with chain history (~470 GB — hours, not minutes). <strong style="color:var(--ink)">Money honesty:</strong>
+    the machine costs us about $285/mo at list; the balance is the babysitting. Cancel anytime — a lapsed
+    subscription gets 7 days' grace before the machine goes back.</p>
+  </div>
+
+  <footer>
+    Full protocol walkthrough: <a href="/client/">fiddy.fun/client</a> ·
+    Repo (MIT): <a href="https://github.com/ivcained/fiddy">github.com/ivcained/fiddy</a>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ipRe = /^(\d{1,3}\.){3}\d{1,3}$/;
+let timer = null;
+
+$('ip').addEventListener('input', () => {
+  const ip = $('ip').value.trim();
+  const ok = ipRe.test(ip);
+  $('cmds').hidden = $('copyrow').hidden = $('statusCard').hidden = !ok;
+  if (ok) {
+    $('ip2').textContent = ip;
+    clearInterval(timer);
+    poll(ip);
+    timer = setInterval(() => poll(ip), 30000);
+  }
+});
+
+$('copy').addEventListener('click', () => {
+  const text = $('cmds').innerText;
+  navigator.clipboard?.writeText(text).then(() => {
+    $('copy').textContent = 'Copied';
+    setTimeout(() => $('copy').textContent = 'Copy commands', 1200);
+  });
+});
+
+// Every command block gets a click-to-copy button (same as the tutorial).
+document.querySelectorAll('pre').forEach(pre => {
+  pre.style.position = 'relative';
+  const btn = document.createElement('button');
+  btn.textContent = 'copy';
+  btn.setAttribute('aria-label', 'Copy this command block');
+  btn.style.cssText = 'position:absolute;top:8px;right:8px;z-index:2;background:rgba(22,23,21,0.85);border:1px solid rgba(255 255 255 / 0.14);border-radius:6px;padding:3px 10px;cursor:pointer;font:12px var(--mono);color:var(--ink-dim)';
+  btn.addEventListener('click', () => {
+    navigator.clipboard?.writeText(pre.innerText).then(() => {
+      btn.textContent = 'copied';
+      setTimeout(() => btn.textContent = 'copy', 1200);
+    });
+  });
+  pre.appendChild(btn);
+});
+
+// "Hand it to your AI agent" — one self-contained prompt, any agent.
+// The detail lives in the agent-readable skill.md, not here.
+const AGENT_PROMPT = `Help me run my own Farcaster node and client: https://fiddy.fun/client/skill.md`;
+
+document.querySelectorAll('.abtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const note = $('agentNote');
+    navigator.clipboard?.writeText(AGENT_PROMPT).then(() => {
+      const url = btn.dataset.agent;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
+        note.textContent = `Copied — paste it into ${btn.textContent} and send.`;
+      } else if (btn.textContent === 'Hermes') {
+        note.textContent = 'Copied — paste it into a new Hermes chat (or any agent with shell access) and send.';
+      } else {
+        note.textContent = 'Copied — paste it into any AI agent that can run shell commands.';
+      }
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.textContent = btn.dataset.label || btn.textContent; }, 1200);
+    });
+    btn.dataset.label = btn.dataset.label || btn.textContent;
+  });
+});
+
+async function poll(ip) {
+  const el = $('status');
+  try {
+    const r = await fetch(`http://${ip}:3381/v1/info`, { signal: AbortSignal.timeout(8000) });
+    const d = await r.json();
+    // Build with textContent only: this data comes from a remote server.
+    const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+    const shards = (d.shardInfos || []).map(s => `shard ${num(s.shardId)}: height ${num(s.maxHeight)}`).join(' · ');
+    const live = document.createElement('span');
+    live.className = 'live';
+    live.textContent = '● LIVE';
+    el.replaceChildren(live, document.createTextNode(` — ${num(d.dbStats?.numMessages).toLocaleString()} messages synced\n${shards}`));
+  } catch {
+    const wait = document.createElement('span');
+    wait.className = 'wait';
+    wait.textContent = '… bootstrapping (API answers when the snapshot finishes)';
+    el.replaceChildren(wait);
+  }
+}
+</script>
+<script src="/client/assets/miniapp-sdk.min.js"></script>
+<script>
+// Managed-by-Fiddy, now self-serve: pay $480 USDC from your Farcaster wallet and
+// OUR account provisions the node. Two rules the page enforces, because the
+// server does:
+//   1. an order exists only if Base confirms the transfer to us — a payment that
+//      has not mined is not an order, and the page says which of the two it is;
+//   2. the node starts only when you sign in with the Farcaster account that
+//      paid, and that same sign-in is the only thing that ever returns the
+//      terminal link. There is no path here that spends money quietly.
+const PAY_TO = '0xde4dcfca310b6a7ade321b6981363e2d7e0323d9';
+const USDC_BASE = 'eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+// The price is the server's, not this file's: the status answer carries it and
+// setPrice() writes it into the headline, the button and the amount. A price
+// change is then one env change, not a release.
+let PRICE_USDC = 320;
+let AMOUNT = '320000000';
+
+function setPrice(usdc) {
+  if (typeof usdc !== 'number' || !isFinite(usdc) || usdc <= 0) return;
+  PRICE_USDC = usdc;
+  AMOUNT = String(Math.round(usdc * 1e6));
+  const label = $('priceLabel');
+  if (label) label.textContent = '$' + (Number.isInteger(usdc) ? usdc : usdc.toFixed(2));
+  const pay = $('payBtn');
+  if (pay && /^Pay \$/.test(pay.textContent)) pay.textContent = 'Pay $' + usdc + ' USDC & deploy';
+}
+
+// One sentence per state, written for a person waiting on a download.
+const STATE_TEXT = {
+  pending: 'paid · sign in to start it',
+  provisioning: 'creating your machine…',
+  bootstrapping: 'machine up · downloading chain history',
+  live: 'live',
+  stopped: 'stopped',
+  terminated: 'retired',
+  failed: 'provisioning failed — we are on it',
+};
+
+function line(parts) {
+  const view = $('subView');
+  view.replaceChildren(...parts);
+  view.hidden = false;
+}
+
+function span(className, text, color) {
+  const node = document.createElement('span');
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  if (color) node.style.color = color;
+  return node;
+}
+
+function link(href, text) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = text;
+  a.rel = 'noreferrer';
+  return a;
+}
+
+function stateDot(state) {
+  const color = state === 'live' ? 'var(--lime)' : state === 'failed' ? '#ff8a5c' : '#ffd166';
+  return span('', '●', color);
+}
+
+// The one path to a terminal link: a challenge we issued, signed in the host,
+// exchanged for that FID's token'd URLs. Called on demand — not on every load —
+// because the host shows a sign-in sheet each time.
+async function signedInNode(fid) {
+  const sdk = window.miniapp && window.miniapp.sdk;
+  if (!sdk) return { error: 'Open this page inside a Farcaster client to sign in.' };
+  let challenge;
+  try {
+    challenge = await fetch('/api/fiddy/managed-node/claim?fid=' + encodeURIComponent(fid)).then((r) => (r.ok ? r.json() : null));
+  } catch { challenge = null; }
+  if (!challenge || !challenge.nonce) return { error: 'Could not start a sign-in. Try again in a moment.' };
+  let signed;
+  try {
+    signed = await sdk.actions.signIn({ nonce: challenge.nonce });
+  } catch {
+    return { error: 'Sign-in was cancelled, so nothing was started.' };
+  }
+  let r;
+  try {
+    r = await fetch('/api/fiddy/managed-node/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fid, nonce: challenge.nonce, message: signed.message, signature: signed.signature }),
+    });
+  } catch {
+    return { error: 'We could not reach the server. Try again in a moment.' };
+  }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { error: d.message || 'We could not match that sign-in to your payment.' };
+  return d;
+}
+
+async function showSubscription(fid) {
+  try {
+    const r = await fetch('/api/fiddy/managed-node/status?fid=' + encodeURIComponent(fid));
+    if (!r.ok) return;
+    const d = await r.json();
+    // Whatever the server says the price is, that is what this page charges.
+    if (typeof d.priceUsdc === 'number') setPrice(d.priceUsdc);
+    if (!d.subscribed) return;
+    renderSubscription(fid, d);
+    // While the machine is being made, keep looking — and stop looking once it
+    // is live, because a node that answers does not need watching.
+    if (['provisioning', 'bootstrapping'].includes(d.state)) schedulePoll(fid);
+  } catch { /* status is a nicety; never break the pay flow */ }
+}
+
+function renderSubscription(fid, d) {
+  const since = new Date(d.since).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const renews = new Date(d.renewsOn).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const parts = [
+    stateDot(d.state),
+    document.createTextNode(` ${STATE_TEXT[d.state] || d.state} · subscribed ${since} · ${d.daysLeft} days left` +
+      (d.daysLeft <= 5 ? ' — time to renew' : '')),
+  ];
+  if (d.state === 'live' && typeof d.height === 'number' && d.height > 0) {
+    parts.push(document.createTextNode(` · height ${d.height.toLocaleString()}`));
+  } else if (d.state === 'bootstrapping' || d.state === 'provisioning') {
+    parts.push(document.createTextNode(' · bootstrap takes hours, not minutes'));
+  }
+  parts.push(document.createTextNode(` · renews ${renews}`));
+
+  if (d.terminalAvailable) {
+    const open = document.createElement('button');
+    open.className = 'btn ghost';
+    open.style.marginLeft = '10px';
+    open.textContent = 'Open your node';
+    open.addEventListener('click', async () => {
+      const before = open.textContent;
+      open.textContent = 'Signing in…';
+      const result = await signedInNode(fid);
+      open.textContent = before;
+      if (result.error) { $('payStatus').textContent = result.error; return; }
+      renderTerminal(result);
+    });
+    parts.push(open);
+  }
+  if (d.error && d.state === 'failed') parts.push(document.createTextNode(` · ${d.error}`));
+  line(parts);
+  $('payBtn').textContent = d.daysLeft <= 5 ? 'Renew — $' + PRICE_USDC + ' USDC' : 'Renew early';
+}
+
+function renderTerminal(node) {
+  const parts = [document.createTextNode('your node: '), link(node.endpointUrl, node.endpointUrl)];
+  if (node.terminalUrl) {
+    parts.push(document.createTextNode(' · '));
+    parts.push(link(node.terminalUrl, 'open the terminal'));
+  }
+  // A sentence, not a footnote: the terminal holds no keys.
+  parts.push(document.createTextNode(' · ops shell for logs and status; the node holds no keys'));
+  line(parts);
+  $('payStatus').textContent = '✓ Signed in. The endpoint and terminal are yours.';
+}
+
+let pollTimer = null;
+function schedulePoll(fid) {
+  if (pollTimer) return;
+  let tries = 0;
+  pollTimer = setInterval(async () => {
+    tries += 1;
+    if (tries > 40) { clearInterval(pollTimer); pollTimer = null; return; }
+    try {
+      const r = await fetch('/api/fiddy/managed-node/status?fid=' + encodeURIComponent(fid));
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.subscribed) renderSubscription(fid, d);
+      if (d.state === 'live' || d.state === 'failed' || d.state === 'terminated') {
+        clearInterval(pollTimer); pollTimer = null;
+      }
+    } catch { /* keep polling; the next tick may work */ }
+  }, 20000);
+}
+
+$('payBtn').addEventListener('click', async () => {
+  const status = $('payStatus');
+  const sdk = window.miniapp && window.miniapp.sdk;
+  if (!sdk) {
+    status.textContent = 'Open this page inside a Farcaster client (e.g. Warpcast) to pay from your Farcaster wallet.';
+    return;
+  }
+  status.textContent = 'Opening your wallet…';
+  try {
+    await sdk.actions.ready();
+    const ctx = await Promise.race([sdk.context, new Promise((_, rej) => setTimeout(() => rej(new Error('host-timeout')), 5000))]);
+    const fid = ctx && ctx.user && ctx.user.fid;
+    if (!fid) { status.textContent = 'Could not read your Farcaster account from the host.'; return; }
+    const result = await sdk.actions.sendToken({
+      token: USDC_BASE,
+      amount: AMOUNT,
+      recipientAddress: PAY_TO,
+    });
+    if (!result || !result.success) { status.textContent = 'Payment cancelled — nothing was charged.'; return; }
+    const txHash = result.send && result.send.transaction;
+    status.textContent = 'Paid. Waiting for Base to confirm the transfer…';
+    const r = await fetch('/api/fiddy/managed-node', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fid, address: (ctx.user.custodyAddress || ''), txHash: txHash || '' }),
+    });
+    const order = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      // The server names the reason (not mined yet, not to us, too small), and
+      // the tx hash is the receipt either way.
+      status.textContent = order.message
+        ? `${order.message} Your receipt: https://basescan.org/tx/${txHash}`
+        : 'We could not register the order. Your receipt: https://basescan.org/tx/' + txHash;
+      return;
+    }
+    status.textContent = '✓ Payment recorded. Sign in to start your node…';
+    // The order is in. Starting the node is a separate, signed step: it is what
+    // binds the machine — and the terminal link — to this account.
+    const started = await signedInNode(fid);
+    if (started.error) {
+      status.textContent = `✓ Paid and recorded. ${started.error} Your node starts the moment you sign in.`;
+      showSubscription(fid);
+      return;
+    }
+    status.textContent = started.started
+      ? '✓ Your node is being created. This page will follow it.'
+      : '✓ Your node is already running on this subscription.';
+    renderTerminal(started);
+    showSubscription(fid);
+  } catch (e) {
+    status.textContent = 'Something failed: ' + (e && e.message ? e.message : String(e)) + ' — if you paid, your tx hash is your receipt; message @ivc.';
+  }
+});
+
+// On load: clear the host splash (ready), then if a Farcaster host knows this
+// user, show what their subscription and node are doing.
+(function () {
+  const sdk = window.miniapp && window.miniapp.sdk;
+  if (!sdk) return;
+  try { sdk.actions.ready(); } catch (e) { /* not in a host */ }
+  Promise.race([sdk.context, new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 4000))])
+    .then((ctx) => { const fid = ctx && ctx.user && ctx.user.fid; if (fid) showSubscription(fid); })
+    .catch(() => {});
+})();
+</script>
+</body>
+</html>

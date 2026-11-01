@@ -1,0 +1,62 @@
+/* The backup reminder, and the words behind the tap.
+ *
+ * One card, in the same glass as the rest of the setup surfaces, because a
+ * notice about the thing that owns the account must not look like advertising.
+ * The blurred state is the point of `[data-hidden='true']`: the words are on
+ * screen but unreadable until the person asks for them, so nothing sensitive is
+ * legible to whoever walks past.
+ */
+
+.fiddy-notice {
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1.5px solid var(--fiddy-glass-border);
+  border-radius: 16px;
+  background: var(--fiddy-glass);
+  backdrop-filter: blur(14px);
+  text-align: left;
+}
+
+.fiddy-notice h2 {
+  margin: 0;
+}
+
+.fiddy-notice .fiddy-primary-btn,
+.fiddy-notice .fiddy-quiet-btn {
+  padding: 8px 14px;
+  font-size: 13.5px;
+}
+
+/* The reveal block. Blurred, unselectable and unreadable until tapped —
+   deliberately, so the words are never legible over a shoulder. */
+.fiddy-notice [data-fiddy='seed-backup-words'][data-hidden='true'] {
+  user-select: none;
+  cursor: pointer;
+}
+
+.fiddy-notice [data-fiddy='seed-backup-words'][data-hidden='false'] {
+  background: var(--fiddy-glass-strong, rgba(255, 255, 255, 0.55));
+}
+
+.fiddy-notice [data-fiddy='seed-backup-words'] ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The thanks line after the confirm step, so the win is visible. */
+.fiddy-notice[data-fiddy='seed-backup-thanks'] .fiddy-quiet-btn {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
+/* At 390 the card has to hold its own: the two actions stack rather than
+   shrinking into an unreadable pair. */
+@media (max-width: 430px) {
+  .fiddy-notice .fiddy-primary-btn,
+  .fiddy-notice .fiddy-quiet-btn[data-fiddy='seed-backup-not-now'] {
+    width: 100%;
+  }
+}

@@ -811,16 +811,19 @@ export const CastImageViewer: React.FC<CastImageViewerProps> = ({
                       const parts = [];
 
                       // Only add like count if not zero
-                      if (cast.reactions.count > 0) {
+                      // (a count can be absent — see `ApiCast` — which is not
+                      // the same as zero; this app reads the hosted API, where
+                      // it never is).
+                      if ((cast.reactions?.count ?? 0) > 0) {
                         parts.push(
-                          `${cast.reactions.count} like${cast.reactions.count === 1 ? '' : 's'}`,
+                          `${cast.reactions?.count} like${cast.reactions?.count === 1 ? '' : 's'}`,
                         );
                       }
 
                       // Only add recast count if not zero
-                      if (cast.recasts.count > 0) {
+                      if ((cast.recasts?.count ?? 0) > 0) {
                         parts.push(
-                          `${cast.recasts.count} recast${cast.recasts.count === 1 ? '' : 's'}`,
+                          `${cast.recasts?.count} recast${cast.recasts?.count === 1 ? '' : 's'}`,
                         );
                       }
 

@@ -6,7 +6,11 @@ import {
   ShareIcon,
 } from '@primer/octicons-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ApiUser, ApiUserProfile } from 'farcaster-client-data';
+import {
+  ApiUser,
+  ApiUserProfile,
+  getFiddyProfileUrl,
+} from 'farcaster-client-data';
 import { useCallback, useState } from 'react';
 
 import { DropdownMenuItem } from '~/components/dropdownMenu/DropdownMenuItem';
@@ -40,13 +44,15 @@ const ProfileMenuActions: React.FC<ProfileMenuActionsProps> = ({
     (e: Event) => {
       e.stopPropagation();
 
-      const profileUri = user.username
-        ? `https://farcaster.xyz/${user.username}`
-        : `https://farcaster.xyz/~/profiles/${user.fid}`;
+      // The link a profile shares is this client's own profile route, by FID:
+      // it is the page we can open (a node answers a profile by FID) and the
+      // page that renders its own card (`server/unfurl/`). Upstream's
+      // `farcaster.xyz/<handle>` link is a different product's front door.
+      const profileUri = getFiddyProfileUrl({ fid: user.fid });
 
       navigator.clipboard.writeText(profileUri);
     },
-    [user.fid, user.username],
+    [user.fid],
   );
 
   const reportUserClicked = useCallback(() => {

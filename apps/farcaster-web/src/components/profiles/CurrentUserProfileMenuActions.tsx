@@ -6,7 +6,11 @@ import {
   ShareIcon,
 } from '@primer/octicons-react';
 import classNames from 'classnames';
-import { ApiUser, ApiUserProfile } from 'farcaster-client-data';
+import {
+  ApiUser,
+  ApiUserProfile,
+  getFiddyProfileUrl,
+} from 'farcaster-client-data';
 import { useCallback, useRef, useState } from 'react';
 
 import { UserExtrasModal } from '~/components/modals/UserExtrasModal';
@@ -44,15 +48,14 @@ const CurrentUserProfileMenuActions: React.FC<
     (e: React.SyntheticEvent) => {
       e.stopPropagation();
 
-      const profileUri = user.username
-        ? `https://farcaster.xyz/${user.username}`
-        : `https://farcaster.xyz/~/profiles/${user.fid}`;
+      // This client's own profile route, by FID — see ProfileMenuActions.
+      const profileUri = getFiddyProfileUrl({ fid: user.fid });
 
       navigator.clipboard.writeText(profileUri);
 
       setOpen(false);
     },
-    [user.fid, user.username],
+    [user.fid],
   );
 
   const viewUserExtrasClicked = useCallback(() => {

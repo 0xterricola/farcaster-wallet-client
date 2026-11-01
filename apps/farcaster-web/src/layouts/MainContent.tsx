@@ -2,7 +2,7 @@ import cn from 'classnames';
 import { FC, memo, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
-import { FullScreenErrorBoundary } from '~/components/errors/FullScreenErrorBoundary';
+import { ShellSectionErrorBoundary } from '~/components/errors/ShellSectionErrorBoundary';
 import { FullScreenLoadingIndicator } from '~/components/loaders/FullScreenLoadingIndicator';
 import { usePageLayoutSize } from '~/hooks/layout/usePageLayout';
 import { MobileHeader } from '~/layouts/MobileHeader';
@@ -20,9 +20,14 @@ const MainContent: FC = memo(() => {
     >
       <MobileHeader />
       <Suspense fallback={<FullScreenLoadingIndicator />}>
-        <FullScreenErrorBoundary>
+        {/* A page that cannot load stays inside the shell: the chrome, the nav
+            and the banner saying whose session this is all survive, and only
+            this column says what it cannot reach. The fork's full-screen
+            boundary here would take the whole client down and, with a
+            device-only session, offer a retry that cannot succeed. */}
+        <ShellSectionErrorBoundary label="This page">
           <Outlet />
-        </FullScreenErrorBoundary>
+        </ShellSectionErrorBoundary>
       </Suspense>
     </main>
   );

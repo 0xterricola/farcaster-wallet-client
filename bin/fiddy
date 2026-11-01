@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# fiddy — three commands to your own Farcaster client on your own read node.
+#
+#   fiddy provision   # (0) provision compute (AWS, or register any server over SSH)
+#   fiddy node up     # (1) install + sync a read node on that compute
+#                     #     --network snapchain (default) | hypersnap
+#   fiddy client up   # (2) run the Fiddy client pointed at your node
+#                     #     --network snapchain (default) | hypersnap
+#
+# Two networks, same idea. Snapchain is Farcaster's own network — the one every
+# account, cast and follow lives on; pick this. Hypersnap is an independent
+# parallel network built by the Quilibrium community — same kind of social data,
+# different plumbing and different economics; it is for explorers, not where your
+# Farcaster account lives. Only one of the two needs a node of your own: fiddy
+# client up --network hypersnap reads the public Hypersnap node as it is.
+#
+# No API keys from anyone. You furnish the compute; the node syncs the network.
+set -euo pipefail
+
+[ -n "${BASH_VERSION:-}" ] || { echo "fiddy needs bash (bash bin/fiddy …)" >&2; exit 1; }
+
+FIDDY_HOME="${FIDDY_HOME:-$HOME/.fiddy}"
+# Resolve symlinks (e.g. /usr/local/bin/fiddy → repo/bin/fiddy) so FIDDY_REPO
+# is the real checkout, not the symlink's directory.
+FIDDY_SRC="${BASH_SOURCE[0]}"
+while [ -L "$FIDDY_SRC" ]; do
+  FIDDY_DIR="$(cd -P "$(dirname "$FIDDY_SRC")" && pwd)"
+  FIDDY_SRC="$(readlink "$FIDDY_SRC")"
+  case "$FIDDY_SRC" in /*) ;; *) FIDDY_SRC="$FIDDY_DIR/$FIDDY_SRC" ;; esac
+done
+FIDDY_REPO="$(cd -P "$(dirname "$FIDDY_SRC")/.." && pwd)"
+export FIDDY_HOME FIDDY_REPO
+
+source "$FIDDY_REPO/cli/lib/common.sh"
+source "$FIDDY_REPO/cli/networks.sh"
+
+usage() {
+  cat <<'EOF'
+fiddy — your own Farcaster client on your own node.
+
+Usage: fiddy <command> [options]
+
+  provision   Provision compute for your node
+              --aws                       create an AWS EC2 instance (needs aws CLI)
+              --ssh user@host             use any server you already have
+  up          Everything, one command: doctor → node up → client up
+  node        Manage your read node
+              up [--network N] [--local] [--force]
+                                          N = snapchain (default) | hypersnap
+                                          install + start + wait for the API.
+                                          hypersnap prints what is known and
+                                          stops: its published install does not
+                                          produce a node that follows the chain.
+              status                      sync status and health
+              logs                        tail node logs
+              start | stop | upgrade      lifecycle without the log tail
+  console     One command to the GUI: starts herdr/Ovis on the box,
+              opens the SSH tunnel for you, launches the browser.
+              open (default) | stop (close the tunnel)
+  client      Run the Fiddy client
+              up [--network N] [--tunnel] [--build]
+                                          N = snapchain (default) | hypersnap
+                                          dev server, SSH tunnel, or prod build.
+                                          hypersnap needs no node: it reads the
+                                          public Hypersnap node.
+              check                       where the client's reads go today
+  doctor      Check local prerequisites
+  install     Put `fiddy` on PATH permanently (symlink into /usr/local/bin)
+  config      Show current fiddy configuration
+
+A mainnet read node needs 4 vCPU, 16 GB RAM and 1.5 TB free disk (snapshot
+bootstrap needs scratch on top of that). fiddy checks the target first and
+will not fill a machine that cannot host it; --force overrides the check.
+That is the price of a node, not of picking a network: reading Hypersnap costs
+nothing and installs nothing — fiddy client up --network hypersnap.
+
+Docs: https://fiddy.fun/client
+EOF
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  provision) source "$FIDDY_REPO/cli/provision.sh"; provision_main "$@" ;;
+  up)
+    # One-shot: check the machine, bring the node up, then the client.
+    # Any flag (e.g. --local, --force, --tunnel) passes through to both.
+    source "$FIDDY_REPO/cli/doctor.sh"; doctor_main
+    source "$FIDDY_REPO/cli/node.sh";    node_main up "$@"
+    source "$FIDDY_REPO/cli/client.sh";  client_main up "$@"
+    ;;
+  node)      source "$FIDDY_REPO/cli/node.sh";      node_main "$@" ;;
+  console)   source "$FIDDY_REPO/cli/console.sh";   console_main "$@" ;;
+  client)    source "$FIDDY_REPO/cli/client.sh";    client_main "$@" ;;
+  doctor)    source "$FIDDY_REPO/cli/doctor.sh";    doctor_main "$@" ;;
+  install)
+    target=/usr/local/bin/fiddy
+    if [ -w /usr/local/bin ] 2>/dev/null; then
+      ln -sf "$FIDDY_REPO/bin/fiddy" "$target"
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo ln -sf "$FIDDY_REPO/bin/fiddy" "$target"
+    else
+      die "need sudo to write $target — run: sudo ln -sf $FIDDY_REPO/bin/fiddy $target"
+    fi
+    ok "installed: $target → $FIDDY_REPO/bin/fiddy (every new shell finds \`fiddy\` now)"
+    ;;
+  config)    config_load; config_show ;;
+  ""|-h|--help|help) usage ;;
+  *) die "unknown command: $cmd (try: fiddy --help)" ;;
+esac

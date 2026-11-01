@@ -1,3 +1,4 @@
+export * from './optimisticallySteppedCount';
 export * from './useOptimisticallyAddNewCastToThread';
 export * from './useOptimisticallyAddNewDirectCastConversation';
 export * from './useOptimisticallyAddNewDirectCastConversationToInbox';

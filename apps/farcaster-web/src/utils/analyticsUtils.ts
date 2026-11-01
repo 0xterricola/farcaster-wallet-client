@@ -1,6 +1,10 @@
 import posthog from 'posthog-js';
 
-import { posthogApiHost, posthogApiKey } from '~/constants/analytics';
+import {
+  analyticsConfigured,
+  posthogApiHost,
+  posthogApiKey,
+} from '~/constants/analytics';
 
 type EventProperties = Record<string, unknown> | undefined;
 type FeatureFlagsCallback = Parameters<typeof posthog.onFeatureFlags>[0];
@@ -18,6 +22,15 @@ const Analytics = {
 
   enable: (): void => {
     disabled = false;
+
+    if (!analyticsConfigured) {
+      // No real key in this build (see `~/constants/analytics`): posthog-js is
+      // never initialised, so no request leaves the page and nothing is written
+      // to storage. The fork's template key used to reach ph.neynar.com on every
+      // load and come back 404/401 — a measurement of nothing, aimed at someone
+      // else's account. MEASURED (2026-10-21) on the live site.
+      return;
+    }
 
     if (!posthogInitialized) {
       posthog.init(posthogApiKey, {

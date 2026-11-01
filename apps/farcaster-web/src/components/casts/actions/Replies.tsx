@@ -37,6 +37,7 @@ const Replies: FC<CastActionProps> = memo(
         <CastReactionAction
           icon={<ReplyIcon />}
           count={cast.replies.count}
+          countMarker="replies"
           isFocused={!!isFocused}
           variant="purple"
           disabled={!isSignedIn || disabled || cast.replyDisabled}

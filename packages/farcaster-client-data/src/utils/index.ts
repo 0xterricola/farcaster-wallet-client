@@ -5,6 +5,7 @@ export * from './ChainUtils';
 export * from './DateUtils';
 export * from './ErrorUtils';
 export * from './EthereumUtils';
+export * from './FiddyUrlUtils';
 export * from './MiniAppUtils';
 export * from './MoneyUtils';
 export * from './ObjectUtils';

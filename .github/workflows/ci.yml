@@ -1,0 +1,85 @@
+name: Verify Fiddy
+
+# The repo's own gates, on every push to main and every pull request.
+#
+# One runner per gate (matrix) so a red gate never hides the other two: the
+# run's conclusion names which of lint / typecheck / test broke.
+#
+# Scope is the farcaster-web package, where the client, the snapchain seams and
+# their tests live:
+#   lint      -> eslint
+#   typecheck -> tsc -p tsconfig.json --noEmit
+#   test      -> vitest run
+# The probes under apps/farcaster-web/scripts/ are deliberately NOT here: they
+# drive a live node and a headless Chrome against a running client, so they are
+# run by hand, not on a runner.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fiddy-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ${{ matrix.gate }} (farcaster-web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [lint, typecheck, test]
+    env:
+      # The repo installs husky from `prepare`; hooks are pointless on a runner.
+      HUSKY: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      # farcaster-web imports the workspace packages by name and reads their
+      # `dist` (gitignored), so both typecheck and test need them built first;
+      # lint does not.
+      - name: Build workspace packages
+        if: matrix.gate != 'lint'
+        run: pnpm build:packages
+
+      - name: ${{ matrix.gate }}
+        run: pnpm --filter farcaster-web ${{ matrix.gate }}
+
+  # The deploy-agent is the one component that spends money and the only one no
+  # other gate executes (lint/typecheck/test never load services/deploy-agent).
+  # Measured 2026-10-24: a job-killing ASI bug in it shipped green through all
+  # three gates and only showed up when a real provision crashed. Hermetic: a
+  # temp repo with stub scripts, no AWS, no network.
+  agent:
+    name: deploy-agent smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HUSKY: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: smoke
+        run: node tests/deploy-agent-smoke.mjs

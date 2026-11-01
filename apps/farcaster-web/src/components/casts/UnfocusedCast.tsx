@@ -23,6 +23,7 @@ import { Replies } from '~/components/casts/actions/Replies';
 import { CastAttachmentsSection } from '~/components/casts/CastAttachmentsSection';
 import { CastAuthorLine } from '~/components/casts/CastAuthorLine';
 import { CastTranslationTopHat } from '~/components/casts/CastTranslationTopHat';
+import { ClampedCastBody } from '~/components/casts/ClampedCastBody';
 import { DeletedCast } from '~/components/casts/DeletedCast';
 import { FeedItemTopHat } from '~/components/casts/FeedItemTopHat';
 import { IncludeReasonTopHat } from '~/components/casts/IncludeReasonTopHat';
@@ -47,18 +48,6 @@ import { ApiCastWithContext } from '~/types';
 import { useHorizontalDragScroll } from '~/utils/castUtils';
 
 import { ShareCast } from './actions/ShareCast';
-
-const EXTRA_WHITESPACE_FOR_SHOW_MORE_HANDLING = ' ';
-
-// https://gist.ake.cx/redoPop/184082fcfa28bb14380097457a666f2f
-function useClampCheck(): [boolean, React.RefCallback<HTMLElement>] {
-  const [clamped, setClamped] = React.useState(false);
-
-  const ref: React.RefCallback<HTMLElement> = (el) =>
-    setClamped(Boolean(el && el.scrollHeight > el.clientHeight));
-
-  return [clamped, ref];
-}
 
 type UnfocusedCastProps = Omit<CastProps, 'isFocused'> & {
   CastTopHatForNotificationsComponent?: ReactNode;
@@ -87,10 +76,9 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
     isAppsDialog = false,
     onMiniAppLaunch,
     isAdminGatedFeedCast = false,
+    readOnly = false,
   }) => {
     const { cast, context } = castWithContext;
-
-    const [isClamped, ref] = useClampCheck();
 
     const {
       isFirstInList,
@@ -127,6 +115,10 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
       displayText,
       hasTranslation,
       isTranslationPending,
+      isTranslationOffered,
+      isAsking,
+      notice,
+      offerTranslation,
       showOriginal,
       sourceLanguageName,
       toggleLabel,
@@ -136,7 +128,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
     const {
       nonLinkfiedText,
       text: processedText,
-      isTruncatedCastText,
       hasAttachments,
       hasNonCarouselAttachments,
       castAttachment,
@@ -147,7 +138,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
       cast,
       castText: displayText,
       isFocusedCast: false,
-      truncateCastText: shouldTruncateCastText,
       draggingRef,
       onMiniAppLaunch: isAppsDialog ? onMiniAppLaunch : undefined,
     });
@@ -200,7 +190,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
           trackCastClick({ type: CastClickType.Cast });
           navigateToConversation({
             castHash: cast.hash,
-            authorUsername: cast.author.username,
             ...(castOpenIncludeReason
               ? { includeReason: castOpenIncludeReason }
               : {}),
@@ -208,7 +197,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
           });
         },
         [
-          cast.author.username,
           cast.hash,
           castOpenIncludeReason,
           navigateToConversation,
@@ -227,7 +215,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
           trackCastClick({ type: CastClickType.Cast });
           navigateToConversation({
             castHash: cast.hash,
-            authorUsername: cast.author.username,
             ...(castOpenIncludeReason
               ? { includeReason: castOpenIncludeReason }
               : {}),
@@ -236,7 +223,6 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
         }
       },
       [
-        cast.author.username,
         cast.hash,
         castOpenIncludeReason,
         navigateToConversation,
@@ -267,9 +253,7 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
 
     const currentUser = useCachedCurrentUser();
 
-    const onShowMoreClick = useCallback((event: MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
+    const onExpandCastBody = useCallback(() => {
       setShowFullCastBody(true);
     }, []);
 
@@ -325,7 +309,10 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
               (isPinned || cast.pinned) && shouldShowPinnedLabel && 'mt-4',
               interactionTopHat && 'mt-4',
               includeReasonTopHatType && 'mt-4',
-              (hasTranslation || isTranslationPending) && 'mt-4',
+              (hasTranslation ||
+                isTranslationPending ||
+                isTranslationOffered) &&
+                'mt-4',
               typeof CastTopHatForNotificationsComponent !== 'undefined' &&
                 'mt-4',
             )}
@@ -359,9 +346,15 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
               />
             )}
             {interactionTopHat && <FeedItemTopHat topHat={interactionTopHat} />}
-            {(hasTranslation || isTranslationPending) && (
+            {(hasTranslation ||
+              isTranslationPending ||
+              isTranslationOffered) && (
               <CastTranslationTopHat
                 isPending={isTranslationPending}
+                isOffered={isTranslationOffered}
+                isAsking={isAsking}
+                notice={notice}
+                onOffer={offerTranslation}
                 sourceLanguageName={sourceLanguageName}
                 showOriginal={showOriginal}
                 toggleLabel={toggleLabel}
@@ -453,37 +446,18 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
                   )}
                 <div className="flex flex-row pl-[72px] pr-4">
                   <div className="flex flex-col whitespace-pre-wrap break-words text-base leading-5 tracking-normal">
-                    <div
-                      className={cn(
-                        shouldTruncateCastText && 'line-clamp-feed',
-                        '[overflow-wrap:anywhere]',
-                      )}
-                      ref={ref}
+                    {/*
+                      One measurement, one button, re-taken whenever the text
+                      changes or the box it is drawn in resizes: see
+                      `ClampedCastBody`.
+                    */}
+                    <ClampedCastBody
+                      fold={shouldTruncateCastText}
+                      text={nonLinkfiedText}
+                      onExpand={onExpandCastBody}
                     >
                       {processedText}
-                      {isTruncatedCastText &&
-                        EXTRA_WHITESPACE_FOR_SHOW_MORE_HANDLING}
-                      {isTruncatedCastText && !showFullCastBody && (
-                        <button
-                          type="button"
-                          className="inline cursor-pointer border-0 bg-transparent p-0 text-link hover:underline"
-                          onClick={onShowMoreClick}
-                          onMouseDown={(event) => event.stopPropagation()}
-                        >
-                          Show more
-                        </button>
-                      )}
-                    </div>
-                    {isClamped && !showFullCastBody && (
-                      <button
-                        type="button"
-                        className="inline cursor-pointer border-0 bg-transparent p-0 text-left text-link hover:underline"
-                        onClick={onShowMoreClick}
-                        onMouseDown={(event) => event.stopPropagation()}
-                      >
-                        Show more
-                      </button>
-                    )}
+                    </ClampedCastBody>
                   </div>
                 </div>
                 <CastAttachmentsSection
@@ -504,7 +478,10 @@ const UnfocusedCastContent: FC<UnfocusedCastProps> = memo(
                       minWidth: mdAvatarDiameter + 16,
                     }}
                   />
-                  <UnfocusedCastActions castWithContext={castWithContext} />
+                  <UnfocusedCastActions
+                    castWithContext={castWithContext}
+                    readOnly={readOnly}
+                  />
                 </div>
               </div>
             </div>
@@ -520,12 +497,39 @@ UnfocusedCastContent.displayName = 'UnfocusedCastContent';
 
 function UnfocusedCastActions({
   castWithContext,
+  readOnly = false,
 }: {
   castWithContext: ApiCastWithContext;
+  readOnly?: boolean;
 }) {
   const isSignedIn = useIsSignedIn();
 
   const { context, cast } = castWithContext;
+
+  // Reading only, on purpose: a visitor with no account can see what a cast is
+  // worth (the numbers the network really holds) and share it, and nothing that
+  // needs an account is drawn at all. The surface that renders this says what
+  // signing in would add, once, rather than a dead button under every cast.
+  if (readOnly) {
+    return (
+      <div
+        className="flex w-full flex-row items-center gap-4 text-muted"
+        data-fiddy="read-only-cast-actions"
+      >
+        <span className="text-xs" data-fiddy="read-only-replies">
+          {cast.replies.count}
+          {cast.replies.count === 1 ? ' reply' : ' replies'}
+        </span>
+        <span className="text-xs" data-fiddy="read-only-recasts">
+          {cast.recasts?.count ?? 0} recasts
+        </span>
+        <span className="text-xs" data-fiddy="read-only-likes">
+          {cast.reactions?.count ?? 0} likes
+        </span>
+        <ShareCast cast={cast} isFocused={context.isFocused} />
+      </div>
+    );
+  }
 
   if (!isSignedIn) {
     return (

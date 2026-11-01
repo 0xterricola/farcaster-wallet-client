@@ -12,10 +12,10 @@ import {
   channelKeyExtractor,
   useAddFavoriteFeed,
   useNonSuspenseFeedSummaries,
+  useNonSuspenseUserPreferences,
   useRemoveFavoriteFeed,
   useSetFavoriteFeedPosition,
   useSetUserPreferences,
-  useUserPreferences,
 } from 'farcaster-client-hooks';
 import React, {
   FC,
@@ -28,6 +28,7 @@ import React, {
 
 import { NFT_IMAGE_UNAVAILABLE_URL } from '~/components/collections/CollectionNameWithImage';
 import { Divider } from '~/components/Divider';
+import { ShellSectionErrorBoundary } from '~/components/errors/ShellSectionErrorBoundary';
 import { Image } from '~/components/images/Image';
 import { NavLink } from '~/components/links/NavLink';
 import { NavLinkIcon } from '~/components/links/NavLinkIcon';
@@ -98,7 +99,7 @@ const ChannelNavLinksContent: FC = () => {
   const addFavoriteFeed = useAddFavoriteFeed();
   const removeFavoriteFeed = useRemoveFavoriteFeed();
   const setFavoriteFeedPosition = useSetFavoriteFeedPosition();
-  const { data: userPreferences } = useUserPreferences();
+  const { data: userPreferences } = useNonSuspenseUserPreferences();
   const setUserPreferences = useSetUserPreferences();
 
   const [expandFavoriteFeeds, setExpandFavoriteFeeds] = useState(
@@ -395,7 +396,16 @@ const ChannelNavLinksContent: FC = () => {
 ChannelNavLinksContent.displayName = 'ChannelNavLinksContent';
 
 const ChannelNavLinks: FC = memo(() => {
-  return <ChannelNavLinksContent />;
+  // Contained on purpose. The channel list is the sidebar's one fetched
+  // region, and when it cannot load the nav around it must not go with it:
+  // the nearest boundary above this used to be the app's full-screen one,
+  // which replaced the whole client (chrome, nav, the user's own avatar) with
+  // a generic error page. See ~/components/errors/ShellSectionErrorBoundary.
+  return (
+    <ShellSectionErrorBoundary label="Channels">
+      <ChannelNavLinksContent />
+    </ShellSectionErrorBoundary>
+  );
 });
 
 ChannelNavLinks.displayName = 'ChannelNavLinks';

@@ -216,6 +216,16 @@ describe('LI.FI portfolio', () => {
     expect(screen.getByRole('alert').textContent).toContain('LI.FI');
     expect(screen.queryByText(/No non-zero/)).toBeNull();
   });
+  it('names the chain that did not answer instead of blanking the surface', () => {
+    mocks.tokens.mockReturnValue({ isError: true });
+    render(<ExternalWalletPortfolio address={wallet} chain={celo} />);
+    const alert = screen.getByRole('alert').textContent;
+    expect(alert).toContain('Celo');
+    // The native coin is read from our own RPC, so it is not part of this
+    // failure and the copy says so.
+    expect(alert).toContain('CELO balance above');
+    expect(alert).toContain('unaffected');
+  });
   it('shows discovery loading', () => {
     mocks.tokens.mockReturnValue({ isPending: true });
     render(<ExternalWalletPortfolio address={wallet} />);

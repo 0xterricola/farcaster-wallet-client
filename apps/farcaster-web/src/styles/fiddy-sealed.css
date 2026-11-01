@@ -1,0 +1,162 @@
+/*
+ * Sealed casts: the card in a feed, the key offer, and the sealing surface.
+ *
+ * Colors come from the Fiddy shell's own variables with a fallback, because a
+ * sealed card renders in two places with different surrounds: inside the Fiddy
+ * shell (`--fiddy-*` are set there) and inside the fork's own feed, where they
+ * are not. The cashtag chip's own rules live in `fiddy-cashtag.css`, next to the
+ * component that needs them — a chip in an ordinary feed must not depend on a
+ * stylesheet that only loads when a sealed cast is on screen.
+ */
+
+.fiddy-sealed {
+  display: block;
+  max-width: 34rem;
+  margin: 0.5rem 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--fiddy-glass-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--fiddy-radius, 16px);
+  background: var(--fiddy-glass, rgba(255, 255, 255, 0.05));
+}
+
+.fiddy-sealed__head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.fiddy-sealed__head svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+
+.fiddy-sealed__line {
+  margin-top: 0.25rem;
+  font-size: 0.92em;
+  line-height: 1.45;
+  color: var(--fiddy-ink-dim, currentColor);
+  opacity: 0.85;
+}
+
+.fiddy-sealed__body {
+  margin-top: 0.6rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fiddy-sealed__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.fiddy-sealed__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border, rgba(255, 255, 255, 0.14));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.92em;
+  cursor: pointer;
+}
+
+.fiddy-sealed__button:hover {
+  border-color: var(--fiddy-accent, #d4ff3f);
+  color: var(--fiddy-accent, #d4ff3f);
+}
+
+.fiddy-sealed__button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.fiddy-sealed__button--loud {
+  background: var(--fiddy-accent, #d4ff3f);
+  border-color: transparent;
+  color: var(--fiddy-on-accent, #1a1c10);
+  font-weight: 600;
+}
+
+.fiddy-sealed__button--loud:hover {
+  color: var(--fiddy-on-accent, #1a1c10);
+  filter: brightness(1.05);
+}
+
+.fiddy-sealed__problem {
+  margin-top: 0.5rem;
+  font-size: 0.92em;
+  color: #ff9d9d;
+}
+
+.fiddy-sealed__key {
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  border: 1px dashed var(--fiddy-glass-border, rgba(255, 255, 255, 0.16));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8em;
+  overflow-wrap: anywhere;
+}
+
+.fiddy-sealed__field {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid var(--fiddy-glass-border, rgba(255, 255, 255, 0.16));
+  background: var(--fiddy-bg-raise, rgba(0, 0, 0, 0.2));
+  color: inherit;
+  font: inherit;
+}
+
+.fiddy-sealed__counter {
+  margin-top: 0.3rem;
+  font-size: 0.85em;
+  color: var(--fiddy-ink-dim, currentColor);
+  opacity: 0.85;
+}
+
+.fiddy-sealed__block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--fiddy-glass-border, rgba(255, 255, 255, 0.1));
+}
+
+.fiddy-sealed__label {
+  display: block;
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim, currentColor);
+  opacity: 0.8;
+}
+
+.fiddy-sealed__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+
+.fiddy-sealed__saved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.fiddy-sealed__saved li {
+  font-size: 0.9em;
+}

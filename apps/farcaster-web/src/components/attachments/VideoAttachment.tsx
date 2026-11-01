@@ -45,6 +45,22 @@ interface VideoAttachmentProps {
   renderHeight?: number;
   maxHeight?: number;
   maxWidth?: number;
+  /**
+   * The strip's shared tile height, when this attachment is one tile of a media
+   * strip (a cast whose embeds are several carousel-eligible ones).
+   *
+   * Every tile in a strip is the same height, and this is that height — the
+   * image and OG tiles already read it in `useCastBody`. With it the player
+   * fills the tile: it covers it while at rest, and switches to `contain` only
+   * while it is actually playing, so playback is never cropped.
+   *
+   * Borrowed from backmeupplz/quilcast (MIT) 0.10.13 `3bc542d90a63` — its
+   * `.strip .vid { min-height: 200px }` and `.strip .vid video { position:
+   * absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }` /
+   * `.strip .vid video:playing { object-fit: contain }` — on top of the shared
+   * tile height 0.10.7 `0abf1de11fba` introduced for images.
+   */
+  tileHeight?: number;
 }
 
 // Analytics dedupe flags. Owned by VideoAttachment (which stays mounted for
@@ -68,6 +84,8 @@ interface VideoPlayerProps {
   renderHeight?: number;
   maxHeight?: number;
   maxWidth?: number;
+  /** One tile of a strip: fill the tile instead of sizing to the media. */
+  fillTile: boolean;
   onPlayingChange?: (playing: boolean) => void;
   // Identifies this attachment in the app-global autoplay queue so duplicate
   // mounts of the same URL can't remove each other's queue entry.
@@ -102,7 +120,14 @@ const posterIsRenderable = (thumbnailUrl?: string): thumbnailUrl is string => {
 };
 
 const VideoAttachment: FC<VideoAttachmentProps> = memo((props) => {
-  const { renderWidth, renderHeight, maxHeight, maxWidth } = props;
+  const { renderWidth, renderHeight, maxHeight, maxWidth, tileHeight } = props;
+
+  /**
+   * A tile of a strip is the strip's shared height, and the player fills it
+   * (see `tileHeight`). Outside a strip nothing changes: the player keeps
+   * sizing itself from the media's own ratio.
+   */
+  const isStripTile = typeof tileHeight === 'number' && tileHeight > 0;
 
   const { aspectRatio } = useMemo(() => {
     return {
@@ -186,12 +211,20 @@ const VideoAttachment: FC<VideoAttachmentProps> = memo((props) => {
       ...props,
       inView,
       aspectRatio,
+      fillTile: isStripTile,
       onPlayingChange: handlePlayingChange,
       autoplayOwnerId,
       manualAutoplayOverrideRef,
       eventsEmittedRef,
     };
-  }, [props, inView, aspectRatio, handlePlayingChange, autoplayOwnerId]);
+  }, [
+    props,
+    inView,
+    aspectRatio,
+    isStripTile,
+    handlePlayingChange,
+    autoplayOwnerId,
+  ]);
 
   const isSafari = useMemo(() => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -210,18 +243,42 @@ const VideoAttachment: FC<VideoAttachmentProps> = memo((props) => {
     <div
       className={classNames(
         'flex shrink-0 flex-col overflow-hidden rounded-[12px] border border-default',
+        // A strip tile: it STRETCHES with the row like every sibling tile
+        // (`CastAttachmentsSection` renders the strip as a flex row, whose
+        // default `align-items: normal` is `stretch`), and the shared height is
+        // the row's own. MEASURED (2026-10-23, the node-backed client): with a
+        // height of its own the video tile was 2px off its siblings in one
+        // layout and 2px off the other way in the next — the image tile is
+        // border-box at the row's cap and the mini-app card is content-driven,
+        // so no single fixed number matches both. Stretching matches both.
+        isStripTile && 'relative self-stretch',
       )}
+      style={
+        isStripTile
+          ? {
+              // The floor: a strip of only media (nothing with an intrinsic
+              // height beside it) still gets the layout's own tile height. The
+              // border stays INSIDE it, as it does on a sibling image tile.
+              minHeight: tileHeight,
+              width: maxWidth,
+            }
+          : undefined
+      }
     >
       <div
         ref={setViewportRefs}
         className="flex items-center"
-        style={{
-          width: renderWidth,
-          height: renderHeight,
-          maxWidth,
-          maxHeight,
-          aspectRatio,
-        }}
+        style={
+          isStripTile
+            ? { position: 'absolute', inset: 0, width: '100%', height: '100%' }
+            : {
+                width: renderWidth,
+                height: renderHeight,
+                maxWidth,
+                maxHeight,
+                aspectRatio,
+              }
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -258,6 +315,7 @@ const VideoAttachment: FC<VideoAttachmentProps> = memo((props) => {
                 maxWidth={maxWidth}
                 maxHeight={maxHeight}
                 aspectRatio={aspectRatio}
+                fillTile={isStripTile}
               />
             }
           >
@@ -273,6 +331,7 @@ const VideoAttachment: FC<VideoAttachmentProps> = memo((props) => {
             maxWidth={maxWidth}
             maxHeight={maxHeight}
             aspectRatio={aspectRatio}
+            fillTile={isStripTile}
           />
         )}
       </div>
@@ -308,16 +367,21 @@ const UnloadedVideoPlaceholder: FC<{
   maxWidth?: number;
   maxHeight?: number;
   aspectRatio: number;
-}> = ({ thumbnailUrl, maxWidth, maxHeight, aspectRatio }) => {
+  /** One tile of a strip: the poster fills the tile, like the player does. */
+  fillTile?: boolean;
+}> = ({ thumbnailUrl, maxWidth, maxHeight, aspectRatio, fillTile = false }) => {
   return (
     <div
       className="video-player flex h-full w-full items-center justify-center"
-      style={{ maxWidth, maxHeight, aspectRatio }}
+      style={fillTile ? undefined : { maxWidth, maxHeight, aspectRatio }}
     >
       {posterIsRenderable(thumbnailUrl) && (
         <img
-          className="h-full w-full object-contain"
-          style={{ maxHeight, aspectRatio }}
+          className={classNames(
+            'h-full w-full',
+            fillTile ? 'object-cover' : 'object-contain',
+          )}
+          style={fillTile ? undefined : { maxHeight, aspectRatio }}
           src={thumbnailUrl}
           alt="Cast video"
         />
@@ -336,6 +400,7 @@ const VidstackVideoPlayer: FC<VideoPlayerProps> = memo(
     maxHeight,
     maxWidth,
     aspectRatio,
+    fillTile,
     onPlayingChange,
     autoplayOwnerId,
     manualAutoplayOverrideRef,
@@ -447,7 +512,14 @@ const VidstackVideoPlayer: FC<VideoPlayerProps> = memo(
     return (
       <MediaPlayer
         ref={ref}
-        className={classNames('video-player')}
+        className={classNames(
+          'video-player',
+          // A strip tile: the class carries the rest/playing fit rule
+          // (`index.css`) — vidstack's own `data-playing` attribute on this
+          // element is the "is it playing" signal, so the player never crops
+          // while it is actually playing.
+          fillTile && 'fiddy-video-tile',
+        )}
         load="visible"
         onMediaExitFullscreenRequest={onExitFullscreen}
         muted
@@ -455,11 +527,15 @@ const VidstackVideoPlayer: FC<VideoPlayerProps> = memo(
         playsInline
         loop={true}
         hideControlsOnMouseLeave
-        style={{
-          maxWidth,
-          maxHeight,
-          aspectRatio,
-        }}
+        style={
+          fillTile
+            ? { width: '100%', height: '100%' }
+            : {
+                maxWidth,
+                maxHeight,
+                aspectRatio,
+              }
+        }
         onCanPlay={() => {
           setCanPlay(true);
         }}
@@ -519,7 +595,7 @@ const VidstackVideoPlayer: FC<VideoPlayerProps> = memo(
           {posterIsRenderable(thumbnailUrl) && (
             <Poster
               className="vds-poster"
-              style={{ maxHeight, aspectRatio }}
+              style={fillTile ? undefined : { maxHeight, aspectRatio }}
               src={thumbnailUrl}
               alt="Cast video"
             />
@@ -548,6 +624,7 @@ const NativeVideoPlayer: FC<VideoPlayerProps> = ({
   controlledVideoPlayerRef,
   inView,
   aspectRatio,
+  fillTile,
   onPlayingChange,
   autoplayOwnerId,
   manualAutoplayOverrideRef,
@@ -723,7 +800,17 @@ const NativeVideoPlayer: FC<VideoPlayerProps> = ({
   return (
     <video
       ref={videoRef}
-      className={classNames('h-full w-full flex-1 object-contain')}
+      className={classNames(
+        'h-full w-full flex-1',
+        // A strip tile covers its tile at rest and letterboxes only while it
+        // is actually playing (the native player is Safari's; it has no
+        // vidstack attribute, so `isPlaying` drives the same rule).
+        fillTile
+          ? isPlaying
+            ? 'object-contain'
+            : 'object-cover'
+          : 'object-contain',
+      )}
       poster={thumbnailUrl}
       src={url}
       playsInline
@@ -766,9 +853,13 @@ const NativeVideoPlayer: FC<VideoPlayerProps> = ({
           eventsEmittedRef.current.volume = true;
         }
       }}
-      style={{
-        aspectRatio,
-      }}
+      style={
+        fillTile
+          ? undefined
+          : {
+              aspectRatio,
+            }
+      }
     />
   );
 };

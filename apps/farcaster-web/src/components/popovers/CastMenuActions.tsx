@@ -422,7 +422,7 @@ const CastMenuActionsContent: FC<CastMenuActionsProps> = memo(
         reasons.push({
           Component: (
             <RecastLabel
-              recasters={cast.recasts.recasters || []}
+              recasters={cast.recasts?.recasters || []}
               isFocusedCast={false}
             />
           ),
@@ -458,7 +458,7 @@ const CastMenuActionsContent: FC<CastMenuActionsProps> = memo(
     }, [
       cast.author.viewerContext?.following,
       cast.channel,
-      cast.recasts.recasters,
+      cast.recasts?.recasters,
       context.includeReason,
       context.shouldShowRecastLabel,
     ]);

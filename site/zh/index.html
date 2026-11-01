@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiddy — 三条命令，在你自己的节点上跑你自己的 Farcaster 客户端</title>
+<meta name="description" content="开机器、跑 Snapchain 读节点、启动客户端。不依赖任何人的 API key，也没有第三方。另外：客户端里装着属于你自己的 Hermes agent。">
+<meta property="og:title" content="Fiddy — 三条命令，拥有你自己的 Farcaster 客户端">
+<meta property="og:description" content="你的节点。你的客户端。你的 agent。不需要任何 API key。">
+<meta property="og:url" content="https://fiddy.fun/client/zh/">
+<link rel="canonical" href="https://fiddy.fun/client/zh/">
+<link rel="alternate" hreflang="en" href="https://fiddy.fun/client">
+<link rel="alternate" hreflang="zh-Hans" href="https://fiddy.fun/client/zh/">
+<style>
+/* ---- Fiddy 深色材质：Solid Glass 规则，手工套用 ----
+   1. 在边缘收口：顶部一道高光，周围一圈发丝线，下面一层投影。
+   2. 厚重，不轻飘：中性色板，模糊从不提亮颜色。
+   3. 深度来自厚度：面板 < 卡片 < 浮层。
+   4. 一个状态：hover / 选中 / 按住共用同一个薄板。 */
+:root {
+  --ground: #161715;
+  --ink: #eef0e8;
+  --ink-dim: #a7ab9e;
+  --lime: #d4ff3f;
+  --lime-ink: #1a1c10;        /* 深色墨水压在黄绿色上 — 约 6:1，永远不用浅色字 */
+  --lime-deep: #7cb518;       /* 黄绿色压暗后用于深色底上的文字与图标 */
+  --cmt: #868b7a;             /* 代码注释 — 在 #10110f 上 5.4:1，达到 AA */
+  --pane: rgba(255 255 255 / 0.045);
+  --card: rgba(255 255 255 / 0.075);
+  --popover: rgba(28 30 26 / 0.92);
+  --rim: rgba(255 255 255 / 0.14);
+  --inner: rgba(255 255 255 / 0.05);
+  --edge: rgba(0 0 0 / 0.5);
+  --shade: rgba(0 0 0 / 0.35);
+  --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, "PingFang SC", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--ground); }
+body {
+  background: var(--ground); color: var(--ink);
+  font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--lime); color: var(--lime-ink); }
+
+.pane {
+  background: var(--pane);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    inset 0 2px 0 var(--inner),
+    inset 0 0 0 1px var(--edge),
+    0 2px 8px var(--shade);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    inset 0 2px 0 var(--inner),
+    inset 0 0 0 1px var(--edge),
+    0 4px 16px var(--shade);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pane, .card { backdrop-filter: none; -webkit-backdrop-filter: none; background: #23241f; }
+}
+
+.wrap { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+
+/* ---- hero ---- */
+header.hero { padding: 72px 0 40px; }
+.wordmark {
+  font: 700 15px/1 var(--mono); letter-spacing: 0.14em; color: var(--lime);
+  text-transform: uppercase; margin-bottom: 28px; display: flex; align-items: center; gap: 10px;
+}
+.wordmark .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime);
+  box-shadow: 0 0 12px rgba(212 255 63 / 0.6); }
+h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.18; letter-spacing: -0.01em; font-weight: 750; }
+h1 .lime { color: var(--lime); }
+.lede { color: var(--ink-dim); font-size: 18px; margin-top: 16px; max-width: 34em; }
+
+/* ---- quickstart ---- */
+.quickstart { margin: 36px 0 8px; padding: 6px; }
+.qs-cmd { display: flex; align-items: baseline; gap: 14px; padding: 16px 18px; border-radius: 12px; }
+.qs-cmd + .qs-cmd { margin-top: 4px; }
+.qs-cmd:hover, .qs-cmd:active { background: rgba(255 255 255 / 0.06); }  /* 一个状态 */
+.qs-n { font: 700 13px/1 var(--mono); color: var(--lime-ink); background: var(--lime);
+  border-radius: 7px; padding: 5px 8px; flex: none;
+  box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.45), 0 2px 6px var(--shade); }
+.qs-cmd code { font: 500 15px/1.5 var(--mono); color: var(--ink); overflow-x: auto; white-space: nowrap; }
+.qs-cmd small { display: block; font: 13px/1.5 -apple-system, sans-serif; color: var(--ink-dim); white-space: normal; }
+.qs-copy { margin-left: auto; flex: none; font: 12px var(--mono); color: var(--ink-dim);
+  background: none; border: none; cursor: pointer; padding: 6px 8px; border-radius: 8px; }
+.qs-copy:hover { color: var(--lime); background: rgba(255 255 255 / 0.06); }
+
+/* ---- sections ---- */
+section { padding: 56px 0 8px; }
+h2 { font-size: 26px; letter-spacing: -0.01em; margin-bottom: 6px; }
+h2 .n { color: var(--lime-deep); font-family: var(--mono); font-size: 15px; vertical-align: super; margin-right: 6px; }
+.kicker { font: 600 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--lime-deep); margin-bottom: 10px; }
+p { margin: 12px 0; }
+p.dim, li { color: var(--ink-dim); }
+strong { color: var(--ink); font-weight: 650; }
+a { color: var(--lime); text-decoration: none; border-bottom: 1px solid rgba(212 255 63 / 0.35); }
+a:hover { border-bottom-color: var(--lime); }
+ul { padding-left: 22px; margin: 12px 0; }
+li { margin: 6px 0; }
+code.inline { font: 0.88em var(--mono); background: var(--pane); padding: 2px 7px; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--edge); }
+
+pre {
+  font: 13.5px/1.65 var(--mono); color: var(--ink);
+  background: #10110f; padding: 18px 20px; border-radius: 14px; overflow-x: auto;
+  margin: 16px 0;
+  box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.07), inset 0 0 0 1px var(--edge), 0 4px 16px var(--shade);
+}
+pre .c { color: var(--cmt); } pre .k { color: var(--lime); }
+
+.note { padding: 16px 20px; margin: 18px 0; }
+.note .t { font: 700 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+.note.warn .t { color: var(--lime); }
+.note p { margin: 6px 0; font-size: 15px; }
+
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; }
+th { text-align: left; font: 700 11.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--lime-deep); padding: 10px 14px 8px; }
+td { padding: 10px 14px; color: var(--ink-dim); border-top: 1px solid rgba(255 255 255 / 0.06); vertical-align: top; }
+td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+
+/* ---- agent strip ---- */
+.agent { margin-top: 20px; padding: 24px; }
+.channels { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { font: 600 12.5px/1 var(--mono); color: var(--ink); padding: 8px 13px; border-radius: 999px;
+  background: var(--pane);
+  box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--edge); }
+.chip.hot { background: var(--lime); color: var(--lime-ink);
+  box-shadow: inset 0 1px 0 rgba(255 255 255 / 0.45), 0 2px 8px var(--shade); }
+
+footer { padding: 56px 0 72px; color: var(--ink-dim); font-size: 14px; }
+footer .rule { height: 1px; background: rgba(255 255 255 / 0.08); margin-bottom: 28px; }
+
+@media (max-width: 560px) {
+  header.hero { padding: 48px 0 28px; }
+  .qs-cmd { flex-wrap: wrap; }
+  .qs-copy { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="wrap">
+  <div class="wordmark"><span class="dot"></span>fiddy.fun
+    <a href="/client" hreflang="en" style="margin-left:auto;border:0;font:600 12px/1 var(--mono);letter-spacing:0.1em">English</a>
+  </div>
+  <h1>你自己的 Farcaster 客户端。<br>你自己的节点。<span class="lime">三条命令。</span></h1>
+  <p class="lede">不需要任何人的 API key。机器由你提供；Snapchain 读节点同步全网数据；
+  Fiddy 客户端通过它读、也通过它写。然后是别家客户端都没有的那一段——孵化一个属于你自己的
+  Hermes agent，24 小时替你干活。</p>
+
+  <div class="card quickstart" id="quickstart">
+    <div class="qs-cmd">
+      <span class="qs-n">0</span>
+      <span><code>fiddy provision --gcp</code><small>把机器开出来（推荐，已实测）——或用下方的 Cloud Shell 一键按钮；<code class="inline">--ssh you@server</code> 接上你手上任何一台服务器</small></span>
+      <button class="qs-copy" data-c="fiddy provision --gcp">复制</button>
+    </div>
+    <div class="qs-cmd">
+      <span class="qs-n">1</span>
+      <span><code>fiddy node up</code><small>在上面安装并同步一个 Snapchain 读节点</small></span>
+      <button class="qs-copy" data-c="fiddy node up">复制</button>
+    </div>
+    <div class="qs-cmd">
+      <span class="qs-n">2</span>
+      <span><code>fiddy client up</code><small>启动指向你自己节点的 Fiddy 客户端</small></span>
+      <button class="qs-copy" data-c="fiddy client up">复制</button>
+    </div>
+  </div>
+  <p class="dim" style="font-size:14px">拿到 CLI：<code class="inline">git clone https://github.com/ivcained/fiddy &amp;&amp; cd fiddy</code> —— <code class="inline">bin/fiddy</code> 这个脚本就是整个工具。完整教程在下面。</p>
+</div></header>
+
+<section id="architecture"><div class="wrap">
+  <div class="kicker">动手之前</div>
+  <h2>Farcaster 到底是怎么拼起来的</h2>
+  <p class="dim">Farcaster 是<strong>混合架构</strong>：身份在链上（OP Mainnet），数据在链下。
+  只有当安全性和一致性真正关键时才上链——创建账号、支付存储租金、注册密钥。所有社交内容——
+  cast、关注、点赞、头像——都是链下消息，由链上已知的一把密钥签名。</p>
+  <table>
+    <tr><th>组件</th><th>它是什么</th></tr>
+    <tr><td>FID</td><td>你的账号编号，在链上铸给你的托管地址。你在链下做的每一件事都引用它。</td></tr>
+    <tr><td>托管地址</td><td>拥有你 FID 的那把以太坊密钥。主密钥。它授权其他所有东西，但日常完全不露面。</td></tr>
+    <tr><td>应用密钥（signer）</td><td>一把 ed25519 密钥，客户端用它替你的 FID 签名消息。由你的托管地址授权，可随时吊销。"登录某个客户端"在底层说的就是这件事。</td></tr>
+    <tr><td>Snapchain</td><td>存放全部用户数据的点对点网络。验证者节点提议区块；读节点跟随、存储，并把 API 提供出去。</td></tr>
+    <tr><td>存储租金</td><td>一笔很小的链上付款，为你的 FID 买下写数据的权利。没有租金，就没有写入。（如果你用过 Farcaster，你的账号已经有存储。）</td></tr>
+  </table>
+</div></section>
+
+<section id="step0"><div class="wrap">
+  <div class="kicker">命令 0</div>
+  <h2><span class="n">0</span>fiddy provision</h2>
+  <p class="dim">读节点需要一台服务器：<strong>4 vCPU、16 GB 内存、1.5–2 TB 可用磁盘</strong>，Ubuntu 22.04+。
+  Snapchain 主网的快照大约 200 GB，那是<em>压缩包</em>的大小——解压后要占掉好几倍的盘，所以按
+  <strong>1.5–2 TB</strong> 规划，不要按 200 GB。AWS 上这套规格的目录价约 <strong>$285/月</strong>
+  （实例约 $121 + 2 TB gp3 约 $164）；任何同等规格的 VPS 都能用，而且便宜得多——
+  2 TB 的 Hetzner / Contabo / OVH 这一档通常 $50–80/月。</p>
+  <!-- @ 保留 &#64; 的写法：Cloudflare Scrape Shield 会把裸地址改写成需要解码脚本的
+       span，而本页的 CSP 会拦掉那个脚本——上线后命令会显示成 "[email protected]"。 -->
+  <pre><span class="c"># 脚本化的 AWS 路径（需要先配好 aws CLI）：</span>
+<span class="k">fiddy provision --aws</span>
+
+<span class="c"># 或者任何你已有的服务器：</span>
+<span class="k">fiddy provision --ssh ubuntu&#64;203.0.113.10</span></pre>
+  <p class="dim">AWS 路径会创建一台 <strong>4 vCPU / 16 GB</strong>、带一块满足读节点存储需求的 gp3 磁盘的实例，
+  预装 Docker，生成一对 SSH 密钥放进 <code class="inline">~/.fiddy/</code>，并把安全组收紧：SSH 和节点 API
+  <strong>只对你的 IP</strong> 开放；gossip 端口对全网保持开放（你的节点就是靠它们和同伴对话的）。
+  两条路径都会把目标写进 <code class="inline">~/.fiddy/config</code>。</p>
+</div></section>
+
+<section id="step1"><div class="wrap">
+  <div class="kicker">命令 1</div>
+  <h2><span class="n">1</span>fiddy node up</h2>
+  <p class="dim">这一步在你的服务器上安装 Docker 和官方 Snapchain 启动脚本，然后开始同步。
+  从现在起你在运行一个<strong>读节点</strong>：它跟随链、保存完整状态，并把 HTTP
+  （<code class="inline">:3381</code>）和 gRPC（<code class="inline">:3383</code>）API 提供出去。
+  任何人都可以跑一个。不需要许可，不需要 API key。</p>
+  <pre><span class="k">fiddy node up</span>      <span class="c"># 安装、启动、等 API 开始应答</span>
+<span class="k">fiddy node status</span>  <span class="c"># 同步进度</span>
+<span class="k">fiddy node logs</span>    <span class="c"># 跟进节点日志</span>
+<span class="k">fiddy node dashboard</span> <span class="c"># 通过 SSH 隧道打开 Grafana 面板（同步高度、节点连接、分片）→ localhost:3000</span></pre>
+
+  <div class="pane note">
+    <div class="t">读节点与验证者节点——以及你的 cast 去了哪里</div>
+    <p><strong>验证者节点</strong>提议区块并对区块投票；只有验证者集合里的密钥能这么做。<strong>读节点</strong>做其他所有事情——包括接收写入。</p>
+    <p>当你把消息 <code class="inline">submitMessage</code> 交给自己的读节点时，它会校验这条消息，并把它
+    <strong>gossip 给验证者节点</strong>——读节点自己没有内存池（mempool）。成功应答的含义是"合法、已接收待转发"，
+    <em>不是</em>"已进区块"。要确认真的上链，盯一个 <code class="inline">MERGE_MESSAGE</code> 事件，或者把这条消息查回来。
+    网络拥挤时，被 gossip 出去的消息可能丢掉、需要重发；客户端也能退回到直接向验证者节点端点提交，
+    这个教程会在真正要紧的地方把两种选择的取舍讲清楚。</p>
+  </div>
+  <p class="dim">完整同步要几个小时；API 会立刻应答，然后在后台把历史追平。</p>
+</div></section>
+
+<section id="step2"><div class="wrap">
+  <div class="kicker">命令 2</div>
+  <h2><span class="n">2</span>fiddy client up</h2>
+  <p class="dim">启动 Fiddy 网页客户端，读和写都指向<em>你自己的</em>节点。如果你的节点 API 被锁在你的 IP 上
+  （AWS 路径的默认行为），加上 <code class="inline">--tunnel</code>，CLI 会为这次会话开一条 SSH 隧道。</p>
+  <pre><span class="k">fiddy client up --tunnel</span></pre>
+
+  <p class="dim" style="margin-top:20px"><strong>登录 = 给客户端它自己的一把密钥。</strong>导入一个
+  已经有存储的账号的助记词。客户端推导出你的托管地址，并且<em>只用它一次</em>——签一条免 gas 的
+  <code class="inline">KEY_ADD</code> 消息，为客户端注册一把全新的 ed25519 应用密钥。不需要 Optimism 交易，
+  不需要 ETH，几秒确认。此后托管密钥就一直闲置，日常的 cast、关注、点赞都由应用密钥签名——
+  权限有范围、有条数上限，而且随时能在界面上用 <code class="inline">KEY_REMOVE</code> 吊销。</p>
+
+  <div class="pane note warn" id="safety">
+    <div class="t">助记词：威力等同 rm -rf，请同样对待</div>
+    <p>助记词就是你的托管地址，也就是你的 FID。任何拿到它的人都拥有这个账号。跟着本教程操作时，
+    <strong>只用测试账号</strong>。原则上，助记词只该粘贴进你信任的开发者写的、本地运行、源码公开的软件——
+    这个仓库是 MIT，助记词从不离开你的浏览器，但这一点请你自己去核实；开源的意义正在于此。
+    只要条件允许，优先选择<strong>委托签名授权</strong>（在一个已经登录的客户端里批准一把应用密钥），
+    而不是导入助记词。</p>
+  </div>
+
+  <p class="dim">到这里客户端就完全是你的了：从你自己的节点读信息流、发 cast、关注、点赞，
+  并在视图设置里决定收不收其他客户端的 cast。</p>
+</div></section>
+
+<section id="agent"><div class="wrap">
+  <div class="kicker">别家客户端都没有的那一段</div>
+  <h2>孵化你的 Fiddy agent</h2>
+  <p class="dim">在客户端里点一下，就会在 Agent37 云上为你开一个<strong>专属 Hermes 实例</strong>——
+  不是聊天机器人，而是一个有自己电脑、24 小时醒着的真 agent。它住在你的客户端里，在那儿和你对话，
+  并运行定时任务：<em>"每天早上看看谁提到了我"、"起草我这周的复盘 cast"。</em></p>
+  <p class="dim">通过 Hermes，你的 Fiddy 能触达你用到的每一个渠道——每一个都要你明确批准：</p>
+  <div class="card agent">
+    <div class="channels">
+      <span class="chip hot">Farcaster</span><span class="chip">iMessage</span><span class="chip">Discord</span>
+      <span class="chip">Telegram</span><span class="chip">WhatsApp</span><span class="chip">Email</span><span class="chip">Web &amp; API</span>
+    </div>
+    <p class="dim" style="margin:16px 0 0">你的 agent 在 Farcaster 上用<strong>自己的 FID 和它自己的免 gas 应用密钥</strong>行动——
+    一眼看得出是 agent 的口吻，你随时可以吊销。它读的也是你刚立起来的那同一台节点：
+    整条链路端到端，看不见任何人的 API key。</p>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <div class="kicker">速查</div>
+  <h2>你一定会撞上的问题</h2>
+  <table>
+    <tr><th>问题</th><th>答案</th></tr>
+    <tr><td>要花 ETH 吗？</td><td>不要。自 Snapchain V16 起，应用密钥是免 gas 的 <code class="inline">KEY_ADD</code> 消息。你需要的是一个已经付过存储租金的账号——仅此而已。</td></tr>
+    <tr><td>我的节点能接收 cast 吗？</td><td>能——读节点会校验写入并 gossip 给验证者节点。它自己没有内存池，所以高负载下写入可能丢；盯 <code class="inline">MERGE_MESSAGE</code> 或把消息查回来，必要时重发。</td></tr>
+    <tr><td>应用密钥能做什么？</td><td>只能做你给它划定的那几类消息（cast、点赞、关注、用户资料）。密钥最迟 90 天滑动过期，每个 FID 最多 1000 把，用 <code class="inline">KEY_REMOVE</code> 即刻吊销。</td></tr>
+    <tr><td>托管密钥放在哪？</td><td>在你的浏览器里，只为那次 EIP-712 的 <code class="inline">KEY_ADD</code> 授权用一次，然后闲置。从不外发，也从不存到服务器上。</td></tr>
+    <tr><td>我依赖了谁？</td><td>依赖你的算力供应商保证机器在线，以及 Snapchain 验证者集合出块——和每个客户端依赖的是同一批人。读、写、身份工具全都在你自己手里。</td></tr>
+  </table>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="rule"></div>
+  <p><strong style="color:var(--ink)">fiddy.fun</strong> · MIT 许可 · <a href="https://github.com/ivcained/fiddy">github.com/ivcained/fiddy</a> · <a href="/client" hreflang="en">English</a></p>
+  <p style="margin-top:8px">建立在 <a href="https://snapchain.farcaster.xyz">Snapchain</a> 与 Farcaster 协议之上。Agent 由 <a href="https://hermes-agent.nousresearch.com">Hermes</a> 驱动，跑在 Agent37 上。基于 Farcaster client 快照的分支，外加外部钱包支持。</p>
+  <p style="margin-top:8px">本文档为英文原文 <a href="/client" hreflang="en">fiddy.fun/client</a> 的中文译本；命令、参数、端口号一律保持原文，未作改写。</p>
+</div></footer>
+
+<script>
+document.querySelectorAll('.qs-copy').forEach(b => b.addEventListener('click', () => {
+  navigator.clipboard?.writeText(b.dataset.c).then(() => { b.textContent = '已复制'; setTimeout(() => b.textContent = '复制', 1200); });
+}));
+</script>
+</body>
+</html>

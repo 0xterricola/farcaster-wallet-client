@@ -1,5 +1,13 @@
 import { matchRoutes } from 'react-router-dom';
 
+import {
+  reservedHandleRoutes,
+  toReservedHandlePath,
+} from '~/constants/reservedHandleRoutes';
+import {
+  HANDLE_PARAM,
+  isReservedRouteName,
+} from '~/constants/reservedRouteNames';
 import { appPathPrefixSymbol } from '~/constants/routePrefixes';
 import { RouteFamily, routes } from '~/constants/routes';
 
@@ -33,11 +41,22 @@ const hydratePath = ({
   params: Record<string, unknown> | undefined;
   searchParams: Record<string, unknown> | undefined;
 }) => {
+  // A reserved name is the app's path (`/feed`, `/explore`), so an account
+  // *called* that is not addressed as `/<name>`: links to it are built in the
+  // explicit `/u/<name>` namespace, which is what keeps mentions, profile tabs
+  // and cast links opening the account instead of the app's own page.
+  const handle = params?.[HANDLE_PARAM];
+  const reservedHandle =
+    path.startsWith(`/:${HANDLE_PARAM}`) &&
+    isReservedRouteName(typeof handle === 'string' ? handle : undefined);
+
+  const targetPath = reservedHandle ? toReservedHandlePath(path) : path;
+
   const hydratedPath = params
     ? Object.keys(params).reduce((memo, key) => {
         return memo.replace(`:${key}`, (params[key] || '') as string);
-      }, path)
-    : path;
+      }, targetPath)
+    : targetPath;
 
   return searchParams
     ? `${hydratedPath}?${encodeSearchParams(searchParams)}`
@@ -102,7 +121,12 @@ const arePathFamiliesRelated = ({
 };
 
 const findPreloadableComponentsForRoute = (path: string) => {
-  const matches = matchRoutes(Object.values(routes), path);
+  // The `/u/<handle>` namespace is part of the addressable surface, so its
+  // pages preload like any other route's.
+  const matches = matchRoutes(
+    [...Object.values(routes), ...reservedHandleRoutes],
+    path,
+  );
 
   return matches
     ? matches

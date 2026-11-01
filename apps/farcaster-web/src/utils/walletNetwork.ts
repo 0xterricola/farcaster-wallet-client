@@ -49,6 +49,14 @@ export const DASHBOARD_CHAINS: ReadonlyMap<number, Chain> = new Map<
   [robinhood.id, robinhood],
 ]);
 
+// Where a cross-chain move may land. A move needs a chain whose wallet
+// transport and read-only surface actually ship, which is the same set the
+// dashboard gates on — named separately so a move can never be offered a chain
+// we cannot read back afterwards. Polygon stays out until that surface ships
+// (see the transports in `utils/wagmi.ts`).
+export const MOVE_DESTINATION_CHAINS: ReadonlyMap<number, Chain> =
+  DASHBOARD_CHAINS;
+
 // Networks that the shared provider can intentionally follow. A network is
 // added to DASHBOARD_CHAINS only after its read-only wallet screen ships.
 export const SELECTABLE_WALLET_CHAINS: ReadonlyMap<number, Chain> = new Map<

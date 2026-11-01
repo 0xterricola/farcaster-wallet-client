@@ -10,7 +10,11 @@ import {
   useCastComposerSession,
 } from '~/contexts/CastComposerSessionProvider';
 
-vi.mock('~/components/modals/ComposeCastModal', () => ({
+/* The composer's modal is now reached through `~/lazy/components` (it drags
+ * `draft-js` in with it, so it is a chunk of its own — card t_648a3e4c). This
+ * test is about the SESSION, not about chunk loading, so the lazy module is
+ * what is mocked: the stub stands in for the modal on both sides of the door. */
+vi.mock('~/lazy/components', () => ({
   ComposeCastModal: ({
     backgrounded,
     onClose,

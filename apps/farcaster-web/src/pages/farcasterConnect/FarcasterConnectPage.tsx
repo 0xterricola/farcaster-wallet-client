@@ -22,7 +22,7 @@ const FarcasterConnectPage: React.FC = React.memo(() => {
   }, []);
 
   return (
-    <Page meta={{ title: 'Farcaster / Sign in with Farcaster' }}>
+    <Page meta={{ title: 'Fiddy / Sign in with Fiddy' }}>
       <div className="flex min-h-dvh flex-col">
         <div className="w-full flex-none">
           <GoToWarpcastHeader />

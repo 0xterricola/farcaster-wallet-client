@@ -5,12 +5,14 @@ import { useUnseen } from 'farcaster-client-hooks';
 import {
   Archive,
   BellIcon,
+  Bot as BotIcon,
   ChevronDown,
   Grid3X3Icon,
   HomeIcon,
   Megaphone,
   SearchIcon,
   Send,
+  Server as ServerIcon,
   UserPlusIcon,
   XIcon,
 } from 'lucide-react';
@@ -19,10 +21,14 @@ import { FC, memo, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 import { AvatarImage } from '~/components/avatar/AvatarImage';
+import { AccountSwitcherEntry } from '~/components/fiddy/accounts/AccountSwitcher';
+import { FiddyAccountMenu } from '~/components/fiddy/FiddyAccountMenu';
+import { FiddyBalanceChipConnected } from '~/components/fiddy/FiddyFunding';
 import { ComposeCastButton } from '~/components/forms/buttons/ComposeCastButton';
 import { ExternalLink } from '~/components/links/ExternalLink';
 import { NavLinkBadge } from '~/components/links/NavLinkBadge';
 import { Search } from '~/components/search/Search';
+import { NodeStatusPill } from '~/components/snapchain/NodeStatusPill';
 import { routes } from '~/constants/routes';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useCastComposerSession } from '~/contexts/CastComposerSessionProvider';
@@ -91,6 +97,16 @@ const useMobileNavState = () => {
         params: {},
         searchParams: undefined,
       }),
+      agent: hydratePath({
+        path: routes.agent.path,
+        params: {},
+        searchParams: undefined,
+      }),
+      node: hydratePath({
+        path: routes.settingsNode.path,
+        params: {},
+        searchParams: undefined,
+      }),
       updates: hydratePath({
         path: routes.channel.path,
         params: { channelKey: 'fc-updates' },
@@ -119,6 +135,8 @@ const useMobileNavState = () => {
         family: 'directCasts',
       }),
       saved: arePathFamiliesRelated({ path: pathname, family: 'saved' }),
+      agent: arePathsRelated(pathname, hrefs.agent),
+      node: arePathsRelated(pathname, hrefs.node),
       apps: arePathFamiliesRelated({ path: pathname, family: 'apps' }),
       settings: arePathFamiliesRelated({ path: pathname, family: 'settings' }),
       developers: arePathsRelated(pathname, hrefs.developers),
@@ -141,6 +159,14 @@ const useMobileNavState = () => {
     }
     if (active.saved) {
       return 'Saved';
+    }
+    if (active.agent) {
+      return 'Fiddy Agent';
+    }
+    if (active.node) {
+      // Plain words: the technical name of the software lives on that screen
+      // (Advanced), not in the chrome everyone sees.
+      return 'Your own setup';
     }
     if (active.apps) {
       return 'Apps';
@@ -310,6 +336,20 @@ const MobileNavDropdown: FC<MobileNavDropdownProps> = memo(
               onClose={onClose}
             />
             <DropdownItem
+              href={hrefs.agent}
+              label="Fiddy Agent"
+              icon={<BotIcon size={16} />}
+              isActive={active.agent}
+              onClose={onClose}
+            />
+            <DropdownItem
+              href={hrefs.node}
+              label="Your own setup"
+              icon={<ServerIcon size={16} />}
+              isActive={active.node}
+              onClose={onClose}
+            />
+            <DropdownItem
               href={hrefs.apps}
               label="Apps"
               icon={<Grid3X3Icon size={16} />}
@@ -359,6 +399,7 @@ const MobileNavDropdown: FC<MobileNavDropdownProps> = memo(
               </span>
               <span className="grow text-sm">Profile</span>
             </RouterLink>
+            <AccountSwitcherEntry className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm text-default hover:bg-overlay-faint active:bg-overlay-faint" />
           </div>
         </div>
       </>
@@ -380,10 +421,12 @@ const MobileHeaderInner: FC = memo(() => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
   useEffect(() => {
     setIsSearchOpen(false);
     setIsMenuOpen(false);
+    setIsAccountMenuOpen(false);
   }, [location.pathname]);
 
   const {
@@ -422,17 +465,22 @@ const MobileHeaderInner: FC = memo(() => {
           </>
         ) : (
           <>
-            <RouterLink
-              to={profileHref}
-              title="Profile"
-              className="flex shrink-0 items-center"
+            <button
+              type="button"
+              className="flex shrink-0 items-center rounded-full"
+              data-fiddy="account-menu-button"
+              aria-haspopup="menu"
+              aria-expanded={isAccountMenuOpen}
+              aria-label="Your account"
+              title="Your account"
+              onClick={() => setIsAccountMenuOpen((prev) => !prev)}
             >
               <AvatarImage
                 imgUrl={currentUser.pfp?.url}
                 imgAlt={currentUser.displayName || currentUser.username || ''}
                 size="sm1"
               />
-            </RouterLink>
+            </button>
 
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
@@ -457,6 +505,13 @@ const MobileHeaderInner: FC = memo(() => {
             >
               <SearchIcon size={18} className="text-default" />
             </button>
+
+            {/* The Fiddy balance, on the phone too: the number alone, and only
+                once there is one to show. */}
+            <FiddyBalanceChipConnected compact />
+
+            {/* Whose node answered, on the phone too — one word and a dot. */}
+            <NodeStatusPill short />
 
             {active.apps && !hasBackgroundedSession ? (
               <ComposeCastButton
@@ -489,6 +544,14 @@ const MobileHeaderInner: FC = memo(() => {
             )}
           </>
         )}
+        {/* The account menu, anchored under this bar. Inside the nav on
+            purpose: the nav is the positioned element, so the panel opens
+            directly beneath the avatar it belongs to and travels with it. */}
+        <FiddyAccountMenu
+          className="fiddy-account-menu-header"
+          isOpen={isAccountMenuOpen}
+          onClose={() => setIsAccountMenuOpen(false)}
+        />
       </nav>
 
       {!isSearchOpen && isMenuOpen && (

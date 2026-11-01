@@ -30,7 +30,7 @@ const ProUpsellPage: React.FC = React.memo(() => {
   }, [navigateInWallet, ref, trackEvent]);
 
   return (
-    <Page meta={{ title: 'Farcaster / Home' }}>
+    <Page meta={{ title: 'Fiddy / Home' }}>
       <BorderedMainContent>
         <PageHeader footer={<FeedHeader defaultFeedTab="home" tab="home" />}>
           <PageTitle>Home</PageTitle>

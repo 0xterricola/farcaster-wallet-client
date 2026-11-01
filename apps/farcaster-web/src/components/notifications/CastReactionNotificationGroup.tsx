@@ -32,7 +32,6 @@ const CastReactionNotificationGroup: FC<CastReactionyNotificationGroupProps> =
         onClick={() => {
           navigateToConversation({
             castHash: cast.hash,
-            authorUsername: cast.author.username,
           });
         }}
       >

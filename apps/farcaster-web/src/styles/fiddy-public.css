@@ -1,0 +1,241 @@
+/* ---------- the public browse surface ----------
+   `/feed` and `/explore`: what a visitor with no account can read. The shell
+   around the column is the app's own (UnauthedLayout when signed out), so this
+   file only adds the parts that are specific to browsing: the sign-in note, the
+   window's own tab and topic controls, the skeletons a first read paints, and
+   the empty / error states.
+
+   Brand tokens come from fiddy-shell.css and are used unchanged. */
+
+.fiddy-public {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* What reading costs, and what signing in would add. One card at the top of
+   the column, never a wall in front of the casts. */
+.fiddy-public-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 12px 16px 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--fiddy-bg-raise, #1d1e1c);
+  border: 1px solid var(--fiddy-glass-border, rgba(238, 240, 232, 0.14));
+  color: var(--fiddy-ink, #eef0e8);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.fiddy-public-note b {
+  font-weight: 800;
+}
+
+.fiddy-public-note span {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.fiddy-public-note-btn {
+  flex: none;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--fiddy-accent, #d4ff3f);
+  color: var(--fiddy-on-accent, #1a1c10);
+  font-weight: 800;
+  font-size: 13.5px;
+}
+
+/* Where the window comes from, in one line. The surface is a follow-graph read
+   anchored on named public accounts, and pretending otherwise would be the one
+   dishonest thing this page could do. */
+.fiddy-public-source {
+  margin: 10px 16px 18px;
+  color: #56604e;
+  font-size: 12px;
+  line-height: 1.55;
+  max-width: 62ch;
+}
+
+.fiddy-public-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fiddy-public-tab {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: #56604e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fiddy-public-tab[aria-current='page'] {
+  color: var(--fiddy-ink, #eef0e8);
+  border-color: var(--fiddy-glass-border, rgba(238, 240, 232, 0.14));
+  background: var(--fiddy-bg-raise, #1d1e1c);
+}
+
+.fiddy-public-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 16px 0;
+}
+
+.fiddy-public-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 28, 16, 0.18);
+  color: #56604e;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.fiddy-public-chip[aria-pressed='true'] {
+  color: var(--fiddy-on-accent, #1a1c10);
+  background: var(--fiddy-accent, #d4ff3f);
+  border-color: transparent;
+}
+
+/* ---------- skeletons ----------
+   A first read of the window is a handful of node reads, so a cold visit waits
+   a beat. These shapes say "casts are coming" without claiming anything about
+   who wrote them or what they say. */
+
+.fiddy-public-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fiddy-public-loading-copy {
+  padding: 16px 16px 4px;
+  color: #56604e;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.fiddy-public-skeleton {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--fiddy-glass-border, rgba(238, 240, 232, 0.14));
+}
+
+.fiddy-public-skeleton-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+}
+
+.fiddy-public-skeleton-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fiddy-public-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.fiddy-public-skeleton-line-short {
+  width: 32%;
+}
+
+.fiddy-public-skeleton-line-mid {
+  width: 72%;
+}
+
+.fiddy-public-skeleton-line-full {
+  width: 96%;
+}
+
+.fiddy-public-skeleton-avatar,
+.fiddy-public-skeleton-line {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--fiddy-ink, #eef0e8), transparent 92%) 0%,
+    color-mix(in oklab, var(--fiddy-ink, #eef0e8), transparent 84%) 50%,
+    color-mix(in oklab, var(--fiddy-ink, #eef0e8), transparent 92%) 100%
+  );
+  background-size: 200% 100%;
+  animation: fiddy-public-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes fiddy-public-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fiddy-public-skeleton-avatar,
+  .fiddy-public-skeleton-line {
+    animation: none;
+  }
+}
+
+/* ---------- nothing to show, or could not read ---------- */
+
+.fiddy-public-state {
+  margin: 16px;
+  padding: 18px 16px;
+  border-radius: 18px;
+  background: var(--fiddy-bg-raise, #1d1e1c);
+  border: 1px solid var(--fiddy-glass-border, rgba(238, 240, 232, 0.14));
+  color: var(--fiddy-ink, #eef0e8);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.fiddy-public-state-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.fiddy-public-state-body {
+  color: var(--fiddy-ink-dim, #9ba193);
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 56ch;
+}
+
+.fiddy-public-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fiddy-public-state-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--fiddy-accent, #d4ff3f);
+  color: var(--fiddy-on-accent, #1a1c10);
+  font-weight: 800;
+  font-size: 13.5px;
+}
+
+.fiddy-public-state-btn-quiet {
+  background: none;
+  border: 1.5px solid var(--fiddy-glass-border, rgba(238, 240, 232, 0.14));
+  color: var(--fiddy-ink-dim, #9ba193);
+}

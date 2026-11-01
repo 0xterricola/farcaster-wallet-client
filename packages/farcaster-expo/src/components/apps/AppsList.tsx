@@ -84,7 +84,9 @@ const CastAppsCard: FC<CastAppsCardProps> = memo(
     }, [cast]);
 
     const isLiked = cast.viewerContext?.reacted ?? false;
-    const likeCount = cast.reactions.count;
+    // Absent means the count has not been read yet (`ApiCast`); this app reads
+    // the hosted API, whose casts always carry it.
+    const likeCount = cast.reactions?.count ?? 0;
 
     const handleLikePress = useCallback(async () => {
       if (isSubmitting.current) return;

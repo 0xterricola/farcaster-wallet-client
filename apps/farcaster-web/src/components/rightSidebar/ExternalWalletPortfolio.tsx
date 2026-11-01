@@ -130,7 +130,12 @@ export function ExternalWalletPortfolio({
           className="mt-4 rounded-xl p-3 text-sm leading-relaxed text-muted bg-elevated-nohover"
           role="alert"
         >
-          Could not load tokens from LI.FI. Try refreshing.{' '}
+          {/* Name the chain that did not answer instead of blanking the surface:
+              the native coin above is read straight from our own RPC, so a token
+              list that failed says nothing about the rest of this wallet. */}
+          No answer from LI.FI for {chain.name} tokens. Your{' '}
+          {chain.nativeCurrency.symbol} balance above is read directly from{' '}
+          {chain.name} and is unaffected. Try refreshing.{' '}
           {data ? 'The token list may be out of date.' : ''}
         </p>
       )}

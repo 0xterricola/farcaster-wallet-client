@@ -7,7 +7,15 @@ import { useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 
 import { EmbeddedWalletBridgeProvider } from '~/components/EmbeddedWallet';
+import { FiddyMobileTabBar } from '~/components/fiddy/FiddyMobileTabBar';
+import { FiddyTopBar } from '~/components/fiddy/FiddyTopBar';
+import { ShellSkeleton } from '~/components/fiddy/ShellSkeleton';
+import { useFiddyBrandGround } from '~/components/fiddy/useFiddyBrand';
 import { PreloadAuthedResources } from '~/components/PrefetchAuthedResources';
+import { DeviceOnlySessionLanding } from '~/components/session/DeviceOnlySessionLanding';
+import { PostForYouStep } from '~/components/session/PostForYouStep';
+import { SignerApprovalGate } from '~/components/session/SignerApprovalGate';
+import { useDeviceOnlySession } from '~/components/session/useDeviceOnlySession';
 import { EnsureCachedCurrentUser } from '~/components/users/EnsureCachedCurrentUser';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { AuthSessionRecoveryBridge } from '~/contexts/AuthSessionRecoveryBridge';
@@ -60,9 +68,14 @@ const LazySpaceProvider = lazyWithPreload(() =>
   import('~/contexts/SpaceContext').then((m) => ({ default: m.SpaceProvider })),
 );
 
+// This boundary sits above the shell's own chrome, so falling back to nothing
+// here is falling back to a blank page: a reader mid-session would lose the top
+// bar and the rail while a WebRTC chunk loads, and on a slow connection they
+// would stay lost. The fallback is the shell itself, which is the same shape the
+// document paints before the app runs — see ~/components/fiddy/ShellSkeleton.
 const SpacesContainer: FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ShellSkeleton />}>
       <LazySpaceProvider>{children}</LazySpaceProvider>
     </Suspense>
   );
@@ -238,6 +251,21 @@ function FollowingFeedSessionBoundary() {
 const AuthedLayout: FC = () => {
   const location = useLocation();
   const { inStandaloneMode } = useStandaloneMode();
+  const deviceOnlySession = useDeviceOnlySession();
+
+  // Fiddy ships dark; pin the ground while the shell is mounted.
+  useFiddyBrandGround();
+
+  // A session that exists only on this device cannot run this shell: every
+  // surface below is a farcaster.xyz read or write, and this session has no
+  // token for any of them. Landing the user here — named, explained, with the
+  // account-free surfaces one tap away — is the honest outcome; mounting the
+  // shell would only produce a broken client. The two account-free surfaces
+  // themselves are the exception, and the landing links to them; see
+  // ~/components/session/DeviceOnlySessionLanding.
+  if (deviceOnlySession.isDeviceOnly) {
+    return <DeviceOnlySessionLanding />;
+  }
 
   return (
     <EnsureCachedCurrentUser>
@@ -301,15 +329,43 @@ const AuthedLayout: FC = () => {
                                           <HomeFeedSessionBoundary />
                                           <FollowingFeedSessionBoundary />
                                           <CastComposerSessionProvider>
-                                            <Container>
-                                              <PreloadAuthedResources />
-                                              <AuthedLeftSideBar />
-                                              <MainContent />
-                                              <AuthedRightSideBar />
-                                              <ToastContainer
-                                                {...toastOptions}
+                                            <div className="fiddy-shell-frame fiddy-surface">
+                                              <FiddyTopBar />
+                                              <Container>
+                                                <PreloadAuthedResources />
+                                                <AuthedLeftSideBar />
+                                                <MainContent />
+                                                <AuthedRightSideBar />
+                                                <ToastContainer
+                                                  {...toastOptions}
+                                                />
+                                              </Container>
+                                              {/* Keeps the phone's tab bar
+                                                  from covering the last row. */}
+                                              <div
+                                                aria-hidden="true"
+                                                className="h-16 sm:hidden"
                                               />
-                                            </Container>
+                                              <FiddyMobileTabBar />
+                                              {/* The one-time "let Fiddy post
+                                                  as you" offer: a reader should
+                                                  not have to find Advanced to
+                                                  learn that Fiddy can post for
+                                                  them, and approving it is one
+                                                  tap on their own phone. It
+                                                  renders nothing unless the
+                                                  offer applies. */}
+                                              <PostForYouStep />
+                                              {/* Pressing the heart, or
+                                                  sending a cast, with no
+                                                  posting key yet: the exact
+                                                  write waiting is held by the
+                                                  write seam and this is the
+                                                  approval it asks for, in
+                                                  place. It renders nothing
+                                                  unless a write is waiting. */}
+                                              <SignerApprovalGate />
+                                            </div>
                                           </CastComposerSessionProvider>
                                         </BespokeTransactionModalProvider>
                                       </HomeLastSelectedTabContextProvider>

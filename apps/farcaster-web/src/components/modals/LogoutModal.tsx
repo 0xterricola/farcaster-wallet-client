@@ -8,6 +8,13 @@ import { useAuth } from '~/contexts/AuthProvider';
 import { useWalletLocked } from '~/contexts/WalletLockedProvider';
 import { trackError } from '~/utils/errorUtils';
 
+/**
+ * The one place that actually signs somebody out: a confirmation, then
+ * `signOut()`. Several surfaces open it (Settings, and the account menu the
+ * avatar opens on every piece of chrome), so it says the same plain thing
+ * wherever it came from — "Sign out", not "Log out".
+ */
+
 type LogoutModalProps = {
   onClose: () => void;
 };
@@ -35,19 +42,19 @@ const LogoutModal: FC<LogoutModalProps> = memo(({ onClose }) => {
       <DefaultModalContainer onClose={onClose}>
         <div className="flex size-full flex-col items-center justify-center p-4">
           <div
-            className="flex w-96 flex-col items-start justify-center rounded-lg border p-4 bg-app border-default"
+            className="flex w-full max-w-96 flex-col items-start justify-center rounded-lg border p-4 bg-app border-default"
+            data-fiddy="sign-out-modal"
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
-            <h3 className="mb-2 text-left text-lg font-semibold">
-              Are you sure you want to log out?
-            </h3>
-            <p>You’ll need a mobile device with Farcaster to log back in.</p>
+            <h3 className="mb-2 text-left text-lg font-semibold">Sign out?</h3>
+            <p>You’ll need a mobile device with Farcaster to sign back in.</p>
             <div className="mt-4 flex w-full flex-row space-x-2">
               <DefaultButton
                 variant="muted"
-                className="w-[180px] min-w-[140px]"
+                className="grow"
+                data-fiddy="sign-out-cancel"
                 onClick={() => {
                   onClose();
                 }}
@@ -56,11 +63,12 @@ const LogoutModal: FC<LogoutModalProps> = memo(({ onClose }) => {
               </DefaultButton>
               <DefaultButton
                 variant="danger"
-                className="w-[180px] min-w-[140px]"
+                className="grow"
+                data-fiddy="sign-out-confirm"
                 isLoading={isSigningOut}
                 onClick={handleLogout}
               >
-                Log out
+                Sign out
               </DefaultButton>
             </div>
           </div>

@@ -11,12 +11,16 @@ import { initAnalytics } from '~/init/initAnalytics';
 import { initFarcasterApi } from '~/init/initFarcasterApi';
 import { initPolyfills } from '~/init/initPolyfills';
 import { initPreloadLazyComponents } from '~/init/initPreloadLazyComponents';
+import { installStaleChunkReloadListener } from '~/init/initReloadOnStaleChunks';
 
 const init = () => {
   initAnalytics();
   initDateFns();
   initFarcasterApi();
   initPolyfills();
+  // Before the preloader below: this tab may already be a build behind, and the
+  // preloader is the first thing in the app that fetches a chunk.
+  installStaleChunkReloadListener();
   initPreloadLazyComponents();
 };
 

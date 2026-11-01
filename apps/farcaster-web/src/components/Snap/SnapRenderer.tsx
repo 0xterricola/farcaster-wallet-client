@@ -15,11 +15,11 @@ import {
 } from 'farcaster-client-hooks';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ComposeCastModal } from '~/components/modals/ComposeCastModal';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { updateSnapCache } from '~/hooks/snap/useFetchSnap';
 import { useSnapActionHandlers } from '~/hooks/snap/useSnapActionHandlers';
 import { useAppThemeName } from '~/hooks/theme/useAppTheme';
+import { ComposeCastModal } from '~/lazy/components';
 
 type SnapCastContext = {
   hash: string;
@@ -215,11 +215,16 @@ export const SnapRenderer = React.memo(
           />
         </div>
         {composeModalOpen ? (
-          <ComposeCastModal
-            intent={composeIntent}
-            isIntentFromSearchParams={false}
-            onClose={closeComposeModal}
-          />
+          /* `compose_cast` is a snap action, so this modal (and the draft-js
+             editor behind it) is fetched the moment a snap asks for one rather
+             than with the bundle: see `~/lazy/components`. */
+          <React.Suspense fallback={null}>
+            <ComposeCastModal
+              intent={composeIntent}
+              isIntentFromSearchParams={false}
+              onClose={closeComposeModal}
+            />
+          </React.Suspense>
         ) : null}
       </>
     );

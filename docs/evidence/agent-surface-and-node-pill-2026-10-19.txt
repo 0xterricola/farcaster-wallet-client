@@ -1,0 +1,137 @@
+Fiddy client v1 — agent surface + node status pill
+Verification run, 2026-10-19 (macOS, Node v26.10.0, pnpm 10.8.1)
+Repo: /Users/lc/Projects/fiddy @ fe6014e + this change
+
+Everything below is a transcript of a command that was actually run, in order.
+
+──────────────────────────────────────────────────────────────────────────────
+0. Workspace install (the new package had no linked deps on this machine)
+
+$ pnpm install --prefer-offline            # repo root
+Scope: all 15 workspace projects
+Lockfile is up to date, resolution step is skipped
+Packages: +2
+Done in 30.6s using pnpm v10.8.1
+$ git diff --stat pnpm-lock.yaml           # (no output: lockfile untouched)
+
+$ cd packages/farcaster-node-client && rm -rf dist && pnpm build
+> tsc
+BUILD_EXIT=0
+$ ls dist | grep -c "d.ts"
+18
+
+──────────────────────────────────────────────────────────────────────────────
+1. Types and lint
+
+$ cd apps/farcaster-web && npx tsc -p tsconfig.json --noEmit
+TypeScript: No errors found
+TSC_EXIT=0
+
+$ npx eslint --fix --quiet src/lib src/hooks/agent src/components/agent \
+      src/components/snapchain src/pages/agent src/layouts \
+      src/components/routing src/snapchain
+LINT_EXIT=0          # (after autofix: import order, prettier, tailwind order)
+
+──────────────────────────────────────────────────────────────────────────────
+2. Tests
+
+$ cd packages/farcaster-node-client && pnpm test
+ Test Files  5 passed | 3 skipped (8)
+      Tests  73 passed | 9 skipped (82)
+
+$ cd apps/farcaster-web && npx vitest run \
+      src/lib/__tests__/agentService.test.ts \
+      src/lib/__tests__/agentSchedules.test.ts \
+      src/components/snapchain/__tests__/NodeStatusPill.test.tsx \
+      src/pages/agent/__tests__/agentSurfaceInvariants.test.ts
+ ✓ src/pages/agent/__tests__/agentSurfaceInvariants.test.ts (3 tests) 12ms
+ ✓ src/lib/__tests__/agentSchedules.test.ts (7 tests) 8ms
+ ✓ src/lib/__tests__/agentService.test.ts (15 tests) 47ms
+ ✓ src/components/snapchain/__tests__/NodeStatusPill.test.tsx (9 tests) 103ms
+ Test Files  4 passed (4)
+      Tests  34 passed (34)
+
+$ npx vitest run src/pages/agent/__tests__/AgentPage.test.tsx
+ ✓ src/pages/agent/__tests__/AgentPage.test.tsx (8 tests) 308ms
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+
+  -> 42 new tests, all passing. AgentPage.test.tsx renders the real surface:
+     hatch card copy, pairing validation (a URL with a path is refused), the
+     schedule request text sent to the agent, the approval-before-connect
+     rule, and the "soon" tags for unexposed channels.
+
+──────────────────────────────────────────────────────────────────────────────
+3. Live wire contract against the deployed control plane
+
+$ FIDDY_LIVE_AGENT_SERVICE=1 npx vitest run src/lib/__tests__/live.agentService.test.ts
+ ✓ live agent service > answers the client list call with the documented auth refusal 840ms
+ ✓ live agent service > serves the public Hermes catalog with real counts 1242ms
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+
+  1/ the client's own listAgents() hit https://mate.legitclub.com and got the
+     service's refusal: HTTP 401, code AUTH_REQUIRED.
+  2/ the public catalog answered with real counts (>1000 skills, >10 plugins).
+
+$ curl -s -o /dev/null -w "%{http_code}" https://mate.legitclub.com/api/health
+200
+$ curl -s https://mate.legitclub.com/api/health
+{"ok":true,"service":"legitmate","mode":"demo","simulation":true}
+$ curl -s https://mate.legitclub.com/api/agents/instances
+{"ok":false,"code":"AUTH_REQUIRED","message":"Sign in before managing an instance."}
+$ curl -s -o /dev/null -w "%{http_code}" https://mate.legitclub.com/api/fiddy/hatch-quote
+404                                   # the hatch routes are not deployed:
+                                      # the surface says "not open yet", it does
+                                      # not pretend the hatch flow exists.
+
+──────────────────────────────────────────────────────────────────────────────
+4. Production build
+
+$ cd apps/farcaster-web && npx vite build          # default heap, Node v26.10.0
+... transforming ...
+BUILD_EXIT=134        # V8 abort (out of memory) mid-transform on this machine;
+                      # not a code error — Node 26 + a 24 GB Air, default heap.
+
+$ NODE_OPTIONS="--max-old-space-size=8192" npx vite build
+✓ built in 39.66s
+BUILD_EXIT=0
+$ ls dist/assets | grep -iE "^AgentPage|^SettingsNode"
+AgentPage-CxcMH7aJ.js
+SettingsNodePage-LokGPYQt.js
+
+  The agent surface and the node surface both ship as lazy route chunks, which
+  is also the proof that the agent route is really reachable: it is a route,
+  not a stray component.
+
+──────────────────────────────────────────────────────────────────────────────
+5. Full app suite, and why the failures in it are not this change
+
+$ npx vitest run            # apps/farcaster-web, whole suite
+ Test Files  6 failed | 60 passed | 1 skipped (67)
+      Tests  104 failed | 597 passed | 2 skipped (703)
+
+  All 104 failures are in six wallet files that this change does not touch
+  (rightSidebar/ExternalWalletActivity|Send|Swap, contexts/SolanaWalletProvider,
+  contexts/UnifiedMetaMaskProvider, utils/walletActivity). Their cause is
+  environmental: `Cannot read properties of undefined (reading 'clear')` on
+  localStorage.clear() under Node v26.10.0 with this jsdom.
+
+  Pre-existing, proven on a pristine checkout of HEAD (no working-tree changes)
+  unpacked with `git archive` into /tmp/fiddy-head:
+
+$ cd /tmp/fiddy-head/apps/farcaster-web && npx vitest run src/utils/__tests__/walletActivity.test.ts
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+
+  Same failures, same cause, on a tree that does not contain this change.
+
+──────────────────────────────────────────────────────────────────────────────
+6. Live node read (the pill's own claim)
+
+$ curl -s https://haatz.quilibrium.com/v1/info | head -c 200
+{"dbStats":{"numMessages":914257294,"numFidRegistrations":3355367,...},
+ "numShards":2,"shardInfos":[{"shardId":0,"maxHeight":48395348,...
+
+  A real Snapchain read node still answers /v1/info with version and shard
+  heights, which is exactly what the `served` state of the pill renders.

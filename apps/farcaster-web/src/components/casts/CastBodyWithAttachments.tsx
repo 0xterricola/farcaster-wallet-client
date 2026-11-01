@@ -12,7 +12,6 @@ type CastBodyWithAttachmentsProps = {
   cast: ApiCast;
   variant: CastAttachmentsSectionVariant;
   castText?: string;
-  truncateCastText?: boolean;
   onMiniAppLaunch?: () => void;
 };
 
@@ -20,7 +19,6 @@ const CastBodyWithAttachments = React.memo(function CastBodyWithAttachments({
   cast,
   variant,
   castText,
-  truncateCastText = false,
   onMiniAppLaunch,
 }: CastBodyWithAttachmentsProps) {
   const { ref: horizontalDragScrollRef, draggingRef } =
@@ -39,7 +37,6 @@ const CastBodyWithAttachments = React.memo(function CastBodyWithAttachments({
     cast,
     castText,
     isFocusedCast,
-    truncateCastText,
     draggingRef,
     onMiniAppLaunch,
   });

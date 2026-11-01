@@ -102,7 +102,7 @@ export function HomeLandingPage() {
     useState(false);
 
   return (
-    <Page className="landing-bg" meta={{ title: 'Farcaster' }}>
+    <Page className="landing-bg" meta={{ title: 'Fiddy' }}>
       <div className="hidden min-h-dvh w-full flex-col p-[60px] sm:flex">
         <div className="flex flex-row items-center space-x-3 text-md">
           <LogoBrandContextMenu>
@@ -185,6 +185,14 @@ export function HomeLandingPage() {
                     Log in with phone
                   </div>
                 </div>
+              </div>
+              <div className="mt-4 text-center text-xs text-[rgba(255,255,255,0.35)]">
+                <ExternalLink
+                  href="https://fiddy.fun/client/"
+                  title="Run your own Farcaster node"
+                >
+                  run your own node →
+                </ExternalLink>
               </div>
               <div className="mt-[35px] flex flex-col space-y-3">
                 <div className="flex flex-row items-center space-x-2 py-2">

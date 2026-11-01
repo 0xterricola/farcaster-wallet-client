@@ -1,0 +1,8 @@
+{
+ "measuredAt": "2026-10-22T08:52:00.000Z",
+ "entryFile": "index-DoD_f06U.js",
+ "entryBytes": 8032505,
+ "totalBytes": 22876558,
+ "chunks": 672,
+ "note": "Recorded deliberately (card t_999e48fa) from the tree this change sits on, BEFORE its lazy-load work: origin/main (c4cf85d, the released line) + the parent card's three commits (first-cast probe, readAuthor, feed cache), built with HTTPS=false VITE_SNAPCHAIN_HTTP_URL=/snapchain-api. Around it: the parent's release 8b21867 measured 8,028,444 bytes, the release deployed when this card ran (377d7e0) measured 8,027,130, and this card's base tree built to 8,032,505. The guard's ceiling is +100 KB on the entry chunk; this card's change cuts it by 3.47 MB (faker's locale corpus and livekit-client leave the entry)."
+}

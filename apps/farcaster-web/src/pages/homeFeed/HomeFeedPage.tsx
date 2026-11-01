@@ -2,7 +2,7 @@ import { EventingProvider } from 'farcaster-client-hooks';
 import React, { useState } from 'react';
 
 import { BorderedMainContent } from '~/components/BorderedMainContent';
-import { FullScreenErrorBoundary } from '~/components/errors/FullScreenErrorBoundary';
+import { ShellSectionErrorBoundary } from '~/components/errors/ShellSectionErrorBoundary';
 import { FeedHeader } from '~/components/feeds/FeedHeader';
 import { FullScreenLoadingIndicator } from '~/components/loaders/FullScreenLoadingIndicator';
 import { DepositBonusModal } from '~/components/modals/DepositBonusModal';
@@ -29,7 +29,7 @@ const HomeFeedPage = React.memo(() => {
     return (
       <Page
         meta={{
-          title: 'Farcaster / Home',
+          title: 'Fiddy / Home',
           description: 'A decentralized social network',
           canonical: 'https://farcaster.xyz',
           twitterCard: 'summary',
@@ -41,9 +41,9 @@ const HomeFeedPage = React.memo(() => {
           </PageHeader>
           <EventingProvider on="home" channel="home">
             <React.Suspense fallback={<FullScreenLoadingIndicator />}>
-              <FullScreenErrorBoundary>
+              <ShellSectionErrorBoundary label="Home">
                 <HomeFeedPageContent />
-              </FullScreenErrorBoundary>
+              </ShellSectionErrorBoundary>
             </React.Suspense>
           </EventingProvider>
         </BorderedMainContent>
@@ -114,7 +114,7 @@ function HomeFeedTabbed() {
   return (
     <Page
       meta={{
-        title: 'Farcaster / Home',
+        title: 'Fiddy / Home',
         description: 'A decentralized social network',
         canonical: 'https://farcaster.xyz',
         twitterCard: 'summary',
@@ -128,9 +128,18 @@ function HomeFeedTabbed() {
         </PageHeader>
         <EventingProvider on="home" key="home">
           <React.Suspense fallback={<FullScreenLoadingIndicator />}>
-            <FullScreenErrorBoundary>
+            {/* The feed's own reads fail like any other region's, so it answers
+                like any other region: the adapter's sentence (or the session
+                note) in the column, with the frame still standing. This used to
+                be the fork's `FullScreenErrorBoundary`, whose fallback is the
+                generic "Error retrieving data" / "Could not reach Farcaster" —
+                a sentence that hides why, and, for a node that did not answer,
+                offers no retry that could work. MEASURED: with the node
+                black-holed this column showed nothing at all for as long as the
+                page was open. */}
+            <ShellSectionErrorBoundary label="Home">
               <HomeFeedPageContent />
-            </FullScreenErrorBoundary>
+            </ShellSectionErrorBoundary>
           </React.Suspense>
         </EventingProvider>
       </BorderedMainContent>

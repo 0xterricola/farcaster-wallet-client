@@ -1,0 +1,79 @@
+{
+  "hypersnap": {
+    "latest_tag": {
+      "compose_http": 200,
+      "compose_newest": 28852000,
+      "compose_sets": 7,
+      "installer_http": 200,
+      "installer_mentions_validators": false,
+      "validators_toml_http": 404
+    },
+    "main_validators_toml": {
+      "http": 200,
+      "missing_vs_registry": 3,
+      "newest": 39798000,
+      "sets": 10
+    }
+  },
+  "issue": {
+    "comments": 3,
+    "http": 200,
+    "state": "open",
+    "title": "Read node halts on shards 1 and 2: \"Block contained signatures from unexpected signers\" at 49,311,004 / 49,147,015",
+    "updated_at": "2026-10-24T03:06:53Z"
+  },
+  "node": {
+    "block_delay_seconds": {
+      "0": 3,
+      "1": 34410,
+      "2": 18520
+    },
+    "error": null,
+    "heights": {
+      "0": 48834649,
+      "1": 49477354,
+      "2": 49328400
+    },
+    "heights_after_20s": {
+      "0": 48834671,
+      "1": 49477354,
+      "2": 49328400
+    },
+    "not_advancing": {
+      "1": {
+        "block_delay_seconds": 34410,
+        "height": 49477354,
+        "moved": false
+      },
+      "2": {
+        "block_delay_seconds": 18520,
+        "height": 49328400,
+        "moved": false
+      }
+    },
+    "url": "https://haatz.quilibrium.com",
+    "version": "0.13.5"
+  },
+  "notes": [],
+  "reason": "upstream main carries 10 validator sets and is missing 3 of the registry's 13 (newest it publishes: 39_798_000, newest the registry publishes: 49_311_000, configVersion 18)",
+  "registry": {
+    "config_version": 18,
+    "newest": 49311000,
+    "newest_per_shard": {
+      "0": 48632000,
+      "1": 49311000,
+      "2": 49147000
+    },
+    "reachable": true,
+    "validator_sets": 13
+  },
+  "snapchain": {
+    "validators_toml": {
+      "http": 200,
+      "matches_registry": true,
+      "newest": 49311000,
+      "sets": 13
+    }
+  },
+  "verdict": "still-broken"
+}

@@ -2,7 +2,6 @@ import { AnalyticsEvent } from 'farcaster-analytics';
 import {
   ApiCollectibleCastWatchAvailableNotificationGroup,
   ApiNotificationCollectibleCastWatchAvailable,
-  CastHashPrefix,
 } from 'farcaster-client-data';
 import { formatTimeAgo, useTrackEvent } from 'farcaster-client-hooks';
 import { Sparkle } from 'lucide-react';
@@ -33,22 +32,12 @@ const CollectibleCastWatchAvailableNotificationGroup: FC<CollectibleCastWatchAva
         action: 'cast',
       });
       navigate({
-        to: 'conversationWithUsername',
+        to: 'conversationWithoutUsername',
         params: {
-          username: firstPreviewItem.content.cast.author.username ?? '',
-          castHashPrefix: firstPreviewItem.content.cast.hash.slice(
-            0,
-            10,
-          ) as CastHashPrefix,
+          castHash: firstPreviewItem.content.cast.hash,
         },
       });
-    }, [
-      firstPreviewItem.content.cast.author.username,
-      firstPreviewItem.content.cast.hash,
-      group.id,
-      navigate,
-      trackEvent,
-    ]);
+    }, [firstPreviewItem.content.cast.hash, group.id, navigate, trackEvent]);
 
     let creatorUsername = firstPreviewItem.content.cast.author.username;
     if (creatorUsername) {

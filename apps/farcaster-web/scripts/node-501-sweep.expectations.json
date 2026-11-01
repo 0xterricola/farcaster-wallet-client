@@ -1,0 +1,3826 @@
+{
+ "surfaces": {
+  "/dwr": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/dwr/0x50184b62b4c52fd76628713562e1eda3dccaf63dPrefix": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/0x50184b62b4c52fd76628713562e1eda3dccaf63dPrefix/quotes": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page couldn\u2019t load",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/0x50184b62b4c52fd76628713562e1eda3dccaf63dPrefix/reactions": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page couldn\u2019t load",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/0x50184b62b4c52fd76628713562e1eda3dccaf63dPrefix/recasts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page couldn\u2019t load",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/assets": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/wallet/positions/open",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/wallet/positions/open",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/casts-and-replies": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/followers": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/followers-you-know": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/following": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/likes": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/pack/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-pack",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-pack",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-pack"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/dwr/referral": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/dwr/snaps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed"
+   ],
+   "panels": []
+  },
+  "/login-desktop": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/login-mobile": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/login-wallet": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/login-web": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/magic-link": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/miniapps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/miniapps/1/?/*": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/miniapps/editors-choice": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/recovery": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/referralCode/SWEEPCODE1": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/start-recovery": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/welcome": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/welcome/apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/welcome/brain": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/welcome/name": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/welcome/ready": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/admin/engagement-ring-candidates": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/admin/feeds-comparison": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/admin/labeled-casts": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/admin/reviews": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/pending-admin-reviews",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/pending-admin-reviews",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/pending-admin-reviews",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/agent": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/agent/apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/agent/brains": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/apps/trending": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/apps/your-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/app-launcher",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/app-launcher",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/app-launcher"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/audio-room/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-room",
+    "POST /~api/v1/audio-room/join",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-room",
+    "POST /~api/v1/audio-room/join",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-room",
+    "POST /~api/v1/audio-room/join",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/bookmarks": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/bookmarked-casts",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/bookmarked-casts",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/bookmarked-casts"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/casts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/followers": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-users",
+    "GET /~api/v1/channel-users",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-users"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/followers-you-know": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/channel-followers-you-know",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/channel-followers-you-know",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/channel-followers-you-know"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/join": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/channel/ai/members": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-users",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-users",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-users"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/settings": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/channel-details"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/channel/ai/settings/general": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page couldn\u2019t load",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/cloudflare-challenge/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/code/SWEEPCODE1": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/compose": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/search-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/search-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/search-channels"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/connect": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/connect-farcaster": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/conversations/0x50184b62b4c52fd76628713562e1eda3dccaf63d": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/user-thread-hidden-replies",
+    "GET /~api/v1/user-thread-hidden-replies",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/user-thread-hidden-replies"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/conversations/0x50184b62b4c52fd76628713562e1eda3dccaf63d/quotes": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/frame"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/conversations/0x50184b62b4c52fd76628713562e1eda3dccaf63d/reactions": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-likes",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-likes",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-likes",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/conversations/0x50184b62b4c52fd76628713562e1eda3dccaf63d/recasts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-recasters",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-recasters",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/cast-recasters",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/debug": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/debug/admin-token": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/debug/casts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page couldn\u2019t load",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/debug/embedded-wallet": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/deposit-bonuses": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/developers": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/domain-manifest",
+    "GET /~api/v1/dev-tools/managed-apps",
+    "PATCH /~api/v2/user-preferences",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/domain-manifest",
+    "GET /~api/v1/dev-tools/managed-apps",
+    "PATCH /~api/v2/user-preferences",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/domain-manifest",
+    "GET /~api/v1/dev-tools/managed-apps",
+    "PATCH /~api/v2/user-preferences",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/developers/api-keys": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/api-keys",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/api-keys",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/api-keys"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/developers/frames": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/developers/mini-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/developers/mini-apps/debug": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/dev-tools/managed-apps",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/dev-tools/managed-apps",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/dev-tools/managed-apps"
+   ],
+   "panels": []
+  },
+  "/~/developers/new": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/developers/snaps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/download": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/explore/apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/explore/channels": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/explore/users": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/following": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/frame-analytics": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/global-frame-analytics",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/global-frame-analytics",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/global-frame-analytics"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/frames": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/frames/launch": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/inbox": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Direct casts isn\u2019t on your node"
+   ]
+  },
+  "/~/inbox/create/3": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Direct casts isn\u2019t on your node"
+   ]
+  },
+  "/~/mini-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/mini-apps/launch": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/mint": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/mobile": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/news/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/article",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/article",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/article",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/notifications": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/notifications/casts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/notifications/channel-role-invites": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/notification-group"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/notifications/frames": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/notifications/mini-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/notification-group",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/privacy-policy": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/pro": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/pro-upsell": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/assets": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/wallet/positions/open",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/wallet/positions/open",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/casts-and-replies": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/profiles/3/followers": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/followers-you-know": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/following": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/likes": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v1/frame",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/profiles/3/snaps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/connected-accounts",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/r/dwr": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/r/dwr/join": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/profile-referral",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/profile-referral",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v1/profile-referral",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/recovery-init": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/referral-code/SWEEPCODE1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info",
+    "POST /~api/v2/get-referral-code-join-info",
+    "POST /~api/v2/get-referral-code-join-info",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/referral/3": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/referralCode/SWEEPCODE1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "POST /~api/v2/get-referral-code-join-info",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "POST /~api/v2/get-referral-code-join-info",
+    "POST /~api/v2/get-referral-code-join-info",
+    "POST /~api/v2/get-referral-code-join-info"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/referrals": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/xp-rewards",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/xp-rewards",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/referrals/list": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/referrals",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/referrals",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/referrals"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/saved": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/bookmarked-casts",
+    "GET /~api/v2/bookmarked-casts",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/bookmarked-casts"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/saved/starter-packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/sealed": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/search/channels": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/search/mini-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/search/recent": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/search/top": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/search/users": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/suggested-users",
+    "GET /~api/v2/discover-channels"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/advanced": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/blocked-users": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/casts-and-users": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/connected-accounts": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/settings/developer-tools": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/direct-casts": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/direct-casts/others": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/direct-casts/recommended": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/feeds": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/frames": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/import": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-twitter-following",
+    "GET /~api/v2/get-twitter-following",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-twitter-following"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/mini-apps": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/muted-keywords": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-keywords",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-keywords",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-keywords"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/muted-users": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-users",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-users",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-users"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/muted-words": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/get-muted-keywords",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-keywords",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/get-muted-keywords",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/mutes-and-blocks": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/node": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/notifications": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/preferred-wallet": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/starter-packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/storage": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/rent-storage-offerings",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/rent-storage-offerings",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/rent-storage-offerings"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node"
+   ]
+  },
+  "/~/settings/verifications": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/settings/verified-addresses": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": []
+  },
+  "/~/sign-in-with-farcaster": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/signup": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/siwf": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/spaces": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/audio-rooms",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/audio-rooms"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/spaces/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/audio-room",
+    "GET /~api/v1/audio-room",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v1/audio-room",
+    "GET /~api/v2/direct-cast-inbox"
+   ],
+   "panels": [
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/starter-packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/starter-packs"
+   ],
+   "panels": []
+  },
+  "/~/starter-packs/1": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/starter-pack"
+   ],
+   "panels": []
+  },
+  "/~/suggested-starter-packs": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/starter-packs/suggested",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs/suggested",
+    "GET /~api/v2/explore-feed",
+    "GET /~api/v2/user-following-channels",
+    "GET /~api/v2/channel-streaks",
+    "GET /~api/v2/feeds",
+    "GET /~api/v1/get-trending-topics",
+    "GET /~api/v2/highlighted-channels",
+    "GET /~api/v2/direct-cast-inbox",
+    "GET /~api/v2/starter-packs/suggested"
+   ],
+   "panels": [
+    "This page isn\u2019t on your node",
+    "Explore isn\u2019t on your node"
+   ]
+  },
+  "/~/support": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/support/deleteaccount": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/terms-of-use": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/together": {
+   "verdict": "works",
+   "refusals": [],
+   "panels": []
+  },
+  "/~/wallet": {
+   "verdict": "refused",
+   "refusals": [
+    "GET /~api/v2/explore-feed"
+   ],
+   "panels": []
+  }
+ }
+}

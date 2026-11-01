@@ -1,6 +1,7 @@
 import { memo, Suspense } from 'react';
 
 import { BorderedMainContent } from '~/components/BorderedMainContent';
+import { FiddyWalletHomeConnected } from '~/components/fiddy/FiddyWalletHome';
 import { Page } from '~/components/page/Page';
 import { PageHeader } from '~/components/page/PageHeader';
 import { PageTitle } from '~/components/page/PageTitle';
@@ -21,6 +22,10 @@ const SettingsPreferredWalletPage = memo(() => {
           <SettingsNav />
           <SettingsPageContent>
             <PreferredWalletSelector />
+            {/* Which wallet pays for what your agent uses, and the one thing it
+                pays for today. Beside the wallet chooser because it is the same
+                question asked about money instead of identity. */}
+            <FiddyWalletHomeConnected />
           </SettingsPageContent>
         </BorderedMainContent>
       </Suspense>

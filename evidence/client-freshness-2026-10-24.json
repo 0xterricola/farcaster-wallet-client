@@ -1,0 +1,163 @@
+{
+  "browser_proof": {
+    "healthy_body": {
+      "checks": "3/3",
+      "never_called_behind": true,
+      "on_screen_sentence": "Answering normally"
+    },
+    "how": "apps/farcaster-web/scripts/verify-freshness-copy.mjs (recipe in its header)",
+    "raw_output": "evidence/client-freshness-2026-10-24-browser.txt",
+    "stale_body": {
+      "checks": "4/4",
+      "node_asked": "4 /v1/info reads reached the stub",
+      "on_screen_sentence": "It answered, but the newest blocks on shards 1 and 2 are 4h 39m and 13m 15s old.",
+      "pill_title": "carries the same sentence",
+      "row": "1. Our public node reads + posts behind the network in use ... (then the sentence)"
+    },
+    "stubbed": "the SIWF relay, and the public node's /v1/info reads only (the 2026-10-24 16:27 UTC body); every other read of that host passed through"
+  },
+  "client_verdict_on_the_last_pair": {
+    "freshness_from_heights_across_reads": "fresh (both shards applied ~200 blocks in 21 s)",
+    "sentence": "It answered, but the newest blocks on shards 1 and 2 are 4h 39m and 13m 15s old.",
+    "status": "stale",
+    "why_stale": "the per-shard ages (16,773 s and 795 s) are far over DEFAULT_HEALTH_CONFIG.maxTipAgeMs (120,000 ms), so those shards' data is hours behind even though the node is applying blocks"
+  },
+  "dom_proof": {
+    "asserts": "the measured sentence verbatim, and that no copy says 'blocks behind'",
+    "tests": [
+      "apps/farcaster-web/src/snapchain/providers/__tests__/pill.test.ts (the pill's hover title)",
+      "apps/farcaster-web/src/pages/settingsNode/Component/ProviderListCard.test.tsx (the node list row)"
+    ]
+  },
+  "field_definition": {
+    "commit_gauge": "farcasterxyz/snapchain src/storage/store/engine.rs: gauge(\"block_delay_seconds\", FarcasterTime::current().to_u64() - block.timestamp)",
+    "how_read": "codeload tarball of farcasterxyz/snapchain main, downloaded 2026-10-24",
+    "info_endpoint": "farcasterxyz/snapchain src/network/server.rs: block_delay: current_time.saturating_sub(max_block_time), where max_block_time is that shard's max_block_timestamp()"
+  },
+  "frozen_shape_earlier_the_same_day": {
+    "measured": "2026-10-24 14:29 to 14:53 UTC, eleven reads over four minutes",
+    "note": "the same number read the other way round: nothing applied, so the newest block got older at 1 s per second",
+    "shard_0": "advanced about one block a second",
+    "shards_1_and_2": "held at 49,477,354 and 49,328,400 while blockDelay climbed 31,706 to 31,937 s and 15,816 to 16,047 s"
+  },
+  "live_reads": [
+    {
+      "at": "2026-10-24T16:07:30Z",
+      "latency_ms": 1407,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48837514,
+          "tipAgeSeconds": 5
+        },
+        "1": {
+          "maxHeight": 49488005,
+          "tipAgeSeconds": 26597
+        },
+        "2": {
+          "maxHeight": 49339113,
+          "tipAgeSeconds": 10627
+        }
+      }
+    },
+    {
+      "at": "2026-10-24T16:07:51Z",
+      "latency_ms": 902,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48837534,
+          "tipAgeSeconds": 6
+        },
+        "1": {
+          "maxHeight": 49488198,
+          "tipAgeSeconds": 26424
+        },
+        "2": {
+          "maxHeight": 49339317,
+          "tipAgeSeconds": 10443
+        }
+      }
+    },
+    {
+      "at": "2026-10-24T16:18:39Z",
+      "latency_ms": 1595,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48838178,
+          "tipAgeSeconds": 4
+        },
+        "1": {
+          "maxHeight": 49494144,
+          "tipAgeSeconds": 21095
+        },
+        "2": {
+          "maxHeight": 49345230,
+          "tipAgeSeconds": 5152
+        }
+      }
+    },
+    {
+      "at": "2026-10-24T16:19:01Z",
+      "latency_ms": 1382,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48838198,
+          "tipAgeSeconds": 5
+        },
+        "1": {
+          "maxHeight": 49494329,
+          "tipAgeSeconds": 20929
+        },
+        "2": {
+          "maxHeight": 49345436,
+          "tipAgeSeconds": 4965
+        }
+      }
+    },
+    {
+      "at": "2026-10-24T16:27:13Z",
+      "latency_ms": 1637,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48838691,
+          "tipAgeSeconds": 2
+        },
+        "1": {
+          "maxHeight": 49498782,
+          "tipAgeSeconds": 16940
+        },
+        "2": {
+          "maxHeight": 49349901,
+          "tipAgeSeconds": 958
+        }
+      }
+    },
+    {
+      "at": "2026-10-24T16:27:35Z",
+      "latency_ms": 872,
+      "ok": true,
+      "shards": {
+        "0": {
+          "maxHeight": 48838710,
+          "tipAgeSeconds": 4
+        },
+        "1": {
+          "maxHeight": 49498964,
+          "tipAgeSeconds": 16773
+        },
+        "2": {
+          "maxHeight": 49350083,
+          "tipAgeSeconds": 795
+        }
+      }
+    }
+  ],
+  "measured": "2026-10-24, three runs of probeSnapchain against the public node, each two reads 21 s apart",
+  "node": "https://haatz.quilibrium.com/v1/info?dbstats=0",
+  "tests": "apps/farcaster-web/src/snapchain/providers/__tests__/health.test.ts and runtime.test.ts, 42 tests, including fixtures of the reads above and of a healthy node",
+  "what": "client freshness: blockDelay is the AGE of each shard's newest block, in seconds, and the client judges it per shard (farcaster-web providers/health.ts)"
+}

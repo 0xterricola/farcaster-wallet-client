@@ -1,0 +1,39 @@
+verify-freshness-copy.mjs — the freshness copy on screen, 2026-10-24
+=================================================================
+
+Server: HTTPS=true VITE_SNAPCHAIN_HTTP_URL=https://haatz.quilibrium.com
+        VITE_FIDDY_NETWORK=hypersnap npx vite --config scripts/probe.vite.config.mjs --port 5183
+Client: the real app, signed in through the stubbed SIWF relay as fid 3.
+Stubbed: the public node's /v1/info reads only, answered with the body measured
+from that node at 16:27:35 UTC (and its healthy sibling). Other reads pass through.
+
+--- FRESHNESS_BODY=stale (exit 0) ---
+attempt 1: clicked Go social — sign in with Farcaster
+after sign-in: path=/
+
+FRESHNESS_BODY=stale  (stub answered /v1/info 4 times)
+path: /~/settings/node
+looking for: It answered, but the newest blocks on shards 1 and 2 are 4h 39m and 13m 15s old.
+on-screen context: e. 1. Our public node reads + posts behind the network in use Open to everyone, no account, answers in about a second from here. Writes are signed on this device and handed to the node, which passes them to the network. It answered, but the newest blocks on shards 1 and 2 are 4h 39m and 13m 15s old. 2. Farcaster's own public server reads only not answering O
+page text around it: fiddy Answers come from a public node Public Feed Hatch an agent Wallet Settings MORE Notifications Spaces Audio rooms SOON Apps Direct Casts SOON Referrals Saved ADVANCED Your own setup Updates Profile Your accounts Your own setup ADVANCED Notifications Profiles from X / Twitter Verified addresses Preferred wallet Direct Casts Storage Mini Apps Feeds Mute and block Your own setup Developer tools Advanced Theme Sign out This is the Advanced part. Point Fiddy at the server you want to read through — your own, or one that is already open to everyone — and everything you read and write goes through it. The rest of Fiddy works without it, and nothing here is needed to get started. Network reading from hypersnap Two networks, same idea. Both carry accounts, casts and follows, and they do not talk to each other. Fiddy only offers a network it can actually read. Snapchain Farcaster's own networ
+ok   the sentence the client composes is on screen
+ok   no copy on screen says "blocks behind"
+ok   the pill’s hover title carries it too
+ok   the node really was asked
+
+4/4 checks passed
+
+--- FRESHNESS_BODY=healthy (exit 0) ---
+attempt 1: clicked Go social — sign in with Farcaster
+after sign-in: path=/
+
+FRESHNESS_BODY=healthy  (stub answered /v1/info 4 times)
+path: /~/settings/node
+looking for: Answering normally
+on-screen context:  public node. 1. Our public node reads + posts working in use Open to everyone, no account, answers in about a second from here. Writes are signed on this device and handed to the node, which passes them to the network. Answering normally, in about 0.0s. 2. Farcaster's own public server reads only
+page text around it: fiddy Answers come from a public node Public Feed Hatch an agent Wallet Settings MORE Notifications Spaces Audio rooms SOON Apps Direct Casts SOON Referrals Saved ADVANCED Your own setup Updates Profile Your accounts Your own setup ADVANCED Notifications Profiles from X / Twitter Verified addresses Preferred wallet Direct Casts Storage Mini Apps Feeds Mute and block Your own setup Developer tools Advanced Theme Sign out This is the Advanced part. Point Fiddy at the server you want to read through — your own, or one that is already open to everyone — and everything you read and write goes through it. The rest of Fiddy works without it, and nothing here is needed to get started. Network reading from hypersnap Two networks, same idea. Both carry accounts, casts and follows, and they do not talk to each other. Fiddy only offers a network it can actually read. Snapchain Farcaster's own networ
+ok   the sentence the client composes is on screen
+ok   no copy on screen says "blocks behind"
+ok   a healthy node is not described as behind
+
+3/3 checks passed

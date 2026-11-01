@@ -2,7 +2,7 @@ import { ImageIcon, LinkIcon, MailIcon } from '@primer/octicons-react';
 import * as Popover from '@radix-ui/react-popover';
 import classNames from 'classnames';
 import { AnalyticsEvent } from 'farcaster-analytics';
-import { ApiCast, ApiFrame, getCastURL } from 'farcaster-client-data';
+import { ApiCast, ApiFrame, getFiddyCastUrl } from 'farcaster-client-data';
 import {
   CastClickType,
   convertCastToCastShareContext,
@@ -178,16 +178,24 @@ const ShareCast: React.FC<CastActionProps> = React.memo(({ cast }) => {
 
   const prefetchShareCast = usePrefetchShareCast();
 
-  const copyCastWarpcastURL = React.useCallback(
+  /**
+   * The link this shares is a fiddy.fun page, because it is a page somebody
+   * else will open: fiddy.fun/~/conversations/<hash> renders the cast, and it
+   * now unfurls as the cast's own card (`server/unfurl/`). Upstream's
+   * `farcaster.xyz` link does neither for us — until the per-page cards existed
+   * this copied a link that said nothing, which is why t_1e01f488 left it.
+   *
+   * The handle is deliberately not in the path: `/dwr/0xec0c8a22` is the
+   * prefix route, which this client reads through `/v2/user-thread-casts` and
+   * no Snapchain node can answer. See `getFiddyCastUrl`.
+   */
+  const copyCastLink = React.useCallback(
     (e: React.SyntheticEvent) => {
       setVisible(false);
 
       e.stopPropagation();
 
-      const castURL = getCastURL({
-        castUsername: cast.author.username,
-        castHash: cast.hash,
-      });
+      const castURL = getFiddyCastUrl({ castHash: cast.hash });
 
       trackCastClick({ type: CastClickType.ShareLink });
       trackEvent(AnalyticsEvent.ShareCastLink, undefined);
@@ -196,7 +204,7 @@ const ShareCast: React.FC<CastActionProps> = React.memo(({ cast }) => {
 
       toast({ message: 'Link copied to clipboard' });
     },
-    [cast.author.username, cast.hash, trackCastClick, trackEvent],
+    [cast.hash, trackCastClick, trackEvent],
   );
 
   const onShareAsImageClick = React.useCallback(
@@ -271,7 +279,7 @@ const ShareCast: React.FC<CastActionProps> = React.memo(({ cast }) => {
                 icon={
                   <LinkIcon size={16} className={'mx-0.5 text-secondary'} />
                 }
-                onClick={copyCastWarpcastURL}
+                onClick={copyCastLink}
               />
               {isSignedIn && (
                 <MenuItem

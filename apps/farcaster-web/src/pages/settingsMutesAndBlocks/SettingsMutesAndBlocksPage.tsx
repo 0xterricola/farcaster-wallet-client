@@ -1,6 +1,7 @@
 import { memo, Suspense } from 'react';
 
 import { BorderedMainContent } from '~/components/BorderedMainContent';
+import { HiddenPeopleList } from '~/components/fiddy/HiddenPeopleList';
 import { SettingsNavLink } from '~/components/links/SettingsNavLink';
 import { SettingsNavLinkLabel } from '~/components/links/SettingsNavLinkLabel';
 import { Page } from '~/components/page/Page';
@@ -21,6 +22,7 @@ const SettingsMutesAndBlocksPage = memo(() => {
         <BorderedMainContent className="flex flex-row">
           <SettingsNav />
           <SettingsPageContent>
+            <HiddenPeopleList />
             <div className="mb-4 flex flex-col">
               <span className="mb-2 font-semibold">Mute and block</span>
               <div className="-mx-4 flex flex-col">

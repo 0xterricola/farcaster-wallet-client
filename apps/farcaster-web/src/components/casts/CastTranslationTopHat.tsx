@@ -9,6 +9,17 @@ type CastTranslationTopHatProps = {
   showOriginal: boolean;
   toggleLabel: string;
   onToggle: () => void;
+  /**
+   * No translation exists yet and one can be made: the bar offers it instead of
+   * reporting it. Only ever true when the origin answered `GET /api/translate`
+   * with `{on:true}` — a host that cannot translate draws nothing at all.
+   */
+  isOffered?: boolean;
+  /** The ask is in flight: the button says so and cannot be pressed twice. */
+  isAsking?: boolean;
+  /** The service's own refusal, in the app's voice, in place of the row's sentence. */
+  notice?: string;
+  onOffer?: () => void;
 };
 
 const CastTranslationTopHat: FC<CastTranslationTopHatProps> = memo((props) => {
@@ -24,7 +35,45 @@ const CastTranslationTopHat: FC<CastTranslationTopHatProps> = memo((props) => {
       </FeedItemTopHatContainer>
     );
   }
-  const { sourceLanguageName, showOriginal, toggleLabel, onToggle } = props;
+
+  const {
+    sourceLanguageName,
+    showOriginal,
+    toggleLabel,
+    onToggle,
+    isOffered,
+    isAsking,
+    notice,
+    onOffer,
+  } = props;
+
+  if (isOffered) {
+    return (
+      <FeedItemTopHatContainer
+        icon={<Languages size={12} />}
+        trailing={
+          <button
+            type="button"
+            className="shrink-0 font-medium text-link hover:underline disabled:no-underline disabled:opacity-60"
+            aria-label={`Translate from ${sourceLanguageName}`}
+            disabled={isAsking}
+            onClick={(event) => {
+              onToggleClick(event);
+              onOffer?.();
+            }}
+          >
+            {isAsking
+              ? 'Translating...'
+              : notice
+                ? 'Try again'
+                : `Translate from ${sourceLanguageName}`}
+          </button>
+        }
+      >
+        {notice ?? `Written in ${sourceLanguageName}`}
+      </FeedItemTopHatContainer>
+    );
+  }
 
   return (
     <FeedItemTopHatContainer

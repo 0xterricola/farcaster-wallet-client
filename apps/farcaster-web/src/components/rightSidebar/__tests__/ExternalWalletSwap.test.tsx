@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   guard: vi.fn(),
   receipt: vi.fn(),
   refresh: vi.fn(),
+  status: vi.fn(),
   tokens: vi.fn(),
   refetchTokens: vi.fn(),
   readContract: vi.fn(),
@@ -74,7 +75,11 @@ vi.mock('~/hooks/useLifiWallet', () => ({
 }));
 vi.mock('~/utils/lifiSwap', async (importOriginal) => {
   const original = await importOriginal<typeof import('~/utils/lifiSwap')>();
-  return { ...original, fetchLifiQuote: mocks.quote };
+  return {
+    ...original,
+    fetchLifiQuote: mocks.quote,
+    fetchLifiTransferStatus: mocks.status,
+  };
 });
 vi.mock('~/utils/sendBaseNativeToken', () => ({
   ensureEvmWalletAccount: mocks.guard,
@@ -112,6 +117,7 @@ beforeEach(() => {
     estimate: { toAmount: '1000', toAmountMin: '990' },
     transactionRequest: { to: contract, data: '0xabcd', value: '0xe8d4a51000' },
   });
+  mocks.status.mockReset().mockResolvedValue({ state: 'waiting' });
   mocks.request.mockReset().mockResolvedValue(hash);
   mocks.guard.mockResolvedValue(undefined);
   mocks.receipt.mockReturnValue({ data: undefined, isError: false });
@@ -1816,5 +1822,196 @@ describe('Robinhood Chain swap integration', () => {
       wallet,
       robinhood.id,
     );
+  });
+});
+
+// A move: one quote that lands on another chain, what it costs, and the states
+// that follow it until the money arrives. Adapted from quilcast
+// `5e4759372ed0` (MIT).
+describe('cross-chain moves', () => {
+  const arbitrumUsdc = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as const;
+  const destination = {
+    chainId: arbitrum.id,
+    address: arbitrumUsdc,
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+  };
+  const arrivalHash = `0x${'b'.repeat(64)}` as const;
+  const moveRoute = {
+    tool: 'relaydepository',
+    toolDetails: { name: 'Relay' },
+    action: { fromAmount: '1000000000000' },
+    estimate: {
+      toAmount: '999000000',
+      toAmountMin: '990000000',
+      executionDuration: 61,
+      fromAmountUSD: '2.4023',
+      toAmountUSD: '2.3678',
+      gasCosts: [{ amountUSD: '0.0019' }],
+      feeCosts: [{ amountUSD: '0.0040', included: false }],
+    },
+    transactionRequest: { to: contract, data: '0xabcd', value: '0xe8d4a51000' },
+  };
+
+  function chooseArbitrum() {
+    mocks.tokens.mockImplementation((_address, chain) => ({
+      data: {
+        tokens:
+          chain?.id === arbitrum.id
+            ? [{ ...destination, verificationStatus: 'verified' }]
+            : [],
+      },
+      refetch: mocks.refetchTokens,
+    }));
+    fireEvent.change(screen.getByLabelText('Move to'), {
+      target: { value: String(arbitrum.id) },
+    });
+    fireEvent.change(screen.getByLabelText('Amount'), {
+      target: { value: '0.000001' },
+    });
+  }
+
+  async function quoteMove() {
+    chooseArbitrum();
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    await screen.findByRole('button', { name: 'Move to Arbitrum One' });
+  }
+
+  function confirmSend() {
+    mocks.receipt.mockReturnValue({
+      data: { transactionHash: hash, status: 'success' },
+      isError: false,
+    });
+  }
+
+  it('names the destination chain in the quote and never reads a balance for it here', async () => {
+    mocks.quote.mockResolvedValue(moveRoute);
+    render(<ExternalWalletSwap />);
+    await quoteMove();
+    expect(mocks.quote).toHaveBeenCalledWith(
+      wallet,
+      from,
+      { ...destination, balance: 0n },
+      1000000000000n,
+      base,
+      arbitrum,
+    );
+    expect(mocks.asset).not.toHaveBeenCalledWith(wallet, arbitrumUsdc, base);
+    expect(screen.getByText('Arrives on Arbitrum One')).toBeTruthy();
+  });
+
+  it('shows the cost, the time and both sides in dollars when LI.FI reported them', async () => {
+    mocks.quote.mockResolvedValue(moveRoute);
+    render(<ExternalWalletSwap />);
+    await quoteMove();
+    const review = screen.getByLabelText(
+      'Review move to Arbitrum One',
+    ).textContent;
+    expect(review).toContain('Route: Relay');
+    expect(review).toContain('about $2.40 in, about $2.37 out');
+    expect(review).toContain('Network and route fees under $0.01');
+    expect(review).toContain('Arrives in about a minute');
+  });
+
+  it('says nothing about cost or time when LI.FI reported none', async () => {
+    mocks.quote.mockResolvedValue({
+      ...moveRoute,
+      estimate: { toAmount: '999000000', toAmountMin: '990000000' },
+    });
+    render(<ExternalWalletSwap />);
+    await quoteMove();
+    const review = screen.getByLabelText(
+      'Review move to Arbitrum One',
+    ).textContent;
+    expect(review).not.toContain('Network and route fees');
+    expect(review).not.toContain('Arrives in');
+    expect(review).not.toContain('$0.00');
+  });
+
+  it('says a route it cannot build in words a person can act on', async () => {
+    mocks.quote.mockRejectedValue(
+      new Error(
+        'LI.FI request failed (404). No available quotes for the requested transfer. Please try again.',
+      ),
+    );
+    render(<ExternalWalletSwap />);
+    chooseArbitrum();
+    fireEvent.click(screen.getByRole('button', { name: 'Get quote' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'No route can move this to Arbitrum One right now.',
+    );
+  });
+
+  it('tells the move’s story: waiting for the network, sent, arrived', async () => {
+    mocks.quote.mockResolvedValue(moveRoute);
+    const view = render(<ExternalWalletSwap />);
+    await quoteMove();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Move to Arbitrum One' }),
+    );
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
+    expect(screen.getByRole('status').textContent).toContain(
+      'Waiting for the network…',
+    );
+    // Nothing has arrived until the send-side receipt says it is in.
+    expect(mocks.status).not.toHaveBeenCalled();
+    mocks.status
+      .mockResolvedValueOnce({ state: 'waiting' })
+      .mockResolvedValue({ state: 'arrived', receivingTxHash: arrivalHash });
+    confirmSend();
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        view.rerender(<ExternalWalletSwap />);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(mocks.status).toHaveBeenCalledWith(hash, base.id, arbitrum.id);
+      expect(screen.getByRole('status').textContent).toContain(
+        'Sent. Waiting for it to arrive on Arbitrum One…',
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000);
+      });
+      expect(screen.getByRole('status').textContent).toContain(
+        'Arrived on Arbitrum One.',
+      );
+      expect(
+        screen
+          .getByRole('link', { name: /^View the arrival on / })
+          .getAttribute('href'),
+      ).toBe(`${arbitrum.blockExplorers.default.url}/tx/${arrivalHash}`);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says plainly when the move reported a problem', async () => {
+    mocks.quote.mockResolvedValue(moveRoute);
+    const view = render(<ExternalWalletSwap />);
+    await quoteMove();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Move to Arbitrum One' }),
+    );
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
+    mocks.status.mockResolvedValue({ state: 'failed' });
+    confirmSend();
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        view.rerender(<ExternalWalletSwap />);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole('status').textContent).toContain(
+        'The move reported a problem',
+      );
+      expect(screen.getAllByRole('link').length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,0 +1,123 @@
+Fiddy node client — live runs against a real Snapchain read node
+captured: 2026-10-18T17:24:12Z  host: 192.168.1.16
+node: https://haatz.quilibrium.com  (public read node, version reported below)
+
+### node fingerprint
+{"dbStats":{"numMessages":914249089,"numFidRegistrations":3355195,"approxSize":796178226804},"numShards":2,"shardInfos":[{"shardId":0,"maxHeight":48331879,"numMessages":12667769,"numFidRegistrations":0,"approxSize":54566215461,"blockDelay":0,"mempoolSize":0},{"shardId":1,"maxHeight":49007098,"numMessages":458614423,"numFidRegistrations":1677739,"approxSize":400057106384,"blockDelay":0,"mempoolSize
+
+### 1/3 hermetic suite (no node required)
+
+---------·········································································
+
+ Test Files  5 passed | 3 skipped (8)
+      Tests  73 passed | 9 skipped (82)
+   Start at  22:54:14
+   Duration  1.27s (transform 262ms, setup 0ms, collect 4.55s, tests 1.72s, environment 1ms, prepare 436ms)
+
+
+### 2/3 live read-only suite  SNAPCHAIN_LIVE_URL=https://haatz.quilibrium.com
+
+ RUN  v3.2.4 /Users/lc/fiddy/packages/farcaster-node-client
+
+ ✓ src/__tests__/live.node.test.ts (5 tests) 3199ms
+   ✓ live node (read-only) > answers /v1/info with the shard layout  1420ms
+   ✓ live node (read-only) > decodes real casts, and their Ed25519 signatures verify  344ms
+   ✓ live node (read-only) > decodes real profile data and signer records  591ms
+   ✓ live node (read-only) > resolves the client behind a real cast from its signer record  557ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  22:54:16
+   Duration  3.73s (transform 40ms, setup 0ms, collect 327ms, tests 3.20s, environment 0ms, prepare 36ms)
+
+
+### 3/3 live write-path suite (rejections only)  SNAPCHAIN_LIVE_WRITE_URL=https://haatz.quilibrium.com
+
+ RUN  v3.2.4 /Users/lc/fiddy/packages/farcaster-node-client
+
+stdout | src/__tests__/live.write.node.test.ts > live node (write path, rejections only)
+observedNodeRejections=[
+  {
+    "what": "MESSAGE_TYPE_CAST_ADD (unknown signer)",
+    "status": 400,
+    "nodeError": "Failed to submit message",
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+  },
+  {
+    "what": "MESSAGE_TYPE_REACTION_ADD (unknown signer)",
+    "status": 400,
+    "nodeError": "Failed to submit message",
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+  },
+  {
+    "what": "MESSAGE_TYPE_LINK_ADD / follow (unknown signer)",
+    "status": 400,
+    "nodeError": "Failed to submit message",
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+  },
+  {
+    "what": "MESSAGE_TYPE_USER_DATA_ADD (unknown signer)",
+    "status": 400,
+    "nodeError": "Failed to submit message",
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+  }
+]
+
+ ✓ src/__tests__/live.write.node.test.ts (3 tests) 2175ms
+   ✓ live node (write path, rejections only) > refuses a cast signed by a key the FID never added  920ms
+   ✓ live node (write path, rejections only) > parses and refuses reactions, follows and profile edits the same way  907ms
+   ✓ live node (write path, rejections only) > a JSON body fails differently, so the assertions above are not vacuous  346ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  22:54:20
+   Duration  2.63s (transform 37ms, setup 0ms, collect 275ms, tests 2.18s, environment 0ms, prepare 39ms)
+
+
+### 4/3 KEY_ADD acceptance probe  SNAPCHAIN_LIVE_WRITE_URL=... SNAPCHAIN_LIVE_WRITE_KEYADD=1
+
+ RUN  v3.2.4 /Users/lc/fiddy/packages/farcaster-node-client
+
+stdout | src/__tests__/live.keyadd.node.test.ts > live node (KEY_ADD acceptance probe) > reports whether a 200 on submit means the key is live (it does not)
+{
+  "fid": 2,
+  "appKeyPublicKeyHex": "0x0f61045ac3864131cf12575bcebebc94cfea09d6716e342466815f1c3918f337",
+  "readNodeAccepted": true,
+  "detail": "HTTP 200, hash 0xd0fadd7c2d0cd4fd8ddda00a1d6338a97f5edab9",
+  "becameASignerWithin60s": false,
+  "gaslessSignerCountBefore": 0
+}
+
+ ✓ src/__tests__/live.keyadd.node.test.ts (1 test) 65757ms
+   ✓ live node (KEY_ADD acceptance probe) > reports whether a 200 on submit means the key is live (it does not)  65756ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  22:54:23
+   Duration  66.27s (transform 56ms, setup 0ms, collect 316ms, tests 65.76s, environment 0ms, prepare 65ms)
+
+
+### post-commit re-run on 98c365a — read + write suites
+captured: 2026-10-18T17:41:42Z
+
+
+ ✓ src/__tests__/live.node.test.ts (5 tests) 3153ms
+   ✓ live node (read-only) > answers /v1/info with the shard layout  1508ms
+   ✓ live node (read-only) > decodes real casts, and their Ed25519 signatures verify  324ms
+   ✓ live node (read-only) > decodes real profile data and signer records  522ms
+   ✓ live node (read-only) > resolves the client behind a real cast from its signer record  534ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  23:11:43
+   Duration  3.53s (transform 27ms, setup 0ms, collect 221ms, tests 3.15s, environment 0ms, prepare 27ms)
+
+
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+    "nodeErrorDetail": "status: InvalidArgument, message: \"bad_request.validation_failure/invalid signer\", details: [], metadata: MetadataMap { headers: {\"x-err-code\": \"bad_request.validation_failure\"} }"
+ ✓ src/__tests__/live.write.node.test.ts (3 tests) 1550ms
+   ✓ live node (write path, rejections only) > refuses a cast signed by a key the FID never added  342ms
+   ✓ live node (write path, rejections only) > parses and refuses reactions, follows and profile edits the same way  942ms
+      Tests  3 passed (3)

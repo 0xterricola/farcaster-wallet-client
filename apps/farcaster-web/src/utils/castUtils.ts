@@ -163,14 +163,17 @@ const buildCastsWithContext = (
 
       const includeDetails =
         cast.replies.count !== 0 ||
-        cast.recasts.count !== 0 ||
-        cast.reactions.count !== 0 ||
+        // Absent means the count has not been read yet, which is not the same
+        // as "nobody engaged": treat it as no details to add for now. The count
+        // arrives behind a feed's paint and this re-renders with it.
+        (cast.recasts?.count ?? 0) !== 0 ||
+        (cast.reactions?.count ?? 0) !== 0 ||
         (typeof cast.quoteCount !== 'undefined' && cast.quoteCount !== 0) ||
         (cast.warpsTipped ?? 0) !== 0;
 
+      const recasters = cast.recasts?.recasters;
       const shouldShowRecastLabel =
-        typeof cast.recasts.recasters !== 'undefined' &&
-        cast.recasts.recasters.length !== 0;
+        typeof recasters !== 'undefined' && recasters.length !== 0;
 
       const isReplyingToEmbed = cast.parentSource?.type === 'url';
 
@@ -364,8 +367,10 @@ const buildCastsWithConversationContext: CastWrapper<ApiCastWithContext> = ({
       focusedCastIndex !== undefined && index >= focusedCastIndex;
 
     const includeDetails =
-      cast.recasts.count !== 0 ||
-      cast.reactions.count !== 0 ||
+      // Absent means not read yet, not "nobody engaged" (see the twin of this
+      // expression above).
+      (cast.recasts?.count ?? 0) !== 0 ||
+      (cast.reactions?.count ?? 0) !== 0 ||
       (typeof cast.quoteCount !== 'undefined' && cast.quoteCount !== 0) ||
       (cast.warpsTipped ?? 0) !== 0;
 

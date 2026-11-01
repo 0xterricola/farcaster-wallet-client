@@ -1,0 +1,224 @@
+/*
+ * Making an account, and holding more than one.
+ *
+ * These screens reuse the onboarding's own vocabulary — the same sheet, the same
+ * buttons, the same tokens — because they are the same conversation: what Fiddy
+ * is, and what it will and will not do for you. Only the pieces that have no
+ * precedent in the setup flow live here: a twelve-word grid, a funding line, a
+ * progress list, and the account list.
+ */
+
+/* --- the twelve words are the account -------------------------------- */
+
+.fiddy-phrase {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: 14px;
+  background: var(--fiddy-glass);
+  color: var(--fiddy-ink);
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 2;
+  letter-spacing: 0.01em;
+  word-spacing: 0.35em;
+  user-select: all;
+}
+
+/* --- a decision the person has to make -------------------------------- */
+
+.fiddy-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font-size: 14px;
+  color: var(--fiddy-ink);
+  cursor: pointer;
+}
+
+.fiddy-check input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--fiddy-accent-deep, #a3c10a);
+}
+
+.fiddy-field small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fiddy-ink-dim);
+}
+
+/* --- what is owed, and to whom ---------------------------------------- */
+
+.fiddy-kv {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 0;
+  border-top: 1px solid var(--fiddy-glass-border);
+  font-size: 14px;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-kv b,
+.fiddy-kv code {
+  margin-left: auto;
+  color: var(--fiddy-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.fiddy-kv code {
+  font-size: 12px;
+  word-break: break-all;
+  text-align: right;
+}
+
+.fiddy-waiting {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--fiddy-ink-dim);
+}
+
+/* --- what has actually finished --------------------------------------- */
+
+.fiddy-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fiddy-steps li {
+  position: relative;
+  padding: 12px 2px 12px 26px;
+  border-top: 1px solid var(--fiddy-glass-border);
+  font-size: 14px;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-steps li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 18px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--fiddy-glass-border);
+}
+
+.fiddy-steps li.now {
+  color: var(--fiddy-ink);
+  font-weight: 600;
+}
+
+.fiddy-steps li.now::before {
+  border-color: var(--fiddy-accent-deep, #a3c10a);
+  background: var(--fiddy-accent-deep, #a3c10a);
+}
+
+.fiddy-steps li.done {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-steps li.done::before {
+  border-color: var(--fiddy-accent-deep, #a3c10a);
+  background: var(--fiddy-accent-deep, #a3c10a);
+}
+
+/* A failure says what it is, in the same voice as the rest of the sheet. */
+.fiddy-error {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: 12px;
+  background: var(--fiddy-glass);
+  color: var(--fiddy-ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* --- the accounts this device holds ----------------------------------- */
+
+.fiddy-accounts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fiddy-accounts li {
+  display: grid;
+  gap: 6px;
+  padding: 14px 2px;
+  border-top: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-account-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-account-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-accounts b {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fiddy-accent-deep, #a3c10a);
+}
+
+.fiddy-accounts .fiddy-quiet-btn {
+  justify-self: start;
+  padding: 6px 10px;
+}
+
+/* --- the rail's door into it ------------------------------------------ */
+
+/*
+ * The entry sits under the nav, quieter than the destinations: it says which
+ * account you are, and it is the way to become a different one.
+ */
+.fiddy-account-entry {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: 12px;
+  background: none;
+  color: var(--fiddy-ink-dim);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fiddy-account-entry:hover {
+  color: var(--fiddy-ink);
+  border-color: var(--fiddy-accent-deep, #a3c10a);
+}

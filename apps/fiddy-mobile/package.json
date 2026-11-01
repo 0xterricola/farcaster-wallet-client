@@ -1,0 +1,37 @@
+{
+  "name": "fiddy-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client --clear",
+    "ios": "expo run:ios",
+    "ios:device": "expo run:ios --device",
+    "android": "expo run:android",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" --config ../../.prettierrc.js --ignore-path ../../.prettierignore"
+  },
+  "dependencies": {
+    "@farcaster/core": "0.20.0",
+    "buffer": "6.0.3",
+    "expo": "55.0.24",
+    "expo-constants": "55.0.16",
+    "expo-crypto": "55.0.15",
+    "expo-linear-gradient": "55.0.14",
+    "expo-splash-screen": "55.0.21",
+    "farcaster-node-client": "workspace:*",
+    "react": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-safe-area-context": "5.6.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "19.2.14",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "babel-preset-expo": "^55.0.17",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

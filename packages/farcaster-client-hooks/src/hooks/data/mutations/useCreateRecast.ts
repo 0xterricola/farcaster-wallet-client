@@ -3,7 +3,10 @@ import { useCallback } from 'react';
 
 import { RecastError } from '../../../errors';
 import { useFarcasterApiClient } from '../../../providers/FarcasterApiClientProvider';
-import { useOptimisticallyUpdateCast } from '../optimistic';
+import {
+  optimisticallySteppedCount,
+  useOptimisticallyUpdateCast,
+} from '../optimistic';
 import { useInvalidateUserCasts } from '../queries/userCasts/useInvalidateUserCasts';
 
 const useCreateRecast = () => {
@@ -27,12 +30,16 @@ const useCreateRecast = () => {
         updates: {
           hash: cast.hash,
           recasts: {
-            count: cast.recasts.count + 1,
+            // Nothing when the count has not been read yet (see the helper).
+            ...optimisticallySteppedCount({
+              count: cast.recasts?.count,
+              delta: 1,
+            }),
             recasters:
               // Add viewer to recasters if values are provided
               viewerFid && viewerDisplayName
                 ? [
-                    ...(cast.recasts.recasters || []),
+                    ...(cast.recasts?.recasters || []),
                     {
                       fid: viewerFid,
                       username: viewerUsername,
@@ -52,8 +59,11 @@ const useCreateRecast = () => {
         revertUpdates: {
           hash: cast.hash,
           recasts: {
-            count: cast.recasts.count,
-            recasters: cast.recasts.recasters?.slice(),
+            ...optimisticallySteppedCount({
+              count: cast.recasts?.count,
+              delta: 0,
+            }),
+            recasters: cast.recasts?.recasters?.slice(),
           },
           viewerContext: {
             recast: cast.viewerContext?.recast,

@@ -71,7 +71,7 @@ const PageMeta: FC<PageMetaProps> = memo(
         )}
         <meta property="og:type" content={ogType} />
         {canonical && <meta property="og:url" content={canonical} />}
-        <meta property="og:site_name" content="Farcaster" />
+        <meta property="og:site_name" content="Fiddy" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content={twitterCard} />

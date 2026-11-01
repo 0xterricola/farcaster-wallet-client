@@ -48,7 +48,6 @@ const ShowMore: FC<ShowMoreProps> = memo(({ cast, onPress }) => {
         } else {
           navigateToConversation({
             castHash: cast.hash,
-            authorUsername: cast.author.username,
           });
         }
       }}

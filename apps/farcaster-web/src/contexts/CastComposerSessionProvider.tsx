@@ -1,8 +1,8 @@
 import { ComposeCast } from '@farcaster/miniapp-core';
 import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
-import React, { ReactNode, useCallback, useMemo } from 'react';
+import React, { ReactNode, Suspense, useCallback, useMemo } from 'react';
 
-import { ComposeCastModal } from '~/components/modals/ComposeCastModal';
+import { ComposeCastModal } from '~/lazy/components';
 import { CastComposerIntent } from '~/types';
 
 type OpenComposerOptions = {
@@ -43,12 +43,18 @@ function CastComposerSessionProvider({ children }: { children: ReactNode }) {
     <>
       {children}
       {session ? (
-        <ComposeCastModal
-          onClose={closeComposer}
-          intent={session.intent}
-          isIntentFromSearchParams={session.isIntentFromSearchParams}
-          backgrounded={session.backgrounded}
-        />
+        /* The composer's own chunk arrives here (see `~/lazy/components`): until
+           it does, the modal is simply not there — the reader asked for a
+           composer and gets one a moment later, not a shell skeleton over the
+           whole app. */
+        <Suspense fallback={null}>
+          <ComposeCastModal
+            onClose={closeComposer}
+            intent={session.intent}
+            isIntentFromSearchParams={session.isIntentFromSearchParams}
+            backgrounded={session.backgrounded}
+          />
+        </Suspense>
       ) : null}
     </>
   );

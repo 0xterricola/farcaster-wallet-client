@@ -25,11 +25,15 @@ import { NewDirectCastConversationModal } from '~/components/modals/NewDirectCas
 import { Page } from '~/components/page/Page';
 import { PageHeader } from '~/components/page/PageHeader';
 import { PageTitle } from '~/components/page/PageTitle';
+import { NodeCannotAnswerPanel } from '~/components/snapchain/NodeCannotAnswerPanel';
+import { localApiEnabled } from '~/constants/api';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
 import { useDirectCasts } from '~/contexts/DirectCastsProvider';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { useNavigate } from '~/hooks/navigation/useNavigate';
 import { useParams } from '~/hooks/navigation/useParams';
+import { classifyHostedRequest } from '~/snapchain/nodeApi/hostedRoutes';
+import { isNodeBackedClientEnabled } from '~/snapchain/nodeApi/nodeBackedClientFlag';
 import { getConversationIdFromActiveConversationId } from '~/utils/directCastUtils';
 
 const filterTabs = [
@@ -117,7 +121,7 @@ const NoteIcon: React.FC<{ size: number }> = React.memo(({ size }) => {
   );
 });
 
-const DirectCastsInboxPage: React.FC = React.memo(() => {
+const DirectCastsInboxContent: React.FC = React.memo(() => {
   const { conversationId: activeConversationId } = useParams(
     'directCastsConversation',
   );
@@ -434,6 +438,49 @@ const DirectCastsInboxPage: React.FC = React.memo(() => {
       )}
     </>
   );
+});
+
+DirectCastsInboxContent.displayName = 'DirectCastsInboxContent';
+
+/**
+ * Why this route has nothing to show when your node is the data source, or
+ * `undefined` when it does have an inbox to read.
+ *
+ * Direct messages are a hosted product, not protocol messages: `hostedRoutes`
+ * classifies `/v2/direct-cast-inbox` as `hosted` on purpose, and the rail
+ * already replaces the nav link with "Direct Casts · soon". MEASURED: with a
+ * real session against a live node, this route used to render a normal-looking
+ * inbox reading "No direct casts" — an empty success, when the truth is that
+ * your node cannot serve direct messages at all.
+ */
+const directCastsMissingNodeReason = (): string | undefined => {
+  if (!isNodeBackedClientEnabled() || localApiEnabled) {
+    return undefined;
+  }
+  const inboxRoute = classifyHostedRequest({
+    method: 'GET',
+    path: '/v2/direct-cast-inbox',
+  });
+  return inboxRoute.kind === 'hosted' ? inboxRoute.why : undefined;
+};
+
+/**
+ * The route's element.
+ *
+ * The gate is a wrapper with no hooks of its own rather than an early return
+ * inside the page: an early return in the page would skip its hooks on that
+ * path (`react-hooks/rules-of-hooks`).
+ */
+const DirectCastsInboxPage: React.FC = React.memo(() => {
+  const reason = directCastsMissingNodeReason();
+  if (reason) {
+    return (
+      <BorderedMainContent>
+        <NodeCannotAnswerPanel label="Direct casts" reason={reason} />
+      </BorderedMainContent>
+    );
+  }
+  return <DirectCastsInboxContent />;
 });
 
 DirectCastsInboxPage.displayName = 'DirectCastsInboxPage';

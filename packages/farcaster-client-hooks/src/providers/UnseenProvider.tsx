@@ -45,6 +45,12 @@ type OnBadgeCountChangeCallbackReferences = {
 };
 
 type UnseenContextValue = {
+  /**
+   * True when the last read of `/v2/unseen` failed. The counts are chrome, not
+   * content, and chrome that silently reads as "0" is a lie: the shell says so
+   * out loud instead. See the loader below for why the failure is held here.
+   */
+  countsUnavailable: boolean;
   notificationsCount: number;
   resetNotificationsCount: () => void;
   unseenNotificationTabs: string[];
@@ -102,6 +108,7 @@ const UnseenProvider: FC<UnseenProviderProps> = memo(
     >([]);
     const [warpTransactionCount, setWarpTransactionCount] = useState(0);
     const warpTransactionCountRef = useRef(0);
+    const [countsUnavailable, setCountsUnavailable] = useState(false);
 
     const fetchUnseen = useFetchUnseen();
     const { registerOnMessageCallback } = useWebSockets();
@@ -215,16 +222,57 @@ const UnseenProvider: FC<UnseenProviderProps> = memo(
     const invalidateDirectCastInboxByAccount =
       useInvalidateDirectCastInboxByAccount();
 
-    const refreshUnseenStatus = useCallback(async () => {
+    /**
+     * One read of `/v2/unseen`, with the failure contained.
+     *
+     * WHY THE try/catch LIVES HERE AND NOT AT THE CALL SITES
+     * Every path to this read starts from a timer — `setTimeout` for the first
+     * poll below, `setInterval` every 30s after it — or from a websocket
+     * callback. A promise rejected in a timer callback has no React owner:
+     * nothing above it can catch it, so no error boundary ever sees it.
+     * Measured (t_963a9287): with `/v2/unseen` failing, the client's own
+     * `UnhandledFetchError` from `buildUnseenFetcher` reached `window` as an
+     * uncaught error.
+     *
+     * It is also not a failure that can be reported by reading a number: the
+     * counts are chrome, and chrome that fails reads as a truthful zero. So the
+     * failure is recorded in `countsUnavailable` for the shell to say out loud,
+     * the last known counts are left alone (a stale badge beats a wrong one),
+     * and the next poll clears it the moment a read succeeds.
+     */
+    const loadUnseenCounts = useCallback(async () => {
       hasStartedPollingRef.current = true;
 
-      const data = await fetchUnseen();
+      let data: Awaited<ReturnType<typeof fetchUnseen>>;
+
+      try {
+        data = await fetchUnseen();
+      } catch (error) {
+        setCountsUnavailable(true);
+        // eslint-disable-next-line no-console
+        console.warn('data could not be read: UnseenProvider:fetchUnseen', error);
+        return undefined;
+      }
+
       if (data === null) {
         onNullUnseenResponse();
+        setCountsUnavailable(true);
         // eslint-disable-next-line no-console
         console.warn('data was null: UnseenProvider:fetchUnseen');
+        return undefined;
       }
-      const { result } = data;
+
+      setCountsUnavailable(false);
+
+      return data.result;
+    }, [fetchUnseen, onNullUnseenResponse]);
+
+    const refreshUnseenStatus = useCallback(async () => {
+      const result = await loadUnseenCounts();
+
+      if (!result) {
+        return;
+      }
 
       setNotificationsCount(result.notificationsCount);
       setUnseenNotificationTabs((currentValue) =>
@@ -243,33 +291,23 @@ const UnseenProvider: FC<UnseenProviderProps> = memo(
         setWarpTransactionCount(result.warpTransactionCount);
       }
     }, [
-      fetchUnseen,
-      onNullUnseenResponse,
+      loadUnseenCounts,
       setArticlesCount,
       setInboxCount,
       setNotificationsCount,
     ]);
 
     const refreshGlobalCountsStatus = useCallback(async () => {
-      hasStartedPollingRef.current = true;
+      const result = await loadUnseenCounts();
 
-      const data = await fetchUnseen();
-      if (data === null) {
-        onNullUnseenResponse();
-        // eslint-disable-next-line no-console
-        console.warn('data was null: UnseenProvider:fetchUnseen');
+      if (!result) {
+        return;
       }
-      const { result } = data;
 
       setNotificationsCount(result.notificationsCount);
 
       setInboxCount(result.inboxCount);
-    }, [
-      fetchUnseen,
-      onNullUnseenResponse,
-      setInboxCount,
-      setNotificationsCount,
-    ]);
+    }, [loadUnseenCounts, setInboxCount, setNotificationsCount]);
 
     useEffect(() => {
       // Initial poll (this should fire only once if refreshUnseenStatus is correctly set): delay it a bit
@@ -445,6 +483,7 @@ const UnseenProvider: FC<UnseenProviderProps> = memo(
 
     const value = useMemo(
       () => ({
+        countsUnavailable,
         notificationsCount,
         resetNotificationsCount,
         unseenNotificationTabs,
@@ -465,6 +504,7 @@ const UnseenProvider: FC<UnseenProviderProps> = memo(
       [
         articlesCount,
         channelFeedsUnseenStatus,
+        countsUnavailable,
         decreaseInboxCount,
         inboxCount,
         incrementInboxCount,

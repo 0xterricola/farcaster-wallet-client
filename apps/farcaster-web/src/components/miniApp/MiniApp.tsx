@@ -86,8 +86,31 @@ import {
 } from '~/components/iframes/IFrameLoader';
 import { FrameIconImage } from '~/components/images/FrameIconImage';
 import { Image } from '~/components/images/Image';
+import {
+  AgentAskApproval,
+  createAgentAskApproval,
+} from '~/components/miniApp/agentAskApproval';
+import { AgentAskCard } from '~/components/miniApp/AgentAskCard';
+import {
+  AGENT_ASK_CAPABILITY,
+  agentAskAnswer,
+  AgentAskMuteStore,
+  createAgentAskChannel,
+  createSessionMuteStore,
+} from '~/components/miniApp/agentAskChannel';
+import {
+  ComposerOpening,
+  createAgentAskHandlers,
+} from '~/components/miniApp/agentAskHandlers';
+import {
+  createLegacyWalletChannel,
+  LegacyWalletProvider,
+} from '~/components/miniApp/legacyWalletChannel';
 import { MiniAppQualityButton } from '~/components/miniApp/MiniAppQualityButton';
-import { ComposeCastModal } from '~/components/modals/ComposeCastModal';
+import {
+  gateMiniAppWire,
+  pinnedMiniAppOrigin,
+} from '~/components/miniApp/miniAppWireGate';
 import { MiniAppQualityModal } from '~/components/modals/MiniAppQualityModal';
 import {
   FavoriteFrameProvider,
@@ -110,13 +133,22 @@ import {
 } from '~/contexts/SignManifestProvider';
 import { SubordinateOpenableWarpcastWalletProvider } from '~/contexts/SubordinateOpenableWarpcastWalletProvider';
 import { useWallet, WalletProvider } from '~/contexts/WalletProvider';
+import { useAgentSession } from '~/hooks/agent/useAgentSession';
 import { useCurrentUser } from '~/hooks/data/useCurrentUser';
 import { useIsAdmin } from '~/hooks/data/useIsAdmin';
 import { useUserLevel } from '~/hooks/data/useUserLevel';
 import { useExternalNavigate } from '~/hooks/navigation/useExternalNavigate';
 import { useNavigateToConversation } from '~/hooks/navigation/useNavigateToConversation';
 import { useSolanaMiniAppProvider } from '~/hooks/useSolanaMiniAppProvider';
+import { ComposeCastModal } from '~/lazy/components';
+import { keepSchedule, newScheduleId } from '~/lib/agentSchedules';
+import {
+  AgentServiceSession,
+  chatWithAgent,
+  listAgents,
+} from '~/lib/agentService';
 import { cn } from '~/lib/utils';
+import { observeWriteEvidence } from '~/snapchain/nodeApi/writeEvidenceWatch';
 import { CastComposerIntent } from '~/types';
 import { trackError } from '~/utils/errorUtils';
 import { logError } from '~/utils/logUtils';
@@ -338,6 +370,42 @@ function InnerMiniAppContent({
   const addRejectedBeforeLoadRef = useRef(false);
   const addPromptCountRef = useRef(0);
 
+  // The agent session this browser holds, read through a ref: the ask channel
+  // below is built once per launched URL, and a session that arrives while the
+  // app is open has to be answered by the listener that is already running.
+  const agentSession = useAgentSession();
+  const agentSessionPairedRef = useRef(false);
+  agentSessionPairedRef.current = agentSession.status === 'paired';
+  // The session itself, read at ask time: a `draft` is one chat message to
+  // whichever agent this browser is paired with when the reader approves
+  // (`docs/CLIENT-MINIAPP-AGENT-BRIDGE.md` §5 — the app never names it).
+  const agentSessionRef = useRef<AgentServiceSession | null>(null);
+  agentSessionRef.current = agentSession.session;
+
+  // The ask bridge's own furniture, built once for this window:
+  //
+  //   agentAskMutes      where the reader's mute lives (session storage, keyed
+  //                      by origin) — the channel and the card share one store,
+  //                      so the card's own control is the channel's answer (§4)
+  //   agentAskApproval   the decision in front of the reader (§4's store)
+  //   agentAskHandlers   the two asks that end in Fiddy's own composer (§3.2,
+  //                      §3.3)
+  const agentAskMutesRef = useRef<AgentAskMuteStore | null>(null);
+  if (agentAskMutesRef.current === null) {
+    agentAskMutesRef.current = createSessionMuteStore();
+  }
+  const agentAskMutes = agentAskMutesRef.current;
+
+  const agentAskApprovalRef = useRef<AgentAskApproval | null>(null);
+  if (agentAskApprovalRef.current === null) {
+    agentAskApprovalRef.current = createAgentAskApproval();
+  }
+  const agentAskApproval = agentAskApprovalRef.current;
+
+  // The app's own manifest name, as the card's aside — never its heading, and
+  // read when the ask arrives rather than when the listener is built.
+  const frameNameRef = useRef<string | undefined>(undefined);
+
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [backState, setBackState] = useState<Back.BackState>(
     Back.DEFAULT_BACK_STATE,
@@ -365,6 +433,11 @@ function InnerMiniAppContent({
     enabled: !!url,
   });
   const frame = useGloballyCachedFrame(data);
+
+  // The name the app chose for itself, kept out of the render and read by the
+  // ask card as an aside: the heading is the origin, which is the only name the
+  // shell can verify (§4).
+  frameNameRef.current = frame?.name;
 
   const unavailable = invalidUrl || (!debug && (harmful || frame?.harmful));
 
@@ -515,13 +588,109 @@ function InnerMiniAppContent({
     emit?.({ event: 'primary_button_clicked' });
   };
 
-  const handleProviderRequest = useCallback(async () => {
-    throw new Error('not implemented');
-  }, []);
+  // The wallet channel an older mini app SDK asks through, instead of the
+  // host's own provider channel. It forwards to the instrumented wallet — see
+  // `legacyWalletChannel.ts` for why the provider is reached through a ref and
+  // why the old answer ('not implemented') was a lie this host contradicted.
+  const legacyWalletProviderRef = useRef<LegacyWalletProvider | undefined>(
+    undefined,
+  );
+  const handleProviderRequest = useMemo(
+    () => createLegacyWalletChannel(() => legacyWalletProviderRef.current),
+    [],
+  );
 
   const locationContext: Context.LocationContext | undefined = useMemo(
     () => (context && context.type !== 'dev_preview' ? context : undefined),
     [context],
+  );
+
+  const [castIntentAndPromise, setCastIntentAndPromise] = useState<{
+    castIntent: CastComposerIntent;
+    onSuccess: ((value: ComposeCast.Result<false>) => void) | undefined;
+  }>();
+
+  /**
+   * The route an ask ends in: the shell's own composer, over the mini app
+   * window, through exactly the state `composeCast` already uses above.
+   *
+   * This is the whole of the bridge's reach into a write. `draft` puts the
+   * agent's answer in it; `post` puts the app's own words in it (read on the
+   * card first, quoted and inert); and in both cases the next thing that can
+   * happen is the reader's own press of Cast
+   * (`docs/CLIENT-MINIAPP-AGENT-BRIDGE.md` §3.2, §3.3).
+   */
+  const openAskComposer = useCallback(
+    (intent: { text: string; embeds?: string[] }): ComposerOpening => {
+      let resolveClosed: (outcome: { cast: boolean }) => void = () => undefined;
+      const closed = new Promise<{ cast: boolean }>((resolve) => {
+        resolveClosed = resolve;
+      });
+      setCastIntentAndPromise({
+        castIntent: {
+          text: intent.text,
+          embeds: intent.embeds ?? [],
+        },
+        onSuccess: (value) =>
+          resolveClosed({ cast: value !== undefined && value.cast !== null }),
+      });
+      return { closed };
+    },
+    [],
+  );
+
+  /**
+   * `draft`, `post` and `remind` — the three asks this shell has a path for.
+   * Everything the handler needs is the shell's own: the paired session this
+   * browser holds, one chat message to the agent that session is for, the
+   * composer above, the write seam's own evidence — which is what tells `posted`
+   * from `unknown` from `failed`, and is never a guess
+   * (`~/snapchain/nodeApi/writeEvidenceWatch`) — and the reader's own request
+   * log, which is where a `remind` and the agent's answer to it live
+   * (`~/lib/agentSchedules`, the same rows the Scheduled tasks tab shows).
+   */
+  const agentAskHandlers = useMemo(
+    () =>
+      createAgentAskHandlers({
+        approval: agentAskApproval,
+        agent: async () => {
+          const session = agentSessionRef.current;
+          if (!session) {
+            return undefined;
+          }
+          try {
+            // The agent this browser's session is for: the first one the
+            // service lists, which is the one the agent surface opens on by
+            // default (`~/pages/agent/AgentPage.tsx`). The app can never name,
+            // choose or influence it (§5).
+            const agents = await listAgents(session);
+            const first = agents[0];
+            return first ? { session, agentId: first.id } : undefined;
+          } catch {
+            return undefined;
+          }
+        },
+        chat: (target, message) =>
+          chatWithAgent(
+            target.session as AgentServiceSession,
+            target.agentId,
+            message,
+          ),
+        composer: openAskComposer,
+        writes: { observe: observeWriteEvidence },
+        schedules: { newId: newScheduleId, keep: keepSchedule },
+      }),
+    [agentAskApproval, openAskComposer],
+  );
+
+  // A new window is a new ask. Closing or replacing the mini app ends the wait
+  // in front of the reader honestly (nothing is carried for an app that is no
+  // longer on screen), and the next window's asks start from its own origin.
+  useEffect(
+    () => () => {
+      agentAskApproval.decline();
+    },
+    [agentAskApproval, url],
   );
 
   const [endpoint, setEndpoint] = useState<HostEndpoint | undefined>(undefined);
@@ -532,16 +701,131 @@ function InnerMiniAppContent({
     }
 
     setEndpoint(
-      createIframeEndpoint({
-        iframe,
-        // targetOrigin: '*',
-        targetOrigin: new URL(url).origin,
-        debug,
-      }),
+      // The wire the exposed SDK listens on is pinned to the frame it serves
+      // here, where it is built: the listener lives on this window, so a gate
+      // anywhere further along would be a gate on the wrong side of the message
+      // (`~/components/miniApp/miniAppWireGate`). Only the incoming side is
+      // touched — `emit`'s own `targetOrigin` below stays what it was.
+      gateMiniAppWire(
+        createIframeEndpoint({
+          iframe,
+          // targetOrigin: '*',
+          targetOrigin: new URL(url).origin,
+          debug,
+        }),
+        // Read at message time: a reload hands back a window this effect never
+        // saw, and the gate has to follow the frame that is on screen.
+        () => iframeLoaderRef.current?.iframe?.contentWindow,
+        pinnedMiniAppOrigin(url),
+      ),
     );
   }, [debug, url]);
 
   const emit = useMemo(() => endpoint?.emit, [endpoint?.emit]);
+
+  // The mini app's own ask channel — what the app may ask this reader's agent
+  // for, and every honest refusal when it may not
+  // (`docs/CLIENT-MINIAPP-AGENT-BRIDGE.md` §3.1, §6). One real listener, and it
+  // is pinned twice: the channel is handed the frame's own window object and the
+  // URL the window was launched with, and it answers only a message that matches
+  // both. A sibling frame, a frame embedded in the app, or any other page gets
+  // nothing at all — not even a refusal, because a reply is itself an oracle.
+  //
+  // The answer goes back to the frame's own origin, the way `createIframeEndpoint`
+  // above addresses this app. `draft`, `post` and `remind` are answered by the
+  // handlers above, in their own time (a reader's decision, a chat message, the
+  // reader's own composer, the reader's own log); any other well-formed ask is
+  // still answered `unavailable`, the honest state for a shell with no path for
+  // it.
+  useEffect(() => {
+    const iframe = iframeLoaderRef.current?.iframe;
+    if (!iframe || !url) {
+      return;
+    }
+
+    const frameOrigin = new URL(url).origin;
+    // The element, as a value this closure can read: its `contentWindow` is
+    // read live at answer time, because a reload hands back a new one.
+    const frameElement = iframe;
+    const channel = createAgentAskChannel({
+      hasPairedSession: () => agentSessionPairedRef.current,
+      // The reader's own mute, shared with the card: muting from the card is
+      // this channel's `muted` answer for the rest of the window (§4).
+      mutes: agentAskMutes,
+      answerAsk: (envelope, deferral) => {
+        if (!agentAskHandlers.answers(envelope.ask)) {
+          // Nothing here has a path for it: this channel's own `unavailable`
+          // stands — the honest answer for an ask this shell has no route for,
+          // which is every ask outside §3's three.
+          return false;
+        }
+        // The channel says nothing for this ask; the handlers answer it when
+        // they have a real state, and the app hears exactly that word.
+        void agentAskHandlers
+          .answer(envelope, {
+            origin: deferral.origin,
+            ...(frameNameRef.current === undefined
+              ? {}
+              : { name: frameNameRef.current }),
+          })
+          .then((state) => {
+            // §4's duplicate window remembers the truth, not a placeholder.
+            deferral.settled(state);
+            answerFrame(state);
+          })
+          .catch(() => {
+            // The shell could not finish the ask: the app hears the honest
+            // `failed` rather than a promise that never lands, and the reader
+            // has been told (S1's sentence says so).
+            deferral.settled('failed');
+            answerFrame('failed');
+          });
+
+        function answerFrame(state: Parameters<typeof agentAskAnswer>[1]) {
+          const frameWindow = deferral.frameWindow as {
+            postMessage?: (message: unknown, targetOrigin: string) => void;
+          };
+          // The window that asked, if it is still the window on screen: a
+          // reload or another app is a different window object, and an answer
+          // is never posted into somebody else's page.
+          if (
+            frameWindow === frameElement.contentWindow &&
+            typeof frameWindow?.postMessage === 'function'
+          ) {
+            frameWindow.postMessage(
+              agentAskAnswer(envelope.id, state),
+              deferral.origin,
+            );
+          }
+        }
+        return true;
+      },
+    });
+    channel.setLaunchedUrl(url);
+
+    const onMessage = (event: MessageEvent) => {
+      // The pin, here as well as inside the channel: this listener serves one
+      // frame's own window object at one origin. The channel refuses anything
+      // else by itself, so neither this call site nor a future one can be the
+      // hole — the check is written twice on purpose.
+      if (
+        event.source !== iframe.contentWindow ||
+        event.origin !== frameOrigin
+      ) {
+        return;
+      }
+      const answer = channel.handle(
+        { source: event.source, origin: event.origin, data: event.data },
+        iframe.contentWindow,
+      );
+      if (answer) {
+        iframe.contentWindow?.postMessage(answer, frameOrigin);
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [url, agentAskHandlers, agentAskMutes]);
 
   const triggerBack = useCallback(() => {
     if (backState.visible) {
@@ -659,11 +943,6 @@ function InnerMiniAppContent({
     maximizeMiniApp,
     setMiniAppLoadingMessage,
   } = useMinimizableWindowContext();
-  const [castIntentAndPromise, setCastIntentAndPromise] = useState<{
-    castIntent: CastComposerIntent;
-    onSuccess: ((value: ComposeCast.Result<false>) => void) | undefined;
-  }>();
-
   const handleComposeCast = useCallback(
     <close extends boolean | undefined = undefined>(
       options: ComposeCast.Options<close>,
@@ -729,7 +1008,6 @@ function InnerMiniAppContent({
 
       navigateToConversation({
         castHash: hash,
-        authorUsername: authorUsername,
         openInNewTab: false,
       });
     },
@@ -812,6 +1090,14 @@ function InnerMiniAppContent({
       'experimental.signManifest',
       'actions.openMiniApp',
       'back',
+      // Fiddy's own channel, not a member of the spec: a mini app can ask the
+      // reader's agent for a draft, a post or a reminder through the
+      // `fiddy:agent-ask` envelope (`docs/CLIENT-MINIAPP-AGENT-BRIDGE.md` §3.1).
+      // It is namespaced because it is ours alone, and it is declared here so a
+      // well-behaved app can find out before asking. Every string in this list
+      // has to be backed by something real; the live channel answers every ask
+      // it can be sent, honestly and in the order §6 fixes.
+      AGENT_ASK_CAPABILITY as MiniAppHostCapability,
     ];
   }, []);
 
@@ -1320,14 +1606,28 @@ function InnerMiniAppContent({
     preferredWallet,
   ]);
 
+  // The origin this window was launched with, pinned as the exposed SDK's own
+  // allowed origin. The endpoint above is already gated on the frame's window
+  // object; this is the second half, stated where the package reads it, so the
+  // wire holds even if the gate is ever moved or the package's list is passed a
+  // wildcard again. An unpinnable window is not exposed at all rather than
+  // exposed to anyone (`~/components/miniApp/miniAppWireGate`).
+  const launchedOrigin = pinnedMiniAppOrigin(url);
   useExposeToEndpoint({
-    endpoint,
+    endpoint: launchedOrigin ? endpoint : undefined,
     sdk,
-    miniAppOrigin: '*',
+    // Unreachable with no endpoint, and inert if it ever were: no document's
+    // origin is the empty string.
+    miniAppOrigin: launchedOrigin ?? '',
     // @ts-expect-error - cant figure out typing here
     ethProvider: instrumentedProvider,
     debug,
   });
+
+  // Filled during render, not in an effect: the mini app SDK above is built
+  // before the wallet is instrumented, and a mini app that asks for the wallet
+  // the instant it loads must find the instrumented one, not an empty ref.
+  legacyWalletProviderRef.current = instrumentedProvider;
 
   // We always start out from minimized state so that we can animate it open
   const [showMiniAppAsMinimized, setShowMiniAppAsMinimized] =
@@ -1406,16 +1706,34 @@ function InnerMiniAppContent({
               }}
             />
             {castIntentAndPromise && (
-              <ComposeCastModal
-                onClose={(cast) => {
-                  castIntentAndPromise.onSuccess?.({
-                    cast: cast !== undefined ? cast : null,
-                  });
-                  setCastIntentAndPromise(undefined);
-                }}
-                intent={castIntentAndPromise.castIntent}
-              />
+              /* The editor's own chunk (see `~/lazy/components`): a mini app
+                 that asked the host to post a cast is the only thing here that
+                 needs a composer. */
+              <React.Suspense fallback={null}>
+                <ComposeCastModal
+                  onClose={(cast) => {
+                    castIntentAndPromise.onSuccess?.({
+                      cast: cast !== undefined ? cast : null,
+                    });
+                    setCastIntentAndPromise(undefined);
+                  }}
+                  intent={castIntentAndPromise.castIntent}
+                />
+              </React.Suspense>
             )}
+            {/*
+              The ask card, drawn by the shell inside this window's own tree —
+              the same place as the composer above, over the app's cross-origin
+              frame, and deliberately not a corner toast and not the agent rail
+              (which only renders on the home feed)
+              (`docs/CLIENT-MINIAPP-AGENT-BRIDGE.md` §4).
+            */}
+            <AgentAskCard
+              approval={agentAskApproval}
+              origin={pinnedMiniAppOrigin(url)}
+              mutes={agentAskMutes}
+              {...(frame?.name === undefined ? {} : { name: frame.name })}
+            />
           </>
         )}
       </div>

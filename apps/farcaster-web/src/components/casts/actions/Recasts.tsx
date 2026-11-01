@@ -63,14 +63,20 @@ const RecastsContent: FC<RecastsContentProps> = memo(
     const [showBlockedAlert, setShowBlockedAlert] = useState(false);
 
     const recastCount = useMemo(() => {
-      return cast.combinedRecastCount || cast.recasts.count;
-    }, [cast.combinedRecastCount, cast.recasts.count]);
+      // Absent means not read yet (a feed paints before its counts are), and an
+      // unread count draws no number at all — see `CastReactionAction`, which
+      // takes `undefined` for exactly this. `combinedRecastCount` is a count the
+      // app computed itself (a recast entry carries one), so it wins when it is
+      // there.
+      return cast.combinedRecastCount || cast.recasts?.count;
+    }, [cast.combinedRecastCount, cast.recasts?.count]);
 
     const castReactionAction = useMemo(() => {
       return (
         <CastReactionAction
           icon={<RecastIcon active={!!cast.viewerContext?.recast} />}
           count={recastCount}
+          countMarker="recasts"
           isActive={cast.viewerContext?.recast}
           isFocused={!!isFocused}
           variant="green"
@@ -91,6 +97,7 @@ const RecastsContent: FC<RecastsContentProps> = memo(
           <CastReactionAction
             icon={<RecastIcon active={!!cast.viewerContext?.recast} />}
             count={recastCount}
+            countMarker="recasts"
             isActive={cast.viewerContext?.recast}
             isFocused={!!isFocused}
             variant="green"

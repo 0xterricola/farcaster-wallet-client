@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cast translation probe — the shipped pair, in a browser</title>
+    <style>
+      /* The theme's own greys, so what is asserted is the app's markup and its
+         words, not this page's chrome. */
+      body {
+        margin: 0;
+        background: #161715;
+        color: #eef0e8;
+        font:
+          13px/1.5 ui-sans-serif,
+          system-ui,
+          sans-serif;
+      }
+      .cast {
+        max-width: 600px;
+        padding: 16px;
+      }
+      .cast p {
+        margin: 6px 0 0;
+        white-space: pre-wrap;
+      }
+      .cast button {
+        background: none;
+        border: 0;
+        color: #d4ff3f;
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+      }
+      .cast .text-link,
+      .cast .text-faint,
+      .cast .text-link:hover {
+        color: #d4ff3f;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fixture-cast"></div>
+    <script type="module" src="/scripts/probe-cast-translations.tsx"></script>
+  </body>
+</html>

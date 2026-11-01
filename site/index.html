@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiddy: your own Farcaster node and client in three commands</title>
+<meta name="description" content="Give one prompt to your agent, or run three commands yourself. Provision compute, sync a Snapchain read node, and open your own Fiddy client. No API keys.">
+<meta property="og:title" content="Fiddy: your own node. Your own client. Three commands.">
+<meta property="og:description" content="One prompt for your agent, or three commands by hand. Your compute, your node, your client.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fiddy.fun/client">
+<meta property="og:image" content="https://fiddy.fun/client/assets/fiddy-splash.png">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://fiddy.fun/client">
+<link rel="alternate" hreflang="en" href="https://fiddy.fun/client">
+<link rel="alternate" hreflang="zh-Hans" href="https://fiddy.fun/client/zh/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23d4ff3f'/%3E%3Cpath d='M19 50V14h29v9H29v7h16v9H29v11z' fill='%231a1c10'/%3E%3C/svg%3E">
+<style>
+/* Solid Glass, adapted for a static opaque workbench.
+   The finish stays at the edge: top rim, hairline, and contact shade.
+   No face gradients, refraction, glow, or decorative motion. */
+:root {
+  --ground: #161715;
+  --ink: #eef0e8;
+  --dim: #9ba193;
+  --lime: #d4ff3f;
+  --lime-ink: #1a1c10;
+  --lime-text: #7cb518;
+  --pane: #1d1f1b;
+  --pane-strong: #22241f;
+  --well: #10110f;
+  --rim: rgba(255, 255, 255, 0.14);
+  --inner: rgba(255, 255, 255, 0.05);
+  --edge: rgba(255, 255, 255, 0.09);
+  --shade: rgba(0, 0, 0, 0.42);
+  --comment: #929787;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--ground); color-scheme: dark; scroll-behavior: smooth; scroll-padding-top: 24px; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--lime); color: var(--lime-ink); }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font-family: inherit; }
+a { color: inherit; text-decoration-color: rgba(212, 255, 63, 0.5); text-underline-offset: 4px; }
+a:hover { text-decoration-color: var(--lime); }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+button:active { transform: scale(0.98); }
+img { max-width: 100%; }
+p { margin: 12px 0; }
+p a, dd a, li a { display: inline-flex; align-items: center; min-height: 32px; vertical-align: middle; }
+p, li { text-wrap: pretty; }
+strong { color: var(--ink); font-weight: 650; }
+.dim { color: var(--dim); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; z-index: 20; top: 12px; left: 12px; padding: 12px 18px; border-radius: 10px; background: var(--lime); color: var(--lime-ink); transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
+.shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+.reading { max-width: 820px; }
+.pane { background: var(--pane); border-radius: 18px; box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--inner), 0 0 0 1px var(--edge), 0 12px 32px -18px var(--shade); }
+.card { background: var(--pane-strong); border-radius: 22px; box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--inner), 0 0 0 1px var(--edge), 0 24px 52px -24px var(--shade); }
+.section { padding: 72px 0; border-top: 1px solid var(--edge); }
+.section h2 { font-size: clamp(30px, 4vw, 44px); line-height: 1.08; letter-spacing: -0.035em; text-wrap: balance; }
+.section h3 { font-size: 20px; line-height: 1.25; letter-spacing: -0.02em; text-wrap: balance; }
+.section-intro { max-width: 68ch; color: var(--dim); font-size: 17px; margin-top: 16px; }
+.step-label { display: flex; align-items: center; gap: 10px; color: var(--lime-text); font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.step-label .number { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--lime); color: var(--lime-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 12px -8px var(--shade); }
+code.inline { font: 0.88em/1.4 var(--mono); background: #20221d; padding: 2px 6px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--edge); overflow-wrap: anywhere; }
+ul:not(.price-ladder):not(.channel-list) { padding-left: 22px; margin: 12px 0; }
+li { margin: 6px 0; }
+
+/* Header and wayfinding */
+.site-header { min-height: 76px; display: flex; align-items: center; gap: 24px; }
+.brand { display: inline-flex; align-items: baseline; gap: 8px; color: var(--ink); text-decoration: none; font-size: 25px; line-height: 1; font-weight: 800; letter-spacing: -0.045em; }
+.brand span { color: var(--dim); font-size: 13px; font-weight: 500; letter-spacing: 0; }
+.header-links { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.header-links a, .jump-nav a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 12px; border-radius: 10px; color: var(--dim); text-decoration: none; font-size: 14px; font-weight: 600; transition: color 140ms ease, background-color 140ms ease, transform 140ms var(--ease); }
+.header-links a:hover, .jump-nav a:hover { color: var(--ink); background: rgba(255,255,255,.05); }
+.header-links .language { color: var(--ink); margin-left: 6px; }
+.jump-nav { display: none; gap: 4px; overflow-x: auto; padding-bottom: 8px; }
+
+/* Hero and signature hand-off */
+.hero-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 54px; align-items: center; padding: 48px 0 42px; }
+h1 { font-size: clamp(48px, 5.2vw, 76px); line-height: 0.99; letter-spacing: -0.055em; font-weight: 780; text-wrap: balance; }
+h1 span { display: block; }
+.lede { color: var(--dim); font-size: 18px; line-height: 1.55; max-width: 35rem; margin-top: 24px; }
+.handoff { padding: 26px; border-radius: 24px; }
+.handoff .label { color: var(--lime-text); font-size: 15px; font-weight: 700; margin-bottom: 7px; }
+.handoff h2 { font-size: 27px; line-height: 1.12; letter-spacing: -0.03em; }
+.handoff .agent-help { color: var(--dim); font-size: 16px; line-height: 1.5; margin: 10px 0 18px; }
+.prompt { background: var(--well); border-radius: 14px; padding: 18px; box-shadow: inset 0 1px 2px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.07); }
+.prompt code { font: 14px/1.7 var(--mono); overflow-wrap: anywhere; }
+.primary-action { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 52px; border: 0; border-radius: 13px; background: var(--lime); color: var(--lime-ink); font-weight: 750; text-decoration: none; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.18), 0 8px 18px -10px #000; transition: transform 140ms var(--ease), box-shadow 140ms ease; }
+.copy-prompt { width: 100%; margin-top: 12px; font-size: 17px; }
+.primary-action:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.65), inset 0 -1px 0 rgba(0,0,0,.18), 0 12px 22px -12px #000; }
+.primary-action.is-copied { background: #bde63b; }
+.manual-link { display: flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 10px; font-size: 16px; transition: transform 140ms var(--ease), text-decoration-color 140ms ease; }
+
+.agent-hero-art { display: block; width: 100%; max-width: 520px; height: auto; margin-top: 22px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+@media (max-width: 900px) { .agent-hero-art { max-width: 100%; } }
+
+/* Three commands and cloud actions */
+.quickstart { scroll-margin-top: 24px; }
+.quick-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+.quick-heading h2 { font-size: 25px; line-height: 1.2; letter-spacing: -0.025em; }
+.quick-heading p { color: var(--dim); font-size: 14px; }
+.command-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.quick-command { display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; padding: 18px; border-radius: 16px; background: var(--well); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px var(--edge); }
+.quick-command .command-name { color: var(--lime-text); font-size: 14px; font-weight: 700; }
+.quick-command code { grid-column: 1 / -1; font: 14px/1.5 var(--mono); overflow-x: auto; white-space: nowrap; }
+.quick-command small { color: var(--dim); font-size: 14px; line-height: 1.45; }
+.copy-command { min-width: 50px; min-height: 44px; padding: 0 12px; border: 1px solid var(--edge); border-radius: 10px; background: #242620; color: var(--ink); font-size: 13px; font-weight: 650; cursor: pointer; box-shadow: inset 0 1px 0 var(--rim); transition: background-color 140ms ease, transform 140ms var(--ease); }
+.copy-command:hover { background: #2c2f27; }
+.copy-command.is-copied { color: var(--lime); }
+.cloud-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 18px; }
+.cloud-actions > p { color: var(--dim); font-size: 15px; }
+.cloud-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.cloud-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 12px; background: var(--pane-strong); color: var(--ink); text-decoration: none; font-weight: 700; font-size: 14px; box-shadow: inset 0 1px 0 var(--rim), 0 0 0 1px var(--edge); transition: transform 140ms var(--ease), background-color 140ms ease; }
+.cloud-button.aws { background: var(--lime); color: var(--lime-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 8px 18px -12px #000; }
+.cloud-button.google img { display: block; width: 190px; height: auto; }
+.cloud-button.google { padding-inline: 12px; }
+@media (hover: hover) and (pointer: fine) {
+  .cloud-button:hover, .primary-action:hover { transform: translateY(-2px); }
+  .copy-command:hover { transform: translateY(-1px); }
+  .manual-link:hover { transform: translateX(3px); }
+  .brand:hover { transform: translateY(-1px); }
+}
+
+/* Facts are measured or dated. No fabricated activity. */
+.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); margin: 38px 0 72px; border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); }
+.fact { padding: 22px 26px; }
+.fact + .fact { border-left: 1px solid var(--edge); }
+.fact strong { display: block; font-size: 27px; line-height: 1.15; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; }
+.fact span { display: block; color: var(--dim); font-size: 14px; line-height: 1.45; margin-top: 6px; }
+.fact a { display: inline-flex; align-items: center; min-height: 32px; }
+.fact a:hover { text-decoration: underline; }
+
+/* Commands */
+pre { position: relative; margin: 18px 0; padding: 56px 18px 18px; border-radius: 15px; background: var(--well); color: var(--ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 0 1px var(--edge), 0 12px 26px -20px var(--shade); overflow-x: auto; font: 13px/1.7 var(--mono); tab-size: 2; }
+pre code { font: inherit; }
+pre .c { color: var(--comment); }
+pre .k { color: var(--ink); }
+.pre-copy { position: absolute; top: 9px; right: 9px; }
+pre::-webkit-scrollbar, .quick-command code::-webkit-scrollbar { height: 6px; }
+pre::-webkit-scrollbar-thumb, .quick-command code::-webkit-scrollbar-thumb { background: #41453a; border-radius: 6px; }
+.cli-setup { margin: 24px 0 30px; }
+.cli-setup p { color: var(--dim); }
+
+/* Provision routes and prices */
+.two-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+.way { min-width: 0; padding: 24px; }
+.way .way-number { color: var(--lime-text); font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.way h3 { font-size: 23px; }
+.way > p { color: var(--dim); font-size: 15px; }
+.way pre { margin-bottom: 14px; }
+.way .cloud-buttons { margin: 18px 0 6px; }
+.way .cloud-button { flex: 1; }
+.provider-details { margin-top: 18px; padding: 8px 20px; }
+details summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; font-weight: 650; }
+details summary::marker { color: var(--lime-text); }
+.provider-details p { color: var(--dim); font-size: 15px; }
+.price-block { margin-top: 48px; }
+.price-block h3 { font-size: 27px; }
+.price-ladder { list-style: none; margin-top: 20px; border-bottom: 1px solid var(--edge); }
+.price-row { display: grid; grid-template-columns: minmax(120px, 1fr) auto; gap: 8px 20px; align-items: baseline; padding: 17px 0; border-top: 1px solid var(--edge); }
+.price-row strong { font-size: 17px; }
+.price-row .price { font-size: 21px; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.price-row small { grid-column: 1 / -1; color: var(--dim); font-size: 14px; }
+.disclosure { margin-top: 20px; padding: 20px; }
+.disclosure h4 { color: var(--lime-text); font-size: 16px; margin-bottom: 6px; }
+.disclosure p { color: var(--dim); font-size: 15px; margin: 6px 0; }
+
+/* Notes, protocol, and agent */
+.note { padding: 22px; margin: 24px 0; }
+.note h3 { color: var(--lime-text); font-size: 18px; margin-bottom: 8px; }
+.note p { color: var(--dim); }
+.note p:last-child { margin-bottom: 0; }
+.warning { box-shadow: inset 0 1px 0 var(--rim), 0 0 0 1px rgba(212,255,63,.28), 0 16px 32px -22px var(--shade); }
+.concept-list { margin-top: 28px; border-bottom: 1px solid var(--edge); }
+.concept-row { display: grid; grid-template-columns: 190px 1fr; gap: 24px; padding: 22px 0; border-top: 1px solid var(--edge); }
+.concept-row dt { font-size: 18px; font-weight: 700; }
+.concept-row dd { color: var(--dim); }
+.protocol-statement { max-width: 30ch; font-size: clamp(26px, 4vw, 42px); line-height: 1.16; letter-spacing: -0.035em; margin: 24px 0; }
+.channel-list { display: flex; flex-wrap: wrap; gap: 9px; list-style: none; margin: 22px 0; }
+.channel-list li { margin: 0; padding: 9px 14px; border-radius: 999px; background: #22241f; color: var(--ink); box-shadow: inset 0 1px 0 var(--rim), 0 0 0 1px var(--edge); font-size: 14px; font-weight: 650; }
+.channel-list .primary-channel { background: var(--lime); color: var(--lime-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.agent-panel { padding: 26px; margin-top: 24px; }
+.agent-panel p { color: var(--dim); }
+
+/* FAQ and footer */
+.faq-list { margin-top: 24px; }
+.faq-item { padding: 0 20px; margin-top: 10px; }
+.faq-item summary { font-size: 17px; }
+.faq-item p { color: var(--dim); padding-bottom: 18px; }
+.site-footer { padding: 48px 0 64px; border-top: 1px solid var(--edge); }
+.footer-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; }
+.footer-brand { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; }
+.site-footer p { color: var(--dim); font-size: 14px; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; }
+.site-footer nav a { min-height: 36px; display: inline-flex; align-items: center; }
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  .lede { max-width: 44rem; }
+  .command-grid { grid-template-columns: 1fr; }
+  .quick-command { grid-template-columns: 1fr auto; }
+  .two-ways { grid-template-columns: minmax(0, 1fr); }
+  .cloud-actions { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 680px) {
+  .shell { width: calc(100% - 32px); }
+  .site-header { min-height: 62px; }
+  .header-links .section-link { display: none; }
+  .header-links { gap: 0; }
+  .jump-nav { display: flex; }
+  .hero-grid { padding: 24px 0 32px; gap: 28px; }
+  h1 { font-size: clamp(40px, 11vw, 58px); line-height: 1.01; }
+  .lede { font-size: 16px; margin-top: 18px; }
+  .handoff { padding: 20px; border-radius: 20px; }
+  .handoff h2 { font-size: 24px; }
+  .handoff .agent-help { font-size: 15px; }
+  .prompt { padding: 16px; }
+  .prompt code { font-size: 14px; }
+  .quick-heading { display: block; }
+  .quick-heading p { margin-top: 5px; }
+  .cloud-buttons { width: 100%; }
+  .cloud-button { flex: 1 1 150px; }
+  .status-strip { grid-template-columns: 1fr; margin-bottom: 56px; }
+  .fact { padding: 18px 4px; }
+  .fact + .fact { border-left: 0; border-top: 1px solid var(--edge); }
+  .section { padding: 56px 0; }
+  .section-intro { font-size: 16px; }
+  .way { padding: 20px; }
+  .way .cloud-button { flex-basis: 100%; }
+  .concept-row { grid-template-columns: 1fr; gap: 8px; padding: 18px 0; }
+  .price-row { grid-template-columns: 1fr auto; gap: 6px 12px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: opacity 140ms ease !important; }
+  button:active, .cloud-button:hover, .primary-action:hover, .copy-command:hover, .manual-link:hover, .brand:hover { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pane, .card { background: #22241f; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to setup</a>
+<header class="site-header shell">
+  <a class="brand" href="/client/" aria-label="Fiddy client home">fiddy<span>/client</span></a>
+  <nav class="header-links" aria-label="Page sections">
+    <a class="section-link" href="#step0">Setup</a>
+    <a class="section-link" href="#costs">Costs</a>
+    <a class="section-link" href="#safety">Safety</a>
+    <a class="section-link" href="#faq">FAQ</a>
+    <a class="language" href="/client/zh/" hreflang="zh-Hans">中文</a>
+  </nav>
+</header>
+<nav class="jump-nav shell" aria-label="Mobile page sections">
+  <a href="#step0">Setup</a><a href="#costs">Costs</a><a href="#protocol">Protocol</a><a href="#safety">Safety</a><a href="#faq">FAQ</a>
+</nav>
+
+<main id="main">
+<div class="shell">
+  <div class="hero-grid">
+    <div>
+      <h1><span>Your own node.</span><span>Your own client.</span><span>Three commands.</span></h1>
+      <p class="lede">No API keys from anyone. Run a Snapchain read node, open Fiddy through it, and add your own Hermes agent. <strong>You furnish the compute. You own the stack.</strong></p>
+      <img class="agent-hero-art" src="/client/assets/fiddy-agent-hero.webp" width="1024" height="1024" alt="Baby Fiddy, our little green robot, holding up a glowing terminal card" loading="eager" fetchpriority="high">
+    </div>
+    <section class="card handoff" aria-labelledby="handoff-title">
+      <p class="label">PASTE THIS INTO YOUR AGENT</p>
+      <h2 id="handoff-title">Give it to your agent.</h2>
+      <p class="agent-help">[CC], Codex, Hermes… it runs the commands with you. The linked guide has the steps, prices, and mistakes to avoid.</p>
+      <div class="prompt"><code id="agent-prompt">I want my own copy of Farcaster. Before you start, ask me where I want to run my node: (a) my own computer, (b) a server I already have, or (c) a new cloud server you provision for me. Prices I was shown for a new cloud server (confirm the current price with the provider first, cloud prices change): about $285/month on AWS, about $350/month on GCP, about \u20ac120/month on Hetzner, about $190/month on OVH. For each option, tell me its cost and the disk it needs (about 2 TB while it downloads), then wait for my choice and my written approval before spending anything. Then follow https://fiddy.fun/client/skill.md. The first download is about 468 GB and takes many hours, so the machine must stay on. If anything else costs money, give me the monthly price and ask me first. Never ask for my seed phrase.</code></div>
+      <button class="primary-action copy-prompt" type="button" data-copy-target="agent-prompt">Copy prompt</button>
+      <a class="manual-link" href="#step0">or do it by hand: see the 3 commands ↓</a>
+    </section>
+  </div>
+
+  <section class="status-strip" aria-label="Verified network facts">
+    <div class="fact"><strong>~914M</strong><span>messages synced in our own verified full-node run</span></div>
+    <div class="fact"><strong><a href="https://github.com/farcasterxyz/snapchain/releases/tag/v0.14.3" target="_blank" rel="noopener">Snapchain v0.14.3</a></strong><span>latest release, checked 25 Oct 2026</span></div>
+    <div class="fact"><strong>0 API keys</strong><span>your compute, your reads, your writes</span></div>
+  </div>
+</div>
+
+<section class="section" id="step0">
+  <div class="shell">
+    <div class="reading">
+      <div class="step-label"><span class="number">1</span>Provision</div>
+      <h2>Get a server, without guessing the size.</h2>
+      <p class="section-intro"><strong>Check free disk space before any install.</strong> A read node needs 4 vCPU, 16 GB RAM, and 2 TB free disk on Ubuntu 22.04 or newer. It downloads about 468 GB, peaks at about 1.66 TB while unpacking, then settles near 597 GB before new blocks are added. Under 1 TB free, never start a local node: use the <a href="#networks">free public relay</a> or the <a href="/client/deploy/#managedCard">managed card, $320/month</a>.</p>
+      <div class="pane note warning">
+        <h3>A full disk starts the download over.</h3>
+        <p>A too-small disk fills, the node restarts, and it re-downloads from chunk 1 until the disk fills again. Pre-check the space; do not retry the same install. Free space or move to a computer with 2 TB free before running it again.</p>
+      </div>
+    </div>
+
+    <div class="cli-setup reading">
+      <p>Get the CLI with <code class="inline">git clone https://github.com/ivcained/fiddy &amp;&amp; cd fiddy</code>. The <code class="inline">bin/fiddy</code> script is the whole tool. Put it on PATH with <code class="inline">export PATH="$PWD/bin:$PATH"</code>.</p>
+      <pre><code><span class="c"># get the CLI, then put it on PATH</span>
+<span class="k">git clone https://github.com/ivcained/fiddy &amp;&amp; cd fiddy</span>
+<span class="k">export PATH="$PWD/bin:$PATH"</span></code></pre>
+    </div>
+
+    <div class="step-label"><span class="number">2</span>Choose where you are sitting</div>
+    <div class="two-ways">
+      <article class="card way">
+        <p class="way-number">Way 1 · From your laptop</p>
+        <h3>Mac, Windows, or Linux</h3>
+        <p>Everything runs from your own terminal. The CLI drives the server over SSH for you. Create the machine first, with one click or one command.</p>
+        <div class="cloud-buttons">
+          <a class="cloud-button aws" href="https://console.aws.amazon.com/cloudshell/home?region=us-east-1" target="_blank" rel="noopener">AWS CloudShell ↗</a>
+          <a class="cloud-button" href="https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fivcained%2Ffiddy&amp;cloudshell_tutorial=docs%2FGCP-DEPLOY.md" target="_blank" rel="noopener">Google CloudShell ↗</a>
+        </div>
+        <!-- Keep the email separator encoded: Cloudflare Scrape Shield rewrites literal addresses. -->
+        <pre><code><span class="c"># in CloudShell, or any terminal with the AWS CLI configured:</span>
+<span class="k">curl -fsSL https://raw.githubusercontent.com/ivcained/fiddy/main/scripts/aws-deploy.sh | bash</span>
+<span class="c"># install fiddy + Herdr/Ovis console locally (no laptop-sized node):</span>
+<span class="k">curl -fsSL https://fiddy.fun/client/install.sh | bash</span>
+<span class="c"># then back in your own terminal, inside the cloned repo:</span>
+<span class="k">fiddy provision --ssh ubuntu&#64;&lt;your-new-ip&gt;</span>   <span class="c"># register the box the script printed</span>
+<span class="k">fiddy node up</span>       <span class="c"># install and sync the node over SSH</span>
+<span class="k">fiddy client up</span>     <span class="c"># client on your laptop, tunneled to your node</span>
+<span class="k">herdr</span>                 <span class="c"># or: Fiddy buttons + built-in Grafana in Ovis</span></code></pre>
+      </article>
+
+      <article class="card way">
+        <p class="way-number">Way 2 · Inside the VPS</p>
+        <h3>You already SSH’d into a server</h3>
+        <p>Skip provision entirely. You already have the machine. One line does the rest.</p>
+        <pre><code><span class="c"># on the server itself:</span>
+<span class="k">curl -fsSL https://fiddy.fun/client/install.sh | bash</span></code></pre>
+        <p>That clones the repo, puts <code class="inline">fiddy</code> on PATH, installs the Herdr/Ovis console, and starts a node if this server does not already have one. Then run <code class="inline">fiddy client up --tunnel</code> when you want the client. In Ovis, press <strong>Cmd/Ctrl+Shift+K</strong> and type <strong>Fiddy</strong> for node buttons; the Grafana button embeds the real dashboard beside the terminal with no AI key.</p>
+        <p>The one wrong move is <code class="inline">fiddy provision</code> on the server. Provisioning runs <strong>from</strong> a machine that talks to the cloud, never on the machine being provisioned.</p>
+        <p><strong>Way 1 provisions. Way 2 runs.</strong></p>
+      </article>
+    </div>
+
+    <div class="reading">
+      <details class="pane provider-details">
+        <summary>Other providers: same three commands, your pick</summary>
+        <pre><code><span class="c"># AWS, needs the aws CLI configured, about $285/month list:</span>
+<span class="k">fiddy provision --aws</span>
+
+<span class="c"># Hetzner CCX33 + 2 TB volume, about €120/month, token from console.hetzner.cloud:</span>
+<span class="k">fiddy provision --hetzner</span>
+
+<span class="c"># OVHcloud Public Cloud b3-16 + 2 TB volume, about $190/month:</span>
+<span class="k">fiddy provision --ovh</span>
+
+<span class="c"># Or any server you already have:</span>
+<span class="k">fiddy provision --ssh ubuntu&#64;203.0.113.10</span></code></pre>
+        <p>Hetzner and OVH paths are scripted against their API docs but not yet battle-tested. They fail loudly with the provider’s own error if anything drifts. OVH credentials come from <code class="inline">api.ovh.com/createToken</code>. A 2 TB box at any Hetzner, Contabo, or OVH-class host typically runs <strong>$50 to 120/month</strong>. Infra-as-code people: the same validated GCP config ships as a Terraform module in <code class="inline">terraform/gcp-read-node/</code>. Run <code class="inline">terraform apply</code> and it prints the next commands.</p>
+      </details>
+      <p class="dim">Every scripted path creates a 4 vCPU, 16 GB machine with about 2 TB disk and Docker preinstalled, then saves the target to <code class="inline">~/.fiddy/config</code>. The AWS path also generates an SSH keypair into <code class="inline">~/.fiddy/</code> and locks the security group down. SSH and the node API answer <strong>your IP only</strong>. Gossip ports stay open to the network so your node can talk to peers.</p>
+      <div class="pane note">
+        <h3>If the outside world cannot reach your copy</h3>
+        <p>Your provider's firewall is blocking the network connection. Open port 3382 over UDP to the network; allow ports 3381 and 3383 over TCP only from your own IP for the HTTP and gRPC APIs.</p>
+      </div>
+    </div>
+
+    <div class="price-block reading" id="costs">
+      <h3>What the compute costs</h3>
+      <p class="dim">You pay your provider directly. Fiddy does not add a fee.</p>
+      <ul class="price-ladder">
+        <li class="price-row"><strong>Your own machine</strong><span class="price">Free</span><small>Use hardware you already have, if it meets the disk and memory requirements.</small></li>
+        <li class="price-row"><strong>Hetzner</strong><span class="price">~€120/mo</span><small>CCX33 with a 2 TB volume. New accounts are capped at 1024 GB volumes, fine once your quota is raised.</small></li>
+        <li class="price-row"><strong>OVHcloud</strong><span class="price">~$190/mo</span><small>b3-16 with a 2 TB volume.</small></li>
+        <li class="price-row"><strong>AWS</strong><span class="price">~$285/mo</span><small>The default path. Its root volume can simply be 2 TB, which is part of the price difference.</small></li>
+        <li class="price-row"><strong>GCP</strong><span class="price">~$350/mo</span><small>Tested end to end by us. <a href="https://cloud.google.com/free" target="_blank" rel="noopener">$300 new-user credit</a>. Set a reminder to delete the VM.</small></li>
+      </ul>
+      <div class="pane disclosure">
+        <h4>New AWS account? Read this first.</h4>
+        <p>CloudShell can stay locked for 0-2 days during verification. GCP is the alternative, with a $300 new-user credit and about $350/month list price after credit. The same AWS one-liner also runs from any terminal after <code class="inline">aws configure</code>.</p>
+        <p><strong>If your hosting company caps your disk:</strong> new accounts can be limited to 1 TB, which cannot safely finish the first boot. Ask support to raise the limit to 2 TB, pick a different company, or start on the public relay and move later. Do not retry against the same cap.</p>
+        <p>Prefer no setup? <a href="/client/deploy/#managedCard">Managed by Fiddy is $320/month</a>. Prefer a guided self-host page? <a href="/client/deploy/">Open fiddy.fun/client/deploy</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="step1">
+  <div class="shell reading">
+    <div class="step-label"><span class="number">2</span>Node</div>
+    <h2>Sync the network yourself.</h2>
+    <p class="section-intro"><code class="inline">fiddy node up</code> installs Docker and the official Snapchain bootstrap on your server, then starts syncing. You now run a <strong>read node</strong>: it follows the chain, stores the full state, and serves HTTP on <code class="inline">:3381</code> and gRPC on <code class="inline">:3383</code>. Anyone can run one. No permission, no API keys.</p>
+    <p class="dim">Want an agent to drive instead? Use the <a href="#handoff-title">agent hand-off at the top</a>. Its linked guide is written for agents, with the steps, prices, and mistakes to avoid.</p>
+    <p class="dim">On Linux the CLI installs the Docker engine itself through <code class="inline">get.docker.com</code>, adds you to the docker group, and asks you to log back in once. There is no Docker Desktop on a headless box. On macOS it offers Docker Desktop instead. The CLI is <code class="inline">bin/fiddy</code>: run <code class="inline">export PATH="$PWD/bin:$PATH"</code> after cloning, or every command says <code class="inline">fiddy: command not found</code>.</p>
+    <pre><code><span class="k">fiddy node up</span>      <span class="c"># install, start, wait for the API to answer</span>
+<span class="k">fiddy node status</span>  <span class="c"># sync progress</span>
+<span class="k">fiddy node logs</span>    <span class="c"># tail the node</span>
+<span class="k">fiddy node dashboard</span> <span class="c"># Grafana at localhost:3000 through an SSH tunnel</span>
+<span class="k">fiddy node autoupgrade on</span> <span class="c"># weekly upgrades, Tuesday 03:00</span></code></pre>
+    <p class="dim"><strong>Autoupgrade is off by default.</strong> The upstream job ends with a host-wide Docker prune. That is fine on a dedicated box, never on a shared one.</p>
+    <div class="pane note">
+      <h3>Read nodes vs validators, and where your casts go</h3>
+      <p><strong>Validators</strong> propose and vote on blocks. Only keys in the validator set can. <strong>Read nodes</strong> do everything else, including accepting writes.</p>
+      <p>When you <code class="inline">submitMessage</code> to your read node, it validates the message and <strong>gossips it to validators</strong>. A read node has no mempool of its own. A success response means “valid, accepted for relay,” not “in a block.” Confirm inclusion by watching for a <code class="inline">MERGE_MESSAGE</code> event or querying the message back.</p>
+      <p>Under heavy network load a gossiped message can drop and need resubmitting. The client can fall back to submitting at a validator endpoint, and this tutorial shows the trade-off when it matters.</p>
+    </div>
+    <p class="dim"><strong>Downloading the whole history: 5,690 pieces, about 468 GB total.</strong> At the measured 10-20 MB/s, this takes many hours. Plan for overnight on a slow disk.</p>
+    <div class="pane note">
+      <h3>0%</h3>
+      <p>Your computer is downloading the whole history of what everyone has ever posted. No exact finish time yet. At 10-20 MB/s this takes many hours.</p>
+      <p>You can close this and come back. It keeps going on its own.</p>
+    </div>
+    <div class="pane note">
+      <h3>34%</h3>
+      <p>About a third is down. It is pulling 10-20 megabytes every second. Roughly 300 GB is left. The speed depends on your connection and disk, so plan for overnight.</p>
+      <p>You can close this and come back. It keeps going on its own.</p>
+    </div>
+    <div class="pane note">
+      <h3>99%</h3>
+      <p>The download finished. Now it unpacks everything into working space. That step needs the full 2 TB free at once, then it shrinks to about 597 GB. A few more minutes.</p>
+      <p>You can close this and come back. You're nearly there.</p>
+    </div>
+    <p class="dim"><strong>Your copy will not answer any requests until the whole history is downloaded and unpacked.</strong> That is normal, not broken.</p>
+    <div class="pane note">
+      <h3>If your copy is not answering yet</h3>
+      <p>A brand-new copy refuses every request until the whole history finishes downloading and unpacking, which takes hours. Run <code class="inline">fiddy node logs</code> to watch progress, then keep waiting; <code class="inline">fiddy node status</code> works after the load completes.</p>
+    </div>
+    <div class="pane note warning">
+      <h3>If your disk filled up</h3>
+      <p>The first boot briefly needs about 2 TB, with a measured peak of about 1.66 TB. A smaller disk fills and the whole download starts over from chunk 1. Free up space or move to a computer with 2 TB free, then run it again. Do not retry on the same full disk.</p>
+    </div>
+    <div class="pane note">
+      <h3>If your laptop went to sleep</h3>
+      <p>Your computer paused, so a local download paused with it. Keep it plugged in and awake, or move to a computer that stays on (about $120-285/month to rent one).</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="networks">
+  <div class="shell reading">
+    <h2>Snapchain or Hypersnap. Pick deliberately.</h2>
+    <p class="section-intro"><strong>Snapchain</strong> is Farcaster’s own network, where every account, cast, and follow lives. Pick this. <strong>Hypersnap</strong> is an independent parallel network built by the Quilibrium community: the same kind of social data, different plumbing and economics. It is for explorers, not where your Farcaster account lives.</p>
+    <pre><code><span class="k">fiddy node up --network snapchain</span>    <span class="c"># Farcaster's own network, the default</span>
+<span class="k">fiddy client up --network hypersnap</span>  <span class="c"># read the public Hypersnap node</span></code></pre>
+    <p class="dim">Reading <strong>Hypersnap</strong> needs no server at all. It reads the public Hypersnap node at <code class="inline">haatz.quilibrium.com</code>, which answers today. Nothing to install, nothing of yours runs.</p>
+    <p class="dim">Running your <em>own</em> Hypersnap node is the part that is not ready. The software is real and installable, but the copy it installs keeps an out-of-date list of who is allowed to decide blocks. It stops following the network after a while while still reporting itself healthy. The fix today is to take that list from Snapchain’s own repository, and upstream’s issue is still open. So <code class="inline">fiddy node up --network hypersnap</code> prints exactly what is known and stops rather than installing something that will quietly fall behind.</p>
+    <div class="pane note">
+      <h3>Which network is Fiddy reading? It says so.</h3>
+      <p>A node does not announce which network it is. The same status page comes back on both, so the client never guesses. It shows the network in <strong>Advanced → your node</strong>, where you can switch between the networks you can actually read: the public Hypersnap node and your own node when you run one. A network with nothing behind it is listed with the reason, never as a button that fails after you press it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="step2">
+  <div class="shell reading">
+    <div class="step-label"><span class="number">3</span>Client</div>
+    <h2>Open Fiddy on your node.</h2>
+    <p class="section-intro"><code class="inline">fiddy client up</code> boots the web client pointed at <em>your</em> node for reads and writes. If your node’s API is locked to your IP, the AWS default, add <code class="inline">--tunnel</code> and the CLI opens an SSH tunnel for the session. Nothing to install first: the CLI brings Docker, Node 22, and pnpm itself when they are missing.</p>
+    <pre><code><span class="k">fiddy client up --tunnel</span></code></pre>
+    <p class="dim"><strong>Signing in is a QR code and your phone.</strong> Press <em>Sign in</em>, or just write a cast. The client shows a code, you scan it with the Farcaster app and approve there, and <strong>your own node</strong> confirms which account signed. The client ends up with its own ed25519 app key, registered by a gasless <code class="inline">KEY_ADD</code> message. No Optimism transaction, no ETH, confirmed in seconds. Your custody key and recovery phrase are never asked for. The app key signs your casts, follows, and reactions: scoped, capped, and revocable from the UI with a <code class="inline">KEY_REMOVE</code>.</p>
+    <p class="dim">It works as it is: Fiddy’s own signer asks for the key, and the approval is the same. To have <em>your</em> instance ask instead, export <code class="inline">FIDDY_INSTANCE_APP_FID</code> and <code class="inline">FIDDY_INSTANCE_APP_KEY</code>, a spare account of yours, before <code class="inline">fiddy client up</code>. Either way it costs you nothing, and either way you can still add a key by hand from <strong>Advanced</strong>, where the recovery-phrase path lives for test accounts and developers. Details: <a href="https://github.com/ivcained/fiddy/blob/main/docs/CLIENT-SELF-HOSTED-CONNECT.md">docs/CLIENT-SELF-HOSTED-CONNECT.md</a>.</p>
+    <div class="pane note warning" id="safety">
+      <h3>Seed phrases: powerful, handle like rm -rf</h3>
+      <p>A seed phrase is your custody address is your FID. Anyone holding it owns the account. Follow this tutorial with a <strong>test account only</strong>. In general, paste a seed phrase only into software from developers you trust, running locally, with source available. This repo is MIT and the phrase never leaves your browser, but verify that yourself. That is the point of open source. Wherever possible prefer <strong>delegated signer authorization</strong>, approving an app key from an already-authenticated client, over seed import.</p>
+    </div>
+    <p class="dim">From here the client is fully yours: read the feed from your node, post casts, follow, react, and include or exclude casts from any other client in your view settings.</p>
+  </div>
+</section>
+
+<section class="section" id="protocol">
+  <div class="shell reading">
+    <p class="protocol-statement">Identity lives onchain. Social data lives offchain. Your node joins the two.</p>
+    <h2>How Farcaster fits together</h2>
+    <p class="section-intro">Farcaster is <strong>hybrid</strong>. Identity lives onchain on OP Mainnet, data lives offchain. Onchain is used only when security and consistency are critical: creating an account, paying storage rent, registering keys. Everything social, including casts, follows, reactions, and profile pictures, is an offchain message signed by a key the chain knows about.</p>
+    <dl class="concept-list">
+      <div class="concept-row"><dt>FID</dt><dd>Your account number, minted onchain to your custody address. Everything you do offchain references it.</dd></div>
+      <div class="concept-row"><dt>Custody address</dt><dd>The Ethereum key that owns your FID. The master key. It authorizes everything else and touches nothing day to day.</dd></div>
+      <div class="concept-row"><dt>App key, or signer</dt><dd>An ed25519 key a client uses to sign messages for your FID. Authorized by your custody address. Revocable. This is what “log in to a client” means under the hood.</dd></div>
+      <div class="concept-row"><dt>Snapchain</dt><dd>The peer-to-peer network storing all user data, Farcaster’s own. Validators propose blocks. Read nodes follow, store, and serve APIs. Hypersnap is a separate network with the same idea. See <a href="#networks">Snapchain or Hypersnap</a>.</dd></div>
+      <div class="concept-row"><dt>Storage rent</dt><dd>A small onchain payment that buys your FID the right to store data. No rent, no writes. Your account already has storage if you have used Farcaster.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="section" id="agent">
+  <div class="shell reading">
+    <div class="step-label">Your client, with an agent inside</div>
+    <h2>Meet your Fiddy agent.</h2>
+    <p class="section-intro">One click in the client provisions a <strong>dedicated Hermes instance</strong> on Agent37 cloud. Not a chatbot, a real agent with its own computer, awake 24/7. It lives in your client, chats with you there, and runs scheduled jobs: <em>“check my mentions every morning,” “draft my weekly recap cast.”</em></p>
+    <p class="dim">Through Hermes, your Fiddy reaches every channel you do, with your explicit approval on each one.</p>
+    <div class="card agent-panel">
+      <ul class="channel-list" aria-label="Available agent channels">
+        <li class="primary-channel">Farcaster</li><li>iMessage</li><li>Discord</li><li>Telegram</li><li>WhatsApp</li><li>Email</li><li>Web &amp; API</li>
+      </ul>
+      <p>Your agent acts on Farcaster under <strong>its own FID and its own gasless app key</strong>, clearly the agent’s voice, revocable by you at any time. It reads from the same node you just stood up: the whole stack, end to end, with nobody’s API key in sight.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="shell reading">
+    <h2>Questions you’ll hit.</h2>
+    <div class="faq-list">
+      <details class="pane faq-item"><summary>Does this cost ETH?</summary><p>No. App keys are gasless <code class="inline">KEY_ADD</code> messages since Snapchain V16. You need an existing account with storage rent paid. That is all.</p></details>
+      <details class="pane faq-item"><summary>Can my node accept casts?</summary><p>Yes. Read nodes validate and gossip writes to validators. They hold no mempool, so under load a write can drop. Watch for <code class="inline">MERGE_MESSAGE</code> or query it back, and resubmit if needed.</p></details>
+      <details class="pane faq-item"><summary>What can the app key do?</summary><p>Only the message types you scope it to: casts, reactions, links, user data. Keys slide-expire in at most 90 days, cap at 1000 per FID, and revoke instantly with <code class="inline">KEY_REMOVE</code>.</p></details>
+      <details class="pane faq-item"><summary>Where’s the custody key?</summary><p>In your browser, used once for the EIP-712 <code class="inline">KEY_ADD</code> authorization, then idle. Never sent anywhere, never stored server-side.</p></details>
+      <details class="pane faq-item"><summary>Who am I depending on?</summary><p>Your compute provider for uptime, and the Snapchain validator set for block production, the same set every client depends on. Reads, writes, and identity tooling are all yours.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="shell footer-grid">
+    <div><div class="footer-brand">fiddy.fun</div><p>MIT-licensed. Your node, your client, your agent.</p></div>
+    <div>
+      <nav aria-label="Footer links"><a href="https://github.com/ivcained/fiddy">GitHub</a><a href="https://snapchain.farcaster.xyz">Snapchain</a><a href="https://hermes-agent.nousresearch.com">Hermes</a><a href="/client/zh/" hreflang="zh-Hans">中文</a></nav>
+      <p>Built on Snapchain and the Farcaster protocol. Agent powered by Hermes on Agent37. Fork of the Farcaster client snapshot with external-wallet support.</p>
+    </div>
+  </div>
+</footer>
+<div class="sr-only" id="copy-status" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  const status = document.getElementById('copy-status');
+  const timers = new WeakMap();
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand('copy');
+    field.remove();
+    if (!copied) throw new Error('Clipboard unavailable');
+  }
+
+  function confirmCopy(button, copied) {
+    const original = button.dataset.originalLabel || button.textContent;
+    button.dataset.originalLabel = original;
+    if (!button.hasAttribute('data-original-aria')) {
+      button.dataset.originalAria = button.getAttribute('aria-label') || '';
+    }
+    button.textContent = copied ? 'Copied' : 'Copy failed';
+    button.setAttribute('aria-label', copied ? 'Copied to clipboard' : 'Copy failed. Select text manually.');
+    button.classList.toggle('is-copied', copied);
+    status.textContent = copied ? 'Copied to clipboard.' : 'Copy failed. Select the text and copy it manually.';
+    clearTimeout(timers.get(button));
+    timers.set(button, setTimeout(() => {
+      button.textContent = original;
+      if (button.dataset.originalAria) button.setAttribute('aria-label', button.dataset.originalAria);
+      else button.removeAttribute('aria-label');
+      button.classList.remove('is-copied');
+    }, 1600));
+  }
+
+  async function handleCopy(button, text) {
+    try {
+      await copyText(text);
+      confirmCopy(button, true);
+    } catch {
+      confirmCopy(button, false);
+    }
+  }
+
+  document.querySelectorAll('[data-copy]').forEach(button => {
+    button.addEventListener('click', () => handleCopy(button, button.dataset.copy));
+  });
+  document.querySelectorAll('[data-copy-target]').forEach(button => {
+    button.addEventListener('click', () => {
+      const target = document.getElementById(button.dataset.copyTarget);
+      if (target) handleCopy(button, target.textContent.trim());
+    });
+  });
+
+  document.querySelectorAll('pre').forEach((pre, index) => {
+    const code = pre.querySelector('code');
+    if (!code) return;
+    if (!code.id) code.id = `command-block-${index + 1}`;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-command pre-copy';
+    button.textContent = 'Copy';
+    button.setAttribute('aria-label', `Copy command block ${index + 1}`);
+    button.dataset.copyTarget = code.id;
+    button.addEventListener('click', () => handleCopy(button, code.textContent));
+    pre.appendChild(button);
+  });
+})();
+</script>
+</body>
+</html>

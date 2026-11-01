@@ -28,6 +28,12 @@ export const AdminReviewsPage = lazyWithPreload(() =>
   })),
 );
 
+export const AgentPage = lazyWithPreload(() =>
+  import('~/pages/agent/AgentPage').then((res) => ({
+    default: res.AgentPage,
+  })),
+);
+
 export const ApiKeysPage = lazyWithPreload(() =>
   import('~/pages/developers/ApiKeysPage').then((res) => ({
     default: res.ApiKeysPage,
@@ -248,9 +254,86 @@ export const ComposePage = lazyWithPreload(() =>
   })),
 );
 
+export const FiddyOnboardingPage = lazyWithPreload(() =>
+  import('~/pages/fiddyOnboarding/FiddyOnboardingPage').then((res) => ({
+    default: res.FiddyOnboardingPage,
+  })),
+);
+
+/** Where a social sign-up lands: the account it just made. */
+export const FiddyAccountPage = lazyWithPreload(() =>
+  import('~/pages/fiddyAccount/FiddyAccountPage').then((res) => ({
+    default: res.FiddyAccountPage,
+  })),
+);
+
+export const FiddyBrainsPage = lazyWithPreload(() =>
+  import('~/pages/fiddyBrains/FiddyBrainsPage').then((res) => ({
+    default: res.FiddyBrainsPage,
+  })),
+);
+
+export const FiddyAppsPage = lazyWithPreload(() =>
+  import('~/pages/fiddyApps/FiddyAppsPage').then((res) => ({
+    default: res.FiddyAppsPage,
+  })),
+);
+
+/* Adding funds: the balance's own screen. Entered from the way in's second step
+   and from the wallet page, so the sheet is written once and addressed here. */
+export const FiddyAddFundsPage = lazyWithPreload(() =>
+  import('~/pages/fiddyAddFunds/FiddyAddFundsPage').then((res) => ({
+    default: res.FiddyAddFundsPage,
+  })),
+);
+
+/* Connect your Farcaster account: the connect-existing-account path. Its own
+   page because it is entered signed out and left by approving on a phone. */
+export const FiddyConnectPage = lazyWithPreload(() =>
+  import('~/pages/fiddyConnect/FiddyConnectPage').then((res) => ({
+    default: res.FiddyConnectPage,
+  })),
+);
+
+/* Together — shared spaces: "work with your people". The list/create surface
+   and the invite landing are separate pages because the landing has to work for
+   somebody who has never been here and has no session at all. */
+export const TogetherPage = lazyWithPreload(() =>
+  import('~/pages/together/TogetherPage').then((res) => ({
+    default: res.TogetherPage,
+  })),
+);
+
+export const TogetherJoinPage = lazyWithPreload(() =>
+  import('~/pages/together/TogetherJoinPage').then((res) => ({
+    default: res.TogetherJoinPage,
+  })),
+);
+
 export const HomeLandingPage = lazyWithPreload(() =>
   import('~/pages/homeLanding/HomeLandingPage').then((res) => ({
     default: res.HomeLandingPage,
+  })),
+);
+
+export const PublicFeedPage = lazyWithPreload(() =>
+  import('~/pages/publicBrowse/PublicBrowsePage').then((res) => ({
+    default: res.PublicFeedPage,
+  })),
+);
+
+export const PublicExplorePage = lazyWithPreload(() =>
+  import('~/pages/publicBrowse/PublicBrowsePage').then((res) => ({
+    default: res.PublicExplorePage,
+  })),
+);
+
+/* A look someone shared: one link, one palette, no account needed to wear it.
+   Public like the browse surface above, and lazy like everything else here so
+   the entry chunk does not carry a page nobody has opened. */
+export const LookPage = lazyWithPreload(() =>
+  import('~/pages/look/LookPage').then((res) => ({
+    default: res.LookPage,
   })),
 );
 
@@ -293,6 +376,12 @@ export const BookmarksPage = lazyWithPreload(() =>
 export const SavedPage = lazyWithPreload(() =>
   import('~/pages/saved/SavedPage').then((res) => ({
     default: res.SavedPage,
+  })),
+);
+
+export const SealedCastsPage = lazyWithPreload(() =>
+  import('~/pages/sealed/SealedCastsPage').then((res) => ({
+    default: res.SealedCastsPage,
   })),
 );
 
@@ -388,6 +477,12 @@ export const SettingsDeveloperToolsPage = lazyWithPreload(() =>
       default: res.SettingsDeveloperToolsPage,
     }),
   ),
+);
+
+export const SettingsNodePage = lazyWithPreload(() =>
+  import('~/pages/settingsNode/SettingsNodePage').then((res) => ({
+    default: res.SettingsNodePage,
+  })),
 );
 
 export const NotificationGroupChannelRoleInvitesPage = lazyWithPreload(() =>

@@ -17,6 +17,7 @@ import React, { FormEvent, useCallback, useMemo, useState } from 'react';
 
 import { AvatarImage } from '~/components/avatar/AvatarImage';
 import { FarcasterProUnlockFeaturesModal } from '~/components/farcasterPro/FarcasterProUnlockFeaturedModal';
+import { ProfileFiddy3DSettings } from '~/components/fiddy/ProfileFiddy3DSettings';
 import { FileInput } from '~/components/forms/FileInput';
 import { Form } from '~/components/forms/Form';
 import { FormControl } from '~/components/forms/FormControl';
@@ -656,6 +657,10 @@ const EditProfileModalContent: React.FC<EditProfileModalContentProps> = ({
                 />
               }
               instructions={undefined}
+            />
+            <ProfileFiddy3DSettings
+              signedInFid={currentUser.fid}
+              isOwnProfile={true}
             />
             {profileError && (
               <div className="mt-4 text-sm font-semibold text-danger">

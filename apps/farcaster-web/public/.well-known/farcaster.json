@@ -1,0 +1,22 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE5MTU1NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDI4NTQ1OUREQzA2NDkwOGQ4NjAzYjc2MjIzMDNkZEUzMEM0OTY2ZTUifQ",
+    "payload": "eyJkb21haW4iOiJmaWRkeS5mdW4ifQ",
+    "signature": "zgo88vq7OsgzVhea9A3HxgGQ3M8jx3/Tz9+ho8r1LQRMLZcsw3RswHEG/grycBWD3ct4NrOCqfmkOOuuoOLxhhw="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "fiddy",
+    "homeUrl": "https://fiddy.fun",
+    "iconUrl": "https://fiddy.fun/brand/fiddy-app-icon.png",
+    "imageUrl": "https://fiddy.fun/fiddy-embed.png",
+    "splashImageUrl": "https://fiddy.fun/fiddy-splash.png",
+    "splashBackgroundColor": "#161715",
+    "webhookUrl": "https://fiddy.fun/api/webhook",
+    "subtitle": "a client with a little agent",
+    "description": "Read your feed, open mini apps, and post with a little agent that asks before it acts.",
+    "primaryCategory": "productivity",
+    "tags": ["fiddy", "farcaster", "agent", "ai", "client"],
+    "tagline": "an agent that asks first"
+  }
+}

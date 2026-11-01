@@ -1,0 +1,2058 @@
+/*
+ * Fiddy shell — design tokens and chrome.
+ *
+ * Source of truth: the OpenDesign project `fiddy-client-4695` (index.html +
+ * tokens.css). The class names here are the design's own, namespaced `fiddy-`
+ * so nothing collides with the upstream fork's Tailwind utilities. Values are
+ * copied, not invented: if a number looks arbitrary it was in the design.
+ *
+ * Dark-only on purpose. The brand is chartreuse on #161715; a light variant
+ * of this shell does not exist in the design and is not guessed at here.
+ */
+
+:root {
+  --fiddy-bg: #161715;
+  --fiddy-bg-raise: #1d1e1c;
+  --fiddy-ink: #eef0e8;
+  --fiddy-ink-dim: #9ba193;
+  --fiddy-accent: #d4ff3f;
+  --fiddy-on-accent: #1a1c10;
+  --fiddy-accent-deep: #7cb518;
+  --fiddy-glass: rgba(255, 255, 255, 0.04);
+  --fiddy-glass-border: rgba(255, 255, 255, 0.09);
+  --fiddy-radius: 18px;
+  --fiddy-font: 'SF Pro Rounded', ui-rounded, system-ui, sans-serif;
+}
+
+/* ---------- brand surfaces ---------- */
+
+.fiddy-surface {
+  background: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* These classes are unlayered, so they beat Tailwind's `hidden` / `sm:hidden`
+   utilities. The responsive gate therefore has to live here too, and it has to
+   be the ONLY declaration of `display` for each class: a later
+   `.fiddy-nav { display: flex }` would out-rank an earlier media query at equal
+   specificity and un-hide the chrome at every width (verified in a headless
+   browser at 390px and 1440px). Each base rule below therefore drops `display`
+   and states it inside its own media query. */
+
+/* The rounded brand face is chrome-only: the feed keeps the app's own type so
+   dense text stays as readable as it is upstream. */
+.fiddy-topbar,
+.fiddy-nav,
+.fiddy-tabs,
+.fiddy-account-menu,
+.fiddy-agent-card {
+  font-family: var(--fiddy-font);
+}
+
+.fiddy-surface ::selection {
+  background: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+}
+
+.fiddy-surface :focus-visible {
+  outline: 2px solid var(--fiddy-accent);
+  outline-offset: 2px;
+}
+
+/* Page background for the shell: the app root is drawn dark while a Fiddy
+   surface is mounted, so the upstream light default never leaks through. */
+html.fiddy-dark-shell,
+html.fiddy-dark-shell body {
+  background-color: var(--fiddy-bg);
+  color-scheme: dark;
+}
+
+/* ---------- top bar ---------- */
+
+.fiddy-topbar {
+  align-items: center;
+  gap: 16px;
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--fiddy-glass-border);
+  background: color-mix(in oklab, var(--fiddy-bg-raise), var(--fiddy-bg) 40%);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* Desktop chrome only: phones keep the app's own compact header, which carries
+   the node pill. */
+@media (min-width: 640px) {
+  .fiddy-topbar {
+    display: flex;
+  }
+}
+
+.fiddy-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-brand-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: block;
+  flex: none;
+}
+
+.fiddy-brand .fiddy-dot {
+  color: var(--fiddy-accent);
+}
+
+/* The baby Fiddy mark in the brand slot: a still that paints first and a canvas
+   that takes over once the model is up. Both fill the same box, so the swap is
+   invisible as a layout event — the still fades out under the drawn model. */
+.fiddy-brand-mark3d {
+  position: relative;
+  display: block;
+  flex: none;
+  line-height: 0;
+}
+
+.fiddy-brand-mark3d-still,
+.fiddy-brand-mark3d-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fiddy-brand-mark3d-still {
+  object-fit: contain;
+  transition: opacity 180ms ease-out;
+}
+
+.fiddy-brand-mark3d-canvas {
+  pointer-events: none;
+}
+
+.fiddy-brand-mark3d-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fiddy-brand-mark3d[data-fiddy-mark='moving'] .fiddy-brand-mark3d-still {
+  opacity: 0;
+}
+
+/* Stillness stays still: a cross-fade is motion too. */
+@media (prefers-reduced-motion: reduce) {
+  .fiddy-brand-mark3d-still {
+    transition: none;
+  }
+}
+
+/* The nav's mark is the same character as the top bar's, as a still — one
+   animated mark per shell (see LeftSideBarLogo for why it is not a canvas). */
+.fiddy-nav-mark {
+  display: block;
+  object-fit: contain;
+}
+
+/* ---------- the hero Fiddy ----------
+   The front door's mascot, drawn by the same three.js scene the chrome's mark
+   uses. The box is sized here and nowhere else: it is identical before the model
+   is fetched and after it arrives, which is what keeps the page from shifting
+   under a reader who is halfway through the first sentence. Two variants, one
+   geometry: `hero` on the front door, `form` beside the name field. */
+
+.fiddy-hero-stage {
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--fiddy-hero-box);
+  height: var(--fiddy-hero-box);
+  line-height: 0;
+}
+
+.fiddy-hero-stage-hero {
+  --fiddy-hero-box: 168px;
+  /* The front door's stage is a real <button> so a press can greet Fiddy and a
+     keyboard can reach it. This is the reset that keeps it looking like the
+     image it is; the focus ring is the shell's own `:focus-visible` rule. */
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fiddy-hero-stage-form {
+  --fiddy-hero-box: 84px;
+}
+
+@media (min-width: 640px) {
+  .fiddy-hero-stage-hero {
+    --fiddy-hero-box: 232px;
+  }
+}
+
+/* A brand glow behind the hero only. The small one beside a form sits inside a
+   row of controls and does not get to light the screen up. */
+.fiddy-hero-stage-hero::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 46%,
+    color-mix(in oklab, var(--fiddy-accent), transparent 84%),
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.fiddy-hero-stage-still,
+.fiddy-hero-stage-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fiddy-hero-stage-still {
+  object-fit: contain;
+  transition: opacity 180ms ease-out;
+}
+
+/* The canvas never takes the pointer: the head follows the pointer anywhere on
+   the WINDOW (that is what makes it look at you), and a press belongs to the
+   button the canvas sits inside. Nothing here turns the figure by hand, so a
+   visitor scrolling past the hero on a phone keeps every thumb movement for the
+   page. */
+.fiddy-hero-stage-canvas {
+  pointer-events: none;
+}
+
+.fiddy-hero-stage-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fiddy-hero-stage[data-fiddy-hero='moving'] .fiddy-hero-stage-still {
+  opacity: 0;
+}
+
+/* A press gets words as well as the baby's hop. The bubble floats over the
+   stage, so its arrival never pushes the front door down the page. */
+.fiddy-hero-greeting {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 8px;
+  max-width: 150px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in oklab, var(--fiddy-accent), white 18%);
+  border-radius: 999px;
+  background: var(--fiddy-accent);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 28%);
+  color: #1a1c10;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fiddy-hero-greeting-in 180ms ease-out;
+}
+
+@keyframes fiddy-hero-greeting-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Stillness stays still: a cross-fade or a bubble pop is motion too. */
+@media (prefers-reduced-motion: reduce) {
+  .fiddy-hero-stage-still,
+  .fiddy-hero-greeting {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* The name field, with the little Fiddy beside it. Sideways when there is room
+   for two columns — the mascot watches you type without standing in the way —
+   and stacked above the field when there is not. `align-items: center` on the
+   row is what keeps the 84px model optically on the input's line rather than on
+   the label's. */
+.fiddy-form-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.fiddy-form-row .fiddy-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (min-width: 520px) {
+  .fiddy-form-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+}
+
+.fiddy-grow {
+  flex: 1;
+}
+
+/* The node-status pill, in the design's chrome dimensions. The component
+   keeps owning its own four honest states; this only sizes and skins it. */
+.fiddy-node-pill {
+  height: 34px !important;
+  padding: 0 14px 0 12px !important;
+  border-radius: 999px !important;
+  background: var(--fiddy-glass);
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  gap: 8px !important;
+}
+
+.fiddy-node-pill-sm {
+  height: 30px !important;
+  padding: 0 11px 0 9px !important;
+  font-size: 12px !important;
+  gap: 6px !important;
+}
+
+/* The shell is a column: a 60px chrome row, then the app's own three columns.
+   Both upstream sidebars are `sticky top-0 h-screen`, so offset them to sit
+   below the chrome instead of sliding under it. */
+.fiddy-shell-frame aside.sticky {
+  top: 60px;
+  height: calc(100vh - 60px);
+}
+
+.fiddy-shell-frame aside.sticky > div {
+  min-height: calc(100vh - 60px);
+}
+
+/* ---------- left nav ---------- */
+
+.fiddy-nav {
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 14px 14px;
+  border-right: 1px solid var(--fiddy-glass-border);
+  background: color-mix(in oklab, var(--fiddy-bg), var(--fiddy-bg-raise) 30%);
+}
+
+/* Desktop chrome only. The upstream <aside> is already `hidden sm:block`; this
+   has to say the same thing out loud, because an unlayered `.fiddy-nav` beats
+   that utility. Without it the rail stays on screen at 390px, laid out at the
+   fork's collapsed offset (x = -35px) and pushing the page 35px wide. */
+@media (min-width: 640px) {
+  .fiddy-nav {
+    display: flex;
+  }
+}
+
+.fiddy-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  color: var(--fiddy-ink-dim);
+  font-weight: 700;
+  font-size: 14.5px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.fiddy-nav-item:hover {
+  background: var(--fiddy-glass);
+  color: var(--fiddy-ink);
+}
+
+.fiddy-nav-item[aria-current='page'] {
+  background: var(--fiddy-bg-raise);
+  color: var(--fiddy-ink);
+  box-shadow: inset 0 0 0 1px var(--fiddy-glass-border);
+}
+
+/*
+ * The fork's own NavLink decides which entry is current (it marks the row with
+ * `bg-surface-secondary`); Fiddy only re-skins it. These rules sit outside
+ * Tailwind's utility layer, so they win over the upstream classes without
+ * editing NavLinkContainer — every entry, primary or not, gets one look.
+ */
+.fiddy-nav a > div {
+  min-height: 44px;
+  border-radius: 12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  gap: 12px;
+  color: var(--fiddy-ink-dim);
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.fiddy-nav a:hover > div {
+  background: var(--fiddy-glass);
+  color: var(--fiddy-ink);
+}
+
+.fiddy-nav a > div.bg-surface-secondary {
+  background: var(--fiddy-bg-raise);
+  color: var(--fiddy-ink);
+  box-shadow: inset 0 0 0 1px var(--fiddy-glass-border);
+}
+
+.fiddy-nav a > div.bg-surface-secondary svg {
+  color: var(--fiddy-accent-deep);
+}
+
+/* Section caption between the primary entries and the rest of the fork's
+   surfaces, so the four Fiddy entries lead without hiding functionality. */
+.fiddy-nav-caption {
+  margin: 14px 0 4px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-nav-foot {
+  margin-top: auto;
+  padding: 10px 12px 0;
+  font-size: 11.5px;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-soon {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 7px;
+  margin-left: auto;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--fiddy-ink-dim), transparent 55%);
+  color: var(--fiddy-ink-dim);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------- feed column ---------- */
+
+.fiddy-composer {
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-bg-raise);
+  border-radius: var(--fiddy-radius);
+}
+
+.fiddy-cast {
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-bg-raise);
+  border-radius: var(--fiddy-radius);
+  transition: border-color 0.15s;
+}
+
+.fiddy-cast:hover {
+  border-color: color-mix(in oklab, var(--fiddy-glass-border), #fff 35%);
+}
+
+/* ---------- agent rail ---------- */
+
+.fiddy-agent-card {
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-bg-raise);
+  border-radius: var(--fiddy-radius);
+  padding: 18px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fiddy-agent-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fiddy-agent-head h2 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-pill-dim {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border);
+  color: var(--fiddy-ink-dim);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fiddy-pill-live {
+  border-color: color-mix(in oklab, var(--fiddy-accent-deep), transparent 45%);
+  color: var(--fiddy-accent-deep);
+}
+
+.fiddy-hatch-card {
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-bg-raise);
+  border-radius: var(--fiddy-radius);
+  padding: 26px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  text-align: center;
+}
+
+/* The dashed identity note under the hatch CTA: what the agent gets that is
+   its own (a fid), said before anyone spends time onboarding. */
+.fiddy-agent-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in oklab, var(--fiddy-ink-dim), transparent 60%);
+  font-size: 12.5px;
+  color: var(--fiddy-ink-dim);
+  text-align: left;
+  line-height: 1.45;
+}
+
+.fiddy-agent-id svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.fiddy-egg-wrap {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: var(--fiddy-glass);
+  border: 1px solid var(--fiddy-glass-border);
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--fiddy-accent-deep);
+}
+
+.fiddy-hatch-card h3 {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-hatch-sub {
+  color: var(--fiddy-ink-dim);
+  font-size: 13.5px;
+  line-height: 1.55;
+  max-width: 300px;
+}
+
+.fiddy-hatch-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 999px;
+  background: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+
+.fiddy-hatch-btn:hover {
+  background: color-mix(in oklab, var(--fiddy-accent), #fff 12%);
+}
+
+.fiddy-feats {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+}
+
+.fiddy-feat {
+  display: flex;
+  gap: 12px;
+  padding: 13px 2px;
+  border-top: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-feat > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--fiddy-accent-deep);
+  flex: none;
+  margin-top: 2px;
+}
+
+.fiddy-feat b {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fiddy-ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fiddy-feat p {
+  font-size: 12.5px;
+  color: var(--fiddy-ink-dim);
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+/* ---------- mobile bottom tab bar ---------- */
+
+.fiddy-tabs {
+  border-top: 1px solid var(--fiddy-glass-border);
+  background: color-mix(in oklab, var(--fiddy-bg-raise), var(--fiddy-bg) 35%);
+  padding: 7px 8px 0;
+}
+
+/* Phone chrome only. The JSX carries `sm:hidden`, but this class is unlayered
+   and would out-rank it — so the gate is restated here, after the base rule and
+   as the only `display` declaration for the bar. */
+@media (max-width: 639px) {
+  .fiddy-tabs {
+    display: flex;
+  }
+}
+
+.fiddy-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 0 9px;
+  border-radius: 12px;
+  color: var(--fiddy-ink-dim);
+  position: relative;
+  min-height: 54px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.fiddy-tab[aria-current='page'] {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-tab[aria-current='page'] svg {
+  color: var(--fiddy-accent-deep);
+}
+
+/* ---------- the account menu (the avatar's door) ----------
+   One panel, three anchors: the desktop top bar, the phone's header, and the
+   phone's "You" tab. "Sign out" is deliberately the last item of a panel short
+   enough to sit on screen without scrolling, because that is the whole card:
+   the way out of the account, findable from anywhere in the shell. */
+
+.fiddy-avatar-button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fiddy-account-menu {
+  z-index: 50;
+  width: 252px;
+  padding: 6px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--fiddy-bg-raise), var(--fiddy-bg) 12%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  color: var(--fiddy-ink);
+}
+
+.fiddy-account-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+}
+
+.fiddy-account-menu-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fiddy-account-menu-name {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fiddy-account-menu-handle {
+  font-size: 12px;
+  color: var(--fiddy-ink-dim);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fiddy-account-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--fiddy-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fiddy-account-menu-item svg {
+  flex: none;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-account-menu-item:hover {
+  background: var(--fiddy-glass);
+}
+
+.fiddy-account-menu-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--fiddy-glass-border);
+}
+
+/* The one destructive thing in the panel, in the tone the shell's own alerts
+   already use for "this is the sharp edge". */
+.fiddy-account-menu-signout,
+.fiddy-account-menu-signout svg {
+  color: #ff8f8f;
+}
+
+.fiddy-account-menu-signout:hover {
+  background: color-mix(in oklab, #ff8f8f, transparent 88%);
+}
+
+/* Anchors. Each opener's own chrome is the positioned element (a sticky header
+   or a fixed bar), so the panel is positioned against it and travels with it. */
+.fiddy-account-menu-topbar {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 20px;
+}
+
+.fiddy-account-menu-header {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 12px;
+}
+
+.fiddy-account-menu-tabbar {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+}
+
+/* ---------- shared buttons and small print ----------
+   Used by the setup sheets and the agent surfaces; kept here so every Fiddy
+   screen has one primary button, one quiet button and one honest-note style. */
+
+.fiddy-primary-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 999px;
+  background: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+  font-weight: 800;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.fiddy-primary-btn:hover {
+  background: color-mix(in oklab, var(--fiddy-accent), #fff 12%);
+}
+
+/* The second loud action, for a screen that really has two ways forward: the
+   same weight as the primary (full width, 50px, 800) with a brand-ringed glass
+   face instead of the fill, so it is unmistakable without competing with the
+   one action the screen is about. Used by the front door's "Look around first",
+   which opens the public browse window with no account at all. */
+.fiddy-secondary-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--fiddy-glass), #fff 4%);
+  border: 1.5px solid color-mix(in oklab, var(--fiddy-accent), transparent 45%);
+  color: var(--fiddy-ink);
+  font-weight: 800;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.fiddy-secondary-btn:hover {
+  border-color: var(--fiddy-accent);
+  background: color-mix(in oklab, var(--fiddy-glass), #fff 9%);
+}
+
+.fiddy-secondary-btn:disabled {
+  opacity: 0.5;
+}
+
+/* The action that has just become the point of the screen: the waiting quiet
+   before it, then a ring, so it is unmistakably where to go — and it is only
+   worn after something the visitor did, never on arrival. */
+.fiddy-primary-btn-hot {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--fiddy-accent), transparent 55%),
+    0 10px 30px color-mix(in oklab, var(--fiddy-accent), transparent 70%);
+  animation: fiddy-primary-invite 1.6s ease-out 1;
+}
+
+@keyframes fiddy-primary-invite {
+  0% {
+    transform: scale(0.985);
+  }
+  60% {
+    transform: scale(1.012);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---------- the one trial message ----------
+   A small conversation, not a chat app: one prompt line, one input with its
+   send button, three openers, and the answer in place of the input. */
+
+.fiddy-trial {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--fiddy-glass), #fff 6%);
+  border: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-trial-label {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-trial-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.fiddy-trial-row .fiddy-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fiddy-trial-send {
+  flex: none;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+  font-weight: 800;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fiddy-trial-send svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fiddy-trial-send:disabled {
+  opacity: 0.45;
+}
+
+.fiddy-trial-starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fiddy-trial-chip {
+  border: 1.5px solid var(--fiddy-glass-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fiddy-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 12px;
+  min-height: 34px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.fiddy-trial-chip:hover:not(:disabled) {
+  border-color: var(--fiddy-accent-deep);
+  background: color-mix(in oklab, var(--fiddy-accent), transparent 90%);
+}
+
+.fiddy-trial-chip:disabled {
+  opacity: 0.5;
+}
+
+.fiddy-trial-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fiddy-trial-bubble {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 34ch;
+}
+
+.fiddy-trial-bubble-me {
+  align-self: flex-end;
+  background: color-mix(in oklab, var(--fiddy-accent), transparent 78%);
+  color: var(--fiddy-ink);
+  border-bottom-right-radius: 6px;
+}
+
+.fiddy-trial-bubble-agent {
+  align-self: flex-start;
+  background: color-mix(in oklab, var(--fiddy-glass), #fff 14%);
+  border: 1px solid var(--fiddy-glass-border);
+  color: var(--fiddy-ink);
+  border-bottom-left-radius: 6px;
+  max-width: 38ch;
+}
+
+.fiddy-trial-note {
+  margin: 0;
+  color: var(--fiddy-ink-dim);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.fiddy-trial-refusal {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-secondary-btn {
+  width: 100%;
+  height: 46px;
+  border-radius: 999px;
+  border: 1.5px solid var(--fiddy-accent-deep);
+  color: var(--fiddy-accent-deep);
+  font-weight: 800;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.fiddy-secondary-btn:hover {
+  background: var(--fiddy-accent-deep);
+  color: var(--fiddy-on-accent);
+}
+
+.fiddy-honest-note {
+  font-size: 12.5px;
+  color: var(--fiddy-ink-dim);
+  line-height: 1.55;
+  display: flex;
+  gap: 8px;
+}
+
+.fiddy-honest-note svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--fiddy-accent-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fiddy-surface *,
+  .fiddy-sheet *,
+  .fiddy-page * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+/* ---------- setup sheets (onboarding steps, brains, apps) ----------
+   One screen, one idea. These screens are the product's front door and the
+   two places you can reopen later; they share one shape so a step cannot drift
+   into a second visual language. Values come from the design tokens above. */
+
+.fiddy-sheet {
+  min-height: 100dvh;
+  width: 100%;
+  background: var(--fiddy-bg);
+  color: var(--fiddy-ink);
+  font-family: var(--fiddy-font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 22px 0;
+}
+
+.fiddy-sheet-top {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.fiddy-sheet-mark {
+  height: 26px;
+  width: auto;
+  display: block;
+}
+
+.fiddy-step-count {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-sheet-body {
+  flex: 1;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 40px 0 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.fiddy-sheet-body-wide {
+  max-width: 620px;
+}
+
+.fiddy-sheet-title {
+  font-size: clamp(28px, 4.4vw, 42px);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0;
+  outline: none;
+}
+
+/* Each step focuses its heading so a screen reader announces the new idea
+   instead of starting over at the top. That focus is programmatic, and a
+   heading is not a control — so it does not get the accent ring, which would
+   otherwise draw a lime box around every headline on arrival. Keyboard users
+   tabbing through still see rings on everything they can act on. */
+.fiddy-sheet-title:focus,
+.fiddy-sheet-title:focus-visible {
+  outline: none;
+}
+
+.fiddy-sheet-sub {
+  color: var(--fiddy-ink-dim);
+  font-size: 16px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 46ch;
+}
+
+.fiddy-sheet-content {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.fiddy-sheet-actions {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fiddy-sheet-note {
+  color: var(--fiddy-ink-dim);
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 44ch;
+}
+
+.fiddy-quiet-btn {
+  background: none;
+  border: none;
+  color: var(--fiddy-ink-dim);
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.fiddy-quiet-btn:hover {
+  color: var(--fiddy-ink);
+  text-decoration: underline;
+}
+
+.fiddy-quiet-btn-inline {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 12.5px;
+}
+
+.fiddy-quiet-btn-outline {
+  align-self: flex-start;
+  border: 1.5px solid var(--fiddy-glass-border);
+  color: var(--fiddy-ink-dim);
+  font-size: 13px;
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+/* What Fiddy promises, on the first screen. Reads like a list of three plain
+   sentences because that is what it is. */
+.fiddy-promise,
+.fiddy-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fiddy-promise li {
+  padding: 11px 2px;
+  border-top: 1px solid var(--fiddy-glass-border);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--fiddy-ink);
+  text-align: left;
+}
+
+.fiddy-summary li {
+  display: flex;
+  gap: 12px;
+  padding: 12px 2px;
+  border-top: 1px solid var(--fiddy-glass-border);
+  font-size: 14.5px;
+}
+
+.fiddy-summary svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+  color: var(--fiddy-accent-deep);
+}
+
+.fiddy-summary b {
+  display: block;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.fiddy-summary small {
+  display: block;
+  color: var(--fiddy-ink-dim);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+/* ---------- cards: brains, one decision each ---------- */
+
+.fiddy-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+/*
+ * An item is as tall as everything it holds.
+ *
+ * `.fiddy-brain-card` is `height: 100%` because the brain grid wants equal
+ * heights across a row. Inside a grid item that percentage is resolved against
+ * the item, so the item ends up only as tall as the card, and a note under the
+ * card (`~wallet home` says why a choice is unavailable) spills out of the item
+ * and lands on whatever comes next — measured on the wallet page: the note and
+ * the summary line rendered on top of each other. A flex column item makes the
+ * percentage indefinite again, so the card is its own height and the note is
+ * part of the item.
+ */
+.fiddy-card-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .fiddy-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fiddy-brain-card {
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 15px 16px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: var(--fiddy-radius);
+  background: var(--fiddy-bg-raise);
+  color: var(--fiddy-ink);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.fiddy-brain-card:hover {
+  border-color: color-mix(in oklab, var(--fiddy-accent), transparent 55%);
+}
+
+.fiddy-brain-card-selected {
+  border-color: var(--fiddy-accent);
+  background: color-mix(
+    in oklab,
+    var(--fiddy-bg-raise),
+    var(--fiddy-accent) 7%
+  );
+  box-shadow: inset 0 0 0 1px var(--fiddy-accent);
+}
+
+.fiddy-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fiddy-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.fiddy-tag {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+  white-space: nowrap;
+}
+
+.fiddy-tag-live {
+  border-color: color-mix(in oklab, var(--fiddy-accent-deep), transparent 45%);
+  color: var(--fiddy-accent-deep);
+}
+
+.fiddy-tag-yours {
+  border-color: color-mix(in oklab, var(--fiddy-accent), transparent 40%);
+  color: var(--fiddy-accent);
+}
+
+.fiddy-card-line {
+  font-size: 12.8px;
+  line-height: 1.5;
+  color: var(--fiddy-ink-dim);
+}
+
+/* ---------- fields ---------- */
+
+.fiddy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.fiddy-field-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-input {
+  width: 100%;
+  height: 50px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-bg-raise);
+  color: var(--fiddy-ink);
+  font-size: 15px;
+  font-family: var(--fiddy-font);
+}
+
+.fiddy-input::placeholder {
+  color: color-mix(in oklab, var(--fiddy-ink-dim), transparent 25%);
+}
+
+.fiddy-input:focus {
+  outline: none;
+  border-color: var(--fiddy-accent);
+}
+
+.fiddy-connect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: var(--fiddy-radius);
+  background: var(--fiddy-bg-raise);
+}
+
+.fiddy-connected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-connected-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fiddy-accent);
+  flex: none;
+}
+
+.fiddy-alert {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, #ff8f8f, transparent 45%);
+  background: color-mix(in oklab, #ff8f8f, transparent 88%);
+  color: #ffd2d2;
+  font-size: 12.8px;
+  line-height: 1.5;
+}
+
+/* ---------- apps: one row, one switch, one permission ---------- */
+
+.fiddy-channel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-channel-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-channel-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.fiddy-channel-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.fiddy-channel-permission {
+  margin: 3px 0 0;
+  font-size: 12.8px;
+  line-height: 1.5;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-switch {
+  flex: none;
+  width: 54px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.fiddy-switch-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--fiddy-ink-dim);
+  transition: transform 0.15s;
+}
+
+.fiddy-switch-on {
+  background: var(--fiddy-accent);
+  border-color: var(--fiddy-accent);
+}
+
+.fiddy-switch-on .fiddy-switch-knob {
+  background: var(--fiddy-on-accent);
+  transform: translateX(22px);
+}
+
+.fiddy-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.fiddy-apps-note {
+  margin-top: 16px;
+}
+
+/* ---------- advanced (for builders), closed by default ---------- */
+
+.fiddy-advanced {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.fiddy-advanced-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 2px;
+  border: none;
+  border-top: 1px solid var(--fiddy-glass-border);
+  background: none;
+  color: var(--fiddy-ink-dim);
+  font-family: var(--fiddy-font);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.fiddy-advanced-toggle:hover {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 12px;
+}
+
+/* ---------- standalone surfaces (Add a brain / Connect apps) ---------- */
+
+.fiddy-page {
+  min-height: 100dvh;
+  font-family: var(--fiddy-font);
+}
+
+.fiddy-page-inner {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 22px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.fiddy-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  color: var(--fiddy-ink-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fiddy-back svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fiddy-back:hover {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fiddy-page-title {
+  font-size: clamp(26px, 3.6vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.fiddy-page-sub {
+  margin: 0;
+  color: var(--fiddy-ink-dim);
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 46ch;
+}
+
+/* ---------- mascot without the roundel ---------- */
+
+.fiddy-egg-bare {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+/* ---------- legal footer of the setup flow ---------- */
+
+.fiddy-legal {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 0 20px;
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.fiddy-legal a {
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-legal a:hover {
+  color: var(--fiddy-ink);
+  text-decoration: underline;
+}
+
+/* ---------- the two pivot surfaces, as tiles on the agent screen ----------
+   "Add a brain" and "Connect apps" are the pivot's two doors, so they sit at
+   the top of the agent surface rather than buried in settings. */
+
+.fiddy-agent-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 640px) {
+  .fiddy-agent-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fiddy-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--fiddy-glass-border);
+  border-radius: var(--fiddy-radius);
+  background: var(--fiddy-bg-raise);
+  color: var(--fiddy-ink);
+  transition: border-color 0.15s;
+}
+
+.fiddy-tile:hover {
+  border-color: color-mix(in oklab, var(--fiddy-accent), transparent 55%);
+}
+
+.fiddy-tile > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 2px;
+  color: var(--fiddy-accent-deep);
+}
+
+.fiddy-tile b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.fiddy-tile small {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fiddy-ink-dim);
+}
+
+/* Connect your Farcaster account — the code the phone scans, and the link that
+   does the same thing on the phone that is already in the person's hand. */
+.fiddy-connect-qr {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 6px;
+}
+
+.fiddy-connect-qr canvas {
+  border-radius: 12px;
+}
+
+.fiddy-connect-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fiddy-accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fiddy-connect-body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fiddy-ink-dim);
+}
+
+/* ---------- the Fiddy balance: chip, home, and adding funds ----------
+   One idea, three sizes. The chip is the number in the chrome; the balance home
+   is that number explained with its recent movements; the add-funds sheet is
+   the only place the number can move. All of it is the design's own language —
+   glass ground, chartreuse accent, rounded 18px — and none of it is a new
+   visual concept. */
+
+.fiddy-chip-link {
+  display: inline-flex;
+  flex: none;
+}
+
+.fiddy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+  color: var(--fiddy-ink);
+  font-size: 13px;
+  font-weight: 700;
+  flex: none;
+}
+
+.fiddy-chip:hover {
+  border-color: color-mix(in oklab, var(--fiddy-accent), transparent 55%);
+}
+
+.fiddy-chip svg {
+  color: var(--fiddy-accent);
+  flex: none;
+}
+
+.fiddy-chip-label {
+  color: var(--fiddy-ink-dim);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* The number is the whole chip on a phone: the bar already carries the node
+   pill, search and the compose action, and a second word would be a crowd. */
+.fiddy-chip-compact {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.fiddy-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--fiddy-radius);
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+}
+
+.fiddy-balance-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fiddy-balance-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-balance-amount strong {
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--fiddy-accent);
+}
+
+.fiddy-balance-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fiddy-balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fiddy-balance-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-balance-list li:first-child {
+  border-top: 0;
+}
+
+.fiddy-balance-movement {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fiddy-balance-movement b {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fiddy-balance-movement small {
+  font-size: 11.5px;
+  color: var(--fiddy-ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.fiddy-balance-value {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+/* ---------- adding funds ---------- */
+
+.fiddy-top-up {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.fiddy-top-up-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fiddy-top-up-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.fiddy-top-up-sub {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fiddy-amount {
+  height: 54px;
+  border-radius: 14px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--fiddy-ink);
+}
+
+.fiddy-amount:hover {
+  border-color: color-mix(in oklab, var(--fiddy-accent), transparent 55%);
+}
+
+.fiddy-amount-selected {
+  border-color: var(--fiddy-accent);
+  color: var(--fiddy-on-accent);
+  background: var(--fiddy-accent);
+}
+
+.fiddy-amount-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fiddy-amount-field > span {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fiddy-ink-dim);
+}
+
+.fiddy-review {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 14px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+  padding: 4px 14px;
+}
+
+.fiddy-review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--fiddy-glass-border);
+}
+
+.fiddy-review-row:first-child {
+  border-top: 0;
+}
+
+.fiddy-review-label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fiddy-ink-dim);
+  flex: none;
+}
+
+.fiddy-review-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+  min-width: 0;
+}
+
+.fiddy-review-value code {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.fiddy-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--fiddy-glass-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fiddy-ink-dim);
+  flex: none;
+}
+
+.fiddy-copy-btn:hover {
+  color: var(--fiddy-ink);
+}
+
+.fiddy-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--fiddy-accent), transparent 65%);
+  background: color-mix(in oklab, var(--fiddy-accent), transparent 92%);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fiddy-pending-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fiddy-progress {
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+}
+
+.fiddy-failure {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fiddy-failure-code code,
+.fiddy-failure-hash {
+  font-size: 12.5px;
+  color: var(--fiddy-ink-dim);
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  display: block;
+}
+
+.fiddy-failure-hash {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--fiddy-glass-border);
+  background: var(--fiddy-glass);
+  font-size: 12px;
+}
+
+.fiddy-page-inner .fiddy-top-up .fiddy-primary-btn,
+.fiddy-page-inner .fiddy-top-up .fiddy-secondary-btn,
+.fiddy-page-inner .fiddy-top-up .fiddy-quiet-btn {
+  width: 100%;
+}

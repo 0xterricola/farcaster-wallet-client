@@ -722,16 +722,16 @@ export const CastImageViewerModal: React.FC<CastImageViewerModalProps> =
                           const parts = [];
 
                           // Only add like count if not zero
-                          if (cast.reactions.count > 0) {
+                          if ((cast.reactions?.count ?? 0) > 0) {
                             parts.push(
-                              `${cast.reactions.count} like${cast.reactions.count === 1 ? '' : 's'}`,
+                              `${cast.reactions?.count} like${cast.reactions?.count === 1 ? '' : 's'}`,
                             );
                           }
 
                           // Only add recast count if not zero
-                          if (cast.recasts.count > 0) {
+                          if ((cast.recasts?.count ?? 0) > 0) {
                             parts.push(
-                              `${cast.recasts.count} recast${cast.recasts.count === 1 ? '' : 's'}`,
+                              `${cast.recasts?.count} recast${cast.recasts?.count === 1 ? '' : 's'}`,
                             );
                           }
 

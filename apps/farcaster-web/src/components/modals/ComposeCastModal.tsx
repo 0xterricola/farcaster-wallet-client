@@ -28,8 +28,13 @@ import { Modal } from '~/components/modals/Modal';
 import { Tab } from '~/components/tabs/Tab';
 import { Tabs } from '~/components/tabs/Tabs';
 import { useAnalytics } from '~/contexts/AnalyticsProvider';
+import {
+  asSentence,
+  nodeCannotAnswer,
+} from '~/snapchain/nodeApi/nodeCannotAnswer';
 import { CastComposerIntent } from '~/types';
 import { trackError } from '~/utils/errorUtils';
+import { toast } from '~/utils/toast';
 
 import { ConfirmationModal } from './ConfirmationModal';
 
@@ -405,12 +410,24 @@ const ComposeCastModal: React.FC<ComposeCastModalProps> = React.memo(
                   });
                 }
 
-                // Server holds the canonical draft now; drop the local copy
-                // so we don't double-show it on next reopen.
+                // The device holds the draft now (drafts are local: see
+                // `localDrafts.ts`); drop the composer's local-first copy so we
+                // don't double-show it on next reopen.
                 clearLocalDraftForCurrentComposer();
 
                 onClose(undefined);
               } catch (e) {
+                // A "Save draft" that said nothing while saving nothing is the
+                // same failure as a Cast that said nothing while posting
+                // nothing. Say which it was.
+                const refusal = nodeCannotAnswer(e);
+                toast({
+                  message: refusal
+                    ? `Your draft wasn't saved. ${asSentence(refusal.message)}`
+                    : "Your draft wasn't saved — try again.",
+                  type: 'error',
+                  toastId: 'save-draft-failed',
+                });
                 trackError(e);
               }
             }}

@@ -12,7 +12,6 @@ import {
   ApiNotificationCollectibleCastBidderTimeLeft,
   ApiNotificationCollectibleCastCreatorBid,
   ApiNotificationCollectibleCastCreatorSettled,
-  CastHashPrefix,
 } from 'farcaster-client-data';
 import {
   formatTimeAgo,
@@ -66,20 +65,12 @@ const CollectibleCastNotificationGroup: FC<CollectibleCastNotificationGroupProps
 
     const handlePress = useCallback(() => {
       navigate({
-        to: 'conversationWithUsername',
+        to: 'conversationWithoutUsername',
         params: {
-          username: firstPreviewItem.content.cast.author.username ?? '',
-          castHashPrefix: firstPreviewItem.content.cast.hash.slice(
-            0,
-            10,
-          ) as CastHashPrefix,
+          castHash: firstPreviewItem.content.cast.hash,
         },
       });
-    }, [
-      firstPreviewItem.content.cast.author.username,
-      firstPreviewItem.content.cast.hash,
-      navigate,
-    ]);
+    }, [firstPreviewItem.content.cast.hash, navigate]);
 
     const label = useMemo(() => {
       const bidAmount = formatBidAmount(firstPreviewItem.content.topBid.amount);

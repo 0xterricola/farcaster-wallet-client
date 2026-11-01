@@ -1,0 +1,160 @@
+id = "fun.fiddy.console"
+name = "Fiddy Console"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Your Snapchain node, one button away: live status, sync, logs, lifecycle, operator FID, upgrades, settings, and the real Grafana dashboard inside Ovis."
+platforms = ["macos", "linux", "windows"]
+
+[[actions]]
+id = "open-console"
+title = "Fiddy: Open node console"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "console"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "status"
+title = "Fiddy: Live node status"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "status"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "logs"
+title = "Fiddy: Node logs"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "logs"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "start"
+title = "Fiddy: Start node"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "start"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "stop"
+title = "Fiddy: Stop node"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "stop"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "grafana"
+title = "Fiddy: Open Grafana dashboard"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "grafana"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "fid-setup"
+title = "Fiddy: Set operator FID"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "fid-setup"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "settings"
+title = "Fiddy: Node settings"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "settings"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "auto-upgrade"
+title = "Fiddy: Auto-upgrade schedule"
+contexts = ["workspace"]
+command = ["python3", "console/herdr_action.py", "auto-upgrade"]
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "open-console-windows"
+title = "Fiddy: Open node console"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "console"]
+platforms = ["windows"]
+
+[[actions]]
+id = "status-windows"
+title = "Fiddy: Live node status"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "status"]
+platforms = ["windows"]
+
+[[actions]]
+id = "logs-windows"
+title = "Fiddy: Node logs"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "logs"]
+platforms = ["windows"]
+
+[[actions]]
+id = "start-windows"
+title = "Fiddy: Start node"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "start"]
+platforms = ["windows"]
+
+[[actions]]
+id = "stop-windows"
+title = "Fiddy: Stop node"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "stop"]
+platforms = ["windows"]
+
+[[actions]]
+id = "grafana-windows"
+title = "Fiddy: Open Grafana dashboard"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "grafana"]
+platforms = ["windows"]
+
+[[actions]]
+id = "fid-setup-windows"
+title = "Fiddy: Set operator FID"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "fid-setup"]
+platforms = ["windows"]
+
+[[actions]]
+id = "settings-windows"
+title = "Fiddy: Node settings"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "settings"]
+platforms = ["windows"]
+
+[[actions]]
+id = "auto-upgrade-windows"
+title = "Fiddy: Auto-upgrade schedule"
+contexts = ["workspace"]
+command = ["python", "console/herdr_action.py", "auto-upgrade"]
+platforms = ["windows"]
+
+[[panes]]
+id = "console"
+title = "Fiddy Console"
+placement = "tab"
+command = ["python3", "console/pane.py"]
+platforms = ["macos", "linux"]
+
+[[panes]]
+id = "grafana"
+title = "Fiddy Grafana"
+placement = "tab"
+command = ["python3", "console/grafana_pane.py"]
+platforms = ["macos", "linux"]
+
+[[panes]]
+id = "console-windows"
+title = "Fiddy Console"
+placement = "tab"
+command = ["python", "console/pane.py"]
+platforms = ["windows"]
+
+[[panes]]
+id = "grafana-windows"
+title = "Fiddy Grafana"
+placement = "tab"
+command = ["python", "console/grafana_pane.py"]
+platforms = ["windows"]

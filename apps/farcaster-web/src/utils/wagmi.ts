@@ -77,6 +77,17 @@ const robinhoodRpcUrl =
   import.meta.env.VITE_ROBINHOOD_RPC_URL ||
   'https://rpc.mainnet.chain.robinhood.com';
 
+// Polygon's bundled default (polygon-rpc.com) now answers `403 API key
+// disabled, tenant disabled` to a keyless caller (measured 2026-10-23), so the
+// transport is pinned here instead of inherited. `https://1rpc.io/matic`
+// answered eth_blockNumber the same day. Quilcast's own replacement
+// (polygon-bor-rpc.publicnode.com) is NOT a candidate: `curl: (60) SSL: no
+// alternative certificate subject name matches target host name`, retried
+// twice. Polygon is in no dashboard, selectable or move-destination set yet, so
+// this only has to be right the moment a mini app or a move reaches for it.
+const polygonRpcUrl =
+  import.meta.env.VITE_POLYGON_RPC_URL || 'https://1rpc.io/matic';
+
 const transports = chains.reduce(
   (acc, chain) => {
     const rpcUrl =
@@ -94,7 +105,9 @@ const transports = chains.reduce(
                   ? hyperevmRpcUrl
                   : chain.id === robinhood.id
                     ? robinhoodRpcUrl
-                    : undefined;
+                    : chain.id === polygon.id
+                      ? polygonRpcUrl
+                      : undefined;
     acc[chain.id] = http(rpcUrl);
     return acc;
   },

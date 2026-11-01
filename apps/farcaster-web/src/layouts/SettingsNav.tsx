@@ -93,12 +93,31 @@ const SettingsNav: FC = memo(() => {
         <SettingsNavLinkLabel>Mute and block</SettingsNavLinkLabel>
       </SettingsNavLink>
       <SettingsNavLink
+        to="settingsNode"
+        params={{}}
+        searchParams={{}}
+        title="Your own setup (Advanced)"
+      >
+        <SettingsNavLinkLabel>Your own setup</SettingsNavLinkLabel>
+      </SettingsNavLink>
+      <SettingsNavLink
         to="settingsDeveloperTools"
         params={{}}
         searchParams={{}}
         title="Developer tools"
       >
         <SettingsNavLinkLabel>Developer tools</SettingsNavLinkLabel>
+      </SettingsNavLink>
+      {/* The command line's own door. Without this entry the route existed and
+          nothing pointed at it, so the Fiddy CLI was reachable only by reading
+          the repository (see ~/pages/settingsAdvanced). */}
+      <SettingsNavLink
+        to="settingsAdvanced"
+        params={{}}
+        searchParams={{}}
+        title="Advanced"
+      >
+        <SettingsNavLinkLabel>Advanced</SettingsNavLinkLabel>
       </SettingsNavLink>
       <SettingsNavLink
         to="#"
@@ -116,14 +135,14 @@ const SettingsNav: FC = memo(() => {
         to="#"
         params={{}}
         searchParams={{}}
-        title="Log out"
+        title="Sign out"
         onClick={(e) => {
           e.preventDefault();
           setIsLogoutModalVisible(true);
         }}
         icon={<SignOutIcon />}
       >
-        <SettingsNavLinkLabel>Log out</SettingsNavLinkLabel>
+        <SettingsNavLinkLabel>Sign out</SettingsNavLinkLabel>
       </SettingsNavLink>
       {isThemeSettingsVisible && (
         <ThemeSettings

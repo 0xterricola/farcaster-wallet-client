@@ -19,6 +19,7 @@ import React, { ReactNode, useCallback, useMemo } from 'react';
 import { FrameEmbedAttachment } from '~/components/attachments/FrameEmbedAttachment';
 import { GroupInviteAttachment } from '~/components/attachments/GroupInviteAttachment';
 import { ImageAttachments } from '~/components/attachments/ImageAttachments';
+import { LookEmbedAttachment } from '~/components/attachments/LookEmbedAttachment';
 import { OpenGraphAttachment } from '~/components/attachments/OpenGraphAttachment';
 import { QuoteCast } from '~/components/attachments/QuoteCast';
 import { RichOpenGraphCastAttachment } from '~/components/attachments/RichOpenGraphAttachment';
@@ -32,13 +33,12 @@ import { UnsupportedEmbed } from '~/components/attachments/UnsupportedEmbed';
 import { VideoAttachment } from '~/components/attachments/VideoAttachment';
 import { ImageLightboxModal } from '~/components/modals/ImageLightboxModal';
 import { LinkifiedText } from '~/components/text/LinkifiedText';
-import { useUserAppContext } from '~/contexts/UserAppContextProvider';
 import { getRenderableEmbeds } from '~/utils/castUtils';
+import { matchLookUrl } from '~/utils/lookTheme';
 
 type CastBody = {
   nonLinkfiedText: string;
   text: ReactNode;
-  isTruncatedCastText: boolean;
 
   hasAttachments: boolean;
   hasNonCarouselAttachments: boolean;
@@ -47,8 +47,6 @@ type CastBody = {
   castAttachment: React.ReactNode;
   nonCarouselAttachments: React.ReactNode;
 };
-
-const TRUNCATE_SHOW_MORE_BUFFER = 10;
 
 const removeTrailingSpaceUrl = ({
   text,
@@ -167,6 +165,21 @@ const useCastAttachment = ({
         );
       }
 
+      // Ours, so we draw it instead of asking the provider for a link card:
+      // a shared look renders as the look itself, with the maker's name and one
+      // button that puts it on (`LookEmbedAttachment`).
+      if (matchLookUrl(openGraphAttachment.url)) {
+        return (
+          <LookEmbedAttachment
+            key={openGraphAttachment.url}
+            url={openGraphAttachment.url}
+            by={cast.author?.username}
+            width={spaceWidth ?? width}
+            height={height}
+          />
+        );
+      }
+
       return (
         <OpenGraphAttachment
           key={openGraphAttachment.url}
@@ -222,6 +235,21 @@ const useCastAttachment = ({
             key={openGraphAttachment.url}
             url={openGraphAttachment.url}
             width={spaceWidth ?? width}
+          />
+        );
+      }
+
+      // Ours, so we draw it instead of asking the provider for a link card:
+      // a shared look renders as the look itself, with the maker's name and one
+      // button that puts it on (`LookEmbedAttachment`).
+      if (matchLookUrl(openGraphAttachment.url)) {
+        return (
+          <LookEmbedAttachment
+            key={openGraphAttachment.url}
+            url={openGraphAttachment.url}
+            by={cast.author?.username}
+            width={spaceWidth ?? width}
+            height={height}
           />
         );
       }
@@ -292,6 +320,18 @@ const useCastAttachment = ({
 
     const { width, height, effectiveAR, carouselMaxHeight, mediaTileHeight } =
       layout;
+
+    /**
+     * The strip's ONE tile height, for every tile in it.
+     *
+     * A strip (a cast carrying several carousel-eligible embeds) gives every
+     * tile the tallest one's height — quilcast 0.10.7 `0abf1de11fba`, MIT. Its
+     * 0.10.13 `3bc542d90a63` fixed the video leg of it: a video used to be
+     * sized from the row while the image tiles were sized to the shared tile,
+     * so the video sat letterboxed in a box that did not match its tile. Both
+     * now read the same number, and `VideoAttachment` fills the tile with it.
+     */
+    const mediaTile = mediaTileHeight ?? height;
 
     if (
       renderableEmbeds.filter((o) => o.type === 'image').length !== 0 &&
@@ -391,6 +431,7 @@ const useCastAttachment = ({
                         : undefined
                     }
                     renderHeight={height}
+                    tileHeight={needsCarousel ? mediaTile : undefined}
                   />
                 );
               })}
@@ -410,7 +451,7 @@ const useCastAttachment = ({
                         !needsCarousel &&
                         effectiveAR !== 'vertical-media'
                           ? undefined
-                          : (mediaTileHeight ?? height)
+                          : mediaTile
                       }
                       width={undefined}
                       maxWidth={
@@ -476,6 +517,7 @@ const useCastAttachment = ({
                         : undefined
                     }
                     renderHeight={height}
+                    tileHeight={needsCarousel ? mediaTile : undefined}
                   />
                 );
               })}
@@ -495,7 +537,7 @@ const useCastAttachment = ({
                         !needsCarousel &&
                         effectiveAR !== 'vertical-media'
                           ? undefined
-                          : (mediaTileHeight ?? height)
+                          : mediaTile
                       }
                       width={carouselHasNonMedia ? width : undefined}
                       maxWidth={
@@ -601,14 +643,12 @@ const useCastBody = ({
   cast,
   castText = cast.text,
   isFocusedCast,
-  truncateCastText,
   draggingRef,
   onMiniAppLaunch,
 }: {
   cast: ApiCast;
   castText?: string;
   isFocusedCast: boolean;
-  truncateCastText: boolean;
   draggingRef: React.RefObject<boolean>;
   onMiniAppLaunch?: () => void;
 }): CastBody => {
@@ -640,26 +680,6 @@ const useCastBody = ({
   });
 
   const bodyText = bodyTextOverride;
-
-  const { regularCastByteLimit } = useUserAppContext();
-
-  const shouldTruncate = useMemo(() => {
-    // One could argue that we should probably be using the byte len check here.
-    // For the first iteration of the release we are okay giving more content on home
-    // feed instead of being really strict since mentions and URLs are also part of the
-    // cast text length here.
-    return (
-      truncateCastText &&
-      !isFocusedCast &&
-      bodyText.length > regularCastByteLimit + TRUNCATE_SHOW_MORE_BUFFER
-    );
-  }, [bodyText, isFocusedCast, regularCastByteLimit, truncateCastText]);
-
-  const textToLinkify = useMemo(() => {
-    return shouldTruncate
-      ? `${bodyText.slice(0, regularCastByteLimit)}...`
-      : bodyText;
-  }, [bodyText, regularCastByteLimit, shouldTruncate]);
 
   const tokenMentions = useMemo(() => {
     if (typeof cast.embeds !== 'undefined' && cast.embeds.urls.length !== 0) {
@@ -696,7 +716,7 @@ const useCastBody = ({
   const linkifiedCastBodyText = (
     <LinkifiedText
       key="cast-text"
-      content={textToLinkify}
+      content={bodyText}
       mentions={cast.mentions}
       channelMentions={cast.channelMentions}
       tokenMentions={tokenMentions}
@@ -708,7 +728,6 @@ const useCastBody = ({
   return {
     nonLinkfiedText: bodyTextOverride,
     text: linkifiedCastBodyText,
-    isTruncatedCastText: shouldTruncate,
     castAttachment: castAttachment,
     nonCarouselAttachments: nonCarouselAttachments,
     hasNonCarouselAttachments: hasNonCarouselAttachments,

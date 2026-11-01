@@ -25,8 +25,10 @@ import React, {
   useState,
 } from 'react';
 
+import { routes } from '~/constants/routes';
 import { authTokenKey, getOnboardingStateKey } from '~/constants/storage';
 import { useClearKeyTransport } from '~/hooks/useClearKeyTransport';
+import { isLocalSessionToken } from '~/lib/siwfSession';
 import { Analytics } from '~/utils/analyticsUtils';
 import { trackError } from '~/utils/errorUtils';
 import { getItem, setItem } from '~/utils/storageUtils';
@@ -117,7 +119,16 @@ const AuthProvider: FC<AuthProviderProps> = memo(({ children }) => {
         trackError(new RemovePersistentQueryStorageError({ error }));
       }
 
-      location.reload();
+      // Signing out ends at the FRONT DOOR, not on whatever page the reader
+      // happened to be on. Reloading in place left them on an address that no
+      // longer has a session behind it: some `/~…` routes are mounted outside
+      // the signed-in gate and paint their signed-out self (a wallet page
+      // offering "Login"), the rest paint nothing at all. MEASURED 2026-10-24
+      // (`scripts/verify-sign-out.mjs`, 390 and 1440): signing out from the
+      // wallet left the reader on `/~/wallet` with the session gone, never on
+      // the landing. `replace` rather than `assign`, so the back button cannot
+      // walk into the session that just ended.
+      window.location.replace(routes.homeFeed.path);
     }, 750);
   }, [
     authToken,
@@ -147,6 +158,13 @@ const AuthProvider: FC<AuthProviderProps> = memo(({ children }) => {
   // Wrapper that persists onboardingState to localStorage after refresh
   const refreshAndPersistOnboardingState = useCallback(
     async (token: string) => {
+      // A local SIWF session has no server-side token to refresh. Asking would
+      // 401 and start the sign-out cascade, so it is skipped by design rather
+      // than by accident. See ~/lib/siwfSession.
+      if (isLocalSessionToken({ secret: token })) {
+        return undefined;
+      }
+
       let result: ApiGetOnboardingState200Response | undefined;
 
       try {
@@ -293,6 +311,15 @@ const AuthProvider: FC<AuthProviderProps> = memo(({ children }) => {
       // 'invalid' branch below.
       const tokenAtProbeStart = authTokenRef.current;
       if (!tokenAtProbeStart) {
+        return;
+      }
+
+      // A local SIWF session is never validated against the server: it has no
+      // server token to validate, so a 401 from it is expected rather than a
+      // revocation to act on. Without this the user is ejected from the session
+      // they just completed, on the first authed request that 401s.
+      // See ~/lib/siwfSession.
+      if (isLocalSessionToken(tokenAtProbeStart)) {
         return;
       }
       isRevalidatingRef.current = true;
@@ -449,9 +476,17 @@ const AuthProvider: FC<AuthProviderProps> = memo(({ children }) => {
               buildOnboardingStateKey(),
               cachedOnboardingState,
             );
-            // Refresh in background (non-blocking)
-            refreshAndPersistOnboardingState(persistedAuthToken.secret);
-          } else {
+
+            if (isLocalSessionToken(persistedAuthToken)) {
+              // Local SIWF session: the stored state is the whole session. Do
+              // not refresh it — there is no server token behind it, and the
+              // refresh would 401 the user out of the session they just
+              // completed. See ~/lib/siwfSession.
+            } else {
+              // Refresh in background (non-blocking)
+              refreshAndPersistOnboardingState(persistedAuthToken.secret);
+            }
+          } else if (!isLocalSessionToken(persistedAuthToken)) {
             // No cache - must block for first-time users
             await refreshAndPersistOnboardingState(persistedAuthToken.secret);
           }

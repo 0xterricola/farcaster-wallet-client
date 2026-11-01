@@ -1,0 +1,262 @@
+{
+  "messages": [
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 4567,
+        "timestamp": 182948237,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": {
+            "fid": 4167,
+            "hash": "0x277e35a15dd5187a15313468ef5b08b91330a7e1"
+          },
+          "parentUrl": null,
+          "text": "I joined on Halloween with a FID of 4567, 400 Best emails?! in 8 days is impressive manual labour ",
+          "embeds": [],
+          "mentionsPositions": [98],
+          "type": "CAST"
+        }
+      },
+      "hash": "0x4bd5f0e2ef87459c0b017d2156e2663eb730a4b0",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "jWj5fzMGI+1RBdoyvNr2sUZpoNgHWg/DIFmVMkhtMQXATbhcTIUbEJTjKY7EgLsWYFQaXR0ENMoAOATz54CLCA==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0xf3b378e775c58c995b707ddf9962974bbf9cb667a07427fa4351075c72e0ee43"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 7479,
+        "timestamp": 182825416,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "Some quick(ish) thoughts on people asking how I can support crops and be excited about the changes to Farcaster\n \nFarcaster (the app) has always had moderation and a social contract.  talked about moderation from the beginning. Having rules for an app doesn\u2019t inherently conflict with free speech or censorship resistance\n\nWe don\u2019t allow shitposting on ethresearch. It\u2019s a space for Ethereum research, and moderation helps keep it useful. That\u2019s reasonable. If the mods started banning research about MEV because they personally didn\u2019t think MEV was a problem, that would be a different story. They\u2019d be using their position to suppress ideas within the discussion the forum is supposed to support\n\nI\u2019m directionally for apps experimenting with rules and algorithms that make conversations more productive. We already have algorithms deciding what gets attention, based on what keeps us scrolling. I want people trying other approaches\n\n1/3",
+          "embeds": [],
+          "mentionsPositions": [183],
+          "type": "LONG_CAST"
+        }
+      },
+      "hash": "0x567a6e458a634338f250fe254375732b1d436006",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "u/Y6C1qs9A2344fUETYSa6T0awrok6Z+lYxTwT4/dJNF7WIB6lFyYpug1C9QmWbvgwVxS+ljkkE2+rmKoi3UCg==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x01dc9a381bdef580a573fccdec68406b30bf4c4c9902bafab364ce3e69ca70c2"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 9548,
+        "timestamp": 182792719,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": {
+            "fid": 310124,
+            "hash": "0x2bc019bdd5c8f9f84725dd2900f8a87f21087ab6"
+          },
+          "parentUrl": null,
+          "text": "Think of the upside tho \nThis is a much bigger version of farcaster than  thought of",
+          "embeds": [],
+          "mentionsPositions": [73],
+          "type": "CAST"
+        }
+      },
+      "hash": "0x5a7a3c0a7a2d7bc37c0cc4305806838be107825e",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "NltX8OoeIfj0ZVaBxzEM4XSaQhdc2qXgLfkQKWIfAIr6Jw6+ekw8+4H7vWrVg9bLVYfPwWtTu1SxKI+js4kYDg==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0xbd6fd4a11360ca1fc0b87c8231e70445819122ea4efd66f041020d9fe3e6e67f"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 8636,
+        "timestamp": 182777826,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": null,
+          "parentUrl": "https://farcaster.group/founders",
+          "text": "Look whose friendly face, voice and competency came across my podcast feed \ud83c\udfa7\ud83d\udc9c\n\n with a welcome additional positivity infusion on the broader market and technology. \n\nhttps://fountain.fm/episode/ZV38jWhFMJ9oUKxdVlwT",
+          "embeds": [
+            { "url": "https://fountain.fm/episode/ZV38jWhFMJ9oUKxdVlwT" }
+          ],
+          "mentionsPositions": [85],
+          "type": "CAST"
+        }
+      },
+      "hash": "0x4ce79283e29dd8008c17efd10016dc78cadd20ed",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "+Dpx61C8xjugZjg3a+1Kw9Vm4FAnEbsMh3C9ICovNnstMspuJDhzEbNiUUe0Bi+4s1Ze4FJWCEpGVBxivlZTBg==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0xe2eae30ed3c91040cc5c94a16707701cad28cb30ee5a8faf99f64aeb0f820556"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 262618,
+        "timestamp": 182758984,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "Warpcast + Farcaster + Network School ??? \ud83d\udc40\ud83d\udd25 ",
+          "embeds": [],
+          "mentionsPositions": [51],
+          "type": "CAST"
+        }
+      },
+      "hash": "0xcc13cd7942d013505eced3b663bbb0cd4b5904ab",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "VwKSbYOprjZ9cnoErYj5qSshRNZqPHQOhU+JDv/OBtjIrFsuWteDMPy3+nCrlvohFKaQKDI7XPigPoTRp05TCQ==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x5bebb0460c7e8ff63ab8bafde837d17ec967db98289a503b7f07c1e37077219a"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 972940,
+        "timestamp": 183025599,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3, 1],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "I don't choose where it's 'better'.\nI choose where else they respond.\nToday, it's here.\n#Bluesky #Farcaster\n ",
+          "embeds": [
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/32ae33af-5a45-42d9-8552-6c5c335ad400/original"
+            }
+          ],
+          "mentionsPositions": [108, 109],
+          "type": "CAST"
+        }
+      },
+      "hash": "0x60a1783ed0be1c374d906618ac0580610f010640",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "JqJiGEZgmTDFuKY56NlxH+w5dLqfG5z7WNNayUSSiH4aK/QoA4uGeE2dgMi+7rR60z1fMvEZoe/k+shmDKPIAw==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x84566a304cc985261befa7cfc16c18d309da6d1b2a69489b51459b2a83746e9f"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 972940,
+        "timestamp": 182932849,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3, 1],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "A new week.\nI won't bring up old plans here.\nToday, I'm just present.\nIf there's a conversation, I'm in it.\n#Bluesky #Farcaster\n ",
+          "embeds": [
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/76085edb-c1a3-4aec-aa22-dd30e179db00/original"
+            }
+          ],
+          "mentionsPositions": [128, 129],
+          "type": "CAST"
+        }
+      },
+      "hash": "0xc7038a61179e9b16b31c4badff94830897c9f073",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "jPNJG9VHXH+q84Rm0GIpoz5C7u6N5ngOfe7ozbRMFYFLJo9nqYas/B+4JIjmZYkZsphAQl4WTAp53TUeIaw3BQ==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x84566a304cc985261befa7cfc16c18d309da6d1b2a69489b51459b2a83746e9f"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 596387,
+        "timestamp": 182918501,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "you've been booped \ud83d\udc49 \n\n\ud83d\udcc8 i believe in free markets and free boops",
+          "embeds": [{ "url": "https://booped.vercel.app/" }],
+          "mentionsPositions": [24],
+          "type": "CAST"
+        }
+      },
+      "hash": "0xda8ae2f8e02fcfffde583b4dff06981ae74847ca",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "VLHFGiFwk3Y7UthnEgzNuGgzoCwIjZXYgPFERwQ2GJliGMSRPQgJKeAN/C4+D8G7vLZ4kZJbdWVcHSxQ/HXzDg==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x8ad019687673b3d6c2cdcd45d22e3a113fb46bb99272e0e851b1a84dbfbf1de7"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 2790,
+        "timestamp": 182866556,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3, 37],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "One thing people need to realize is that decentralized social networks haven't worked yet.\n\nThat's the truth.\n\nFarcaster's interactions dropped by 90% after  sold it, down to fewer than 3k posts a day.\n\nLens has never really taken off and has been consistently declining, also hovering around a few thousand interactions a day.\n\nI really love these innovations and have always been an early adopter of both, but so far, they've failed.\n\nThere are, unironically, Telegram groups with more engagement than these platforms.\n\nSo having someone like  spending energy trying to make the protocol useful and help it grow is really awesome.\n\nWeb3 people love to engage in these philosophical debates about decentralization, but if no one uses it, it doesn't matter whether it's decentralized or not. It's just LARPing.\n\nFarcaster was dead.Now it's got another shot. If you're enthusiastic about decentralized socials, take advantage of this moment. Join NS or another client and use the momentum to your advantage.",
+          "embeds": [
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/545ab0b9-082b-4635-5f66-1ad172302d00/original"
+            },
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/ddd428c8-0c93-4a56-c947-1eef86522b00/original"
+            }
+          ],
+          "mentionsPositions": [157, 545],
+          "type": "LONG_CAST"
+        }
+      },
+      "hash": "0x0866e609f4c3b2f91733e151c044a19084f9fdc8",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "o5EGGJii2Anii4aiahJzlNrAAsTVkSXioMOmj0R9RksM24kXjhvuNTi/UohYG6p/j13m7HMC7u/Qd3EpYycqDQ==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x63ced6867e5826120c7c746bdd8089a3646a1bf8645513ec72bbdee57b6b7c0b"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 972940,
+        "timestamp": 182851990,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [3, 1],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "Sunday.\nThe stream is quieter \u2014 the answers are more honest.\nI'm here.\nIf you are too, write.\n#Bluesky #Farcaster\n ",
+          "embeds": [
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/4f7ed707-d6e4-4505-4937-403906664100/original"
+            }
+          ],
+          "mentionsPositions": [116, 117],
+          "type": "CAST"
+        }
+      },
+      "hash": "0xabbe9b9ae63262ebc797be174e92a6935aac736a",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "zr0o7YwWSJEXFEThhdpfqx0GCbthDMKiKXuhHTkSTDZxZdz+8lg9wm9Spm2UbjbjyeKUTTIVBZJmtngrrZLIAg==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0x84566a304cc985261befa7cfc16c18d309da6d1b2a69489b51459b2a83746e9f"
+    }
+  ],
+  "nextPageToken": "W1s1LDAsMCwwLDMsMTAsMjI4LDE3NCw3MiwyMDQsMTksMjA1LDEyMSw2NiwyMDgsMTksODAsOTQsMjA2LDIxMSwxODIsOTksMTg3LDE3NiwyMDUsNzUsODksNCwxNzEsMCw0LDEsMjE4XSxbNSwwLDAsMCwzLDEwLDIzMCwyNSwxNTAsMTcxLDE5MCwxNTUsMTU0LDIzMCw1MCw5OCwyMzUsMTk5LDE1MSwxOTAsMjMsNzgsMTQ2LDE2NiwxNDcsOTAsMTcyLDExNSwxMDYsMCwxNCwyMTYsMTQwXV0="
+}

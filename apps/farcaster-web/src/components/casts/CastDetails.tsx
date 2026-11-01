@@ -20,14 +20,24 @@ type CastDetailComponent = {
 const CastDetails: React.FC<CastDetailsProps> = React.memo(
   ({ cast, isFocused }) => {
     const replyCount = cast.replies.count;
-    const recastCount = cast.recasts.count;
-    const reactionCount = cast.reactions.count;
+    // Counts are absent until they have been read (`ApiCast`): a feed paints
+    // before its counts are read, so this renders nothing for them until they
+    // arrive (0 renders nothing today anyway) — and never a made-up zero.
+    const recastCount = cast.recasts?.count ?? 0;
+    const reactionCount = cast.reactions?.count ?? 0;
     const quoteCount = cast.quoteCount || 0;
     const warpsTipped = cast.warpsTipped || 0;
 
     const castDetailItems: CastDetailComponent[] = React.useMemo(() => {
       const items: CastDetailComponent[] = [];
 
+      // The engagement counts carry `data-fiddy-count` markers because a count
+      // can arrive AFTER the cast was painted (`ApiCast`'s optional counts —
+      // a node-backed feed paints before its counts are read, see
+      // `~/snapchain/nodeApi/reads` `readCastCounts`). That makes "is the like
+      // count on screen yet?" a question a probe can ask and answer
+      // (`scripts/measure-first-cast.mjs`), rather than one inferred from
+      // whatever text happened to be in the block.
       if (!isFocused && replyCount !== 0) {
         items.push({
           Component: (
@@ -35,6 +45,7 @@ const CastDetails: React.FC<CastDetailsProps> = React.memo(
               <span
                 className="mr-1 text-sm font-semibold text-secondary"
                 title={replyCount.toLocaleString()}
+                data-fiddy-count="replies"
               >
                 {formatShorthandNumber(replyCount)}
               </span>
@@ -54,6 +65,7 @@ const CastDetails: React.FC<CastDetailsProps> = React.memo(
                 <span
                   className="mr-1 text-sm font-semibold text-secondary"
                   title={reactionCount.toLocaleString()}
+                  data-fiddy-count="likes"
                 >
                   {formatShorthandNumber(reactionCount)}
                 </span>
@@ -76,6 +88,7 @@ const CastDetails: React.FC<CastDetailsProps> = React.memo(
                 <span
                   className="mr-1 text-sm font-semibold text-secondary"
                   title={recastCount.toLocaleString()}
+                  data-fiddy-count="recasts"
                 >
                   {formatShorthandNumber(recastCount)}
                 </span>

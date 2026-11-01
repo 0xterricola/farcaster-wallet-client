@@ -149,7 +149,8 @@ function NoTokensFound({ ticker }: { ticker: string }) {
             </div>
           </div>
           <div className="text-base text-muted">
-            Still gathering data — check back later.
+            No market was found for {shortAddress}. This client reads token
+            markets from Dexscreener, a public market index.
           </div>
         </div>
       </BorderedMainContent>

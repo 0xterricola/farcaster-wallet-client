@@ -3,7 +3,7 @@ import {
   type ApiCast,
   type ApiDirectCastMessageMetadata,
   type ApiUser,
-  getCastURL,
+  getFiddyCastUrl,
 } from 'farcaster-client-data';
 import {
   buildNonGroupConversationId,
@@ -195,10 +195,7 @@ const ShareCastAsDirectCastModalContent: React.FC<
       MAX_NUM_SELECTED_TARGETS,
     );
 
-    const castURL = getCastURL({
-      castUsername: cast.author.username,
-      castHash: cast.hash,
-    });
+    const castURL = getFiddyCastUrl({ castHash: cast.hash });
 
     const message =
       typeof directCastMessage !== 'undefined' && directCastMessage !== ''
@@ -265,7 +262,6 @@ const ShareCastAsDirectCastModalContent: React.FC<
       position: 'bottom-center',
     });
   }, [
-    cast.author.username,
     cast.hash,
     currentUser.displayName,
     currentUser.fid,

@@ -5,6 +5,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthedRoutes } from '~/components/routing/AuthedRoutes';
 import { Redirect } from '~/components/routing/Redirect';
 import { RedirectIfAtPath } from '~/components/routing/RedirectIfAtPath';
+import { ReservedHandleGuard } from '~/components/routing/ReservedHandleGuard';
+import { reservedHandleRoutes } from '~/constants/reservedHandleRoutes';
 import { defaultRoute, redirects, routes } from '~/constants/routes';
 import { authTokenKey } from '~/constants/storage';
 import { DebugProvider } from '~/contexts/DebugProvider';
@@ -12,7 +14,7 @@ import { OnCurrentNavLinkClickedProvider } from '~/contexts/OnCurrentNavLinkClic
 import { useIsSignedIn } from '~/hooks/data/useIsSignedIn';
 import { AuthedLayout } from '~/layouts/AuthedLayout';
 import { UnauthedLayout } from '~/layouts/UnauthedLayout';
-import { HomeFeedPage, HomeLandingPage } from '~/lazy/pages';
+import { FiddyOnboardingPage, HomeFeedPage } from '~/lazy/pages';
 import { trackError } from '~/utils/errorUtils';
 import { getItem } from '~/utils/storageUtils';
 
@@ -57,6 +59,30 @@ const Router: React.FC = () => {
               />
             </Route>
             <Route element={isSignedIn ? <AuthedLayout /> : <UnauthedLayout />}>
+              {/* The public browse surface, at the two root paths a visitor
+                  types: `/feed` and `/explore`. Deliberately outside every
+                  sign-in gate in both directions: a visitor with no account
+                  reads it, and a signed-in reader can open the same page
+                  without leaving the shell. Both names are reserved
+                  (`reservedRouteNames.ts`), so these routes are what a bare
+                  `/feed` resolves to instead of the profile of whoever is
+                  called @feed. */}
+              <Route
+                path={routes.publicFeed.path}
+                element={<routes.publicFeed.Component />}
+              />
+              <Route
+                path={routes.publicExplore.path}
+                element={<routes.publicExplore.Component />}
+              />
+              {/* A look someone shared: the same rule as the two paths above —
+                  no sign-in gate in either direction, because the link is the
+                  thing being handed over. Its own name is reserved by the route
+                  table, so this is what `/look/<id>` resolves to. */}
+              <Route
+                path={routes.look.path}
+                element={<routes.look.Component />}
+              />
               {/* Authed Routes */}
               <Route element={<AuthedRoutes />}>
                 <Route
@@ -134,6 +160,14 @@ const Router: React.FC = () => {
                   path={routes.saved.path}
                   element={<routes.saved.Component />}
                 />
+                {/* The agent surface is a first-class route: the sidebar entry,
+                    the hatch CTA on the empty state, and the status pill all
+                    land here, and without this route the nav would fall through
+                    to the catch-all redirect. */}
+                <Route
+                  path={routes.agent.path}
+                  element={<routes.agent.Component />}
+                />
                 <Route
                   path={routes.savedStarterPacks.path}
                   element={<routes.savedStarterPacks.Component />}
@@ -182,6 +216,10 @@ const Router: React.FC = () => {
                 <Route
                   path={routes.settingsDeveloperTools.path}
                   element={<routes.settingsDeveloperTools.Component />}
+                />
+                <Route
+                  path={routes.settingsNode.path}
+                  element={<routes.settingsNode.Component />}
                 />
                 <Route
                   path={routes.settingsAdvanced.path}
@@ -376,9 +414,42 @@ const Router: React.FC = () => {
                 path={routes.wallet.path}
                 element={<routes.wallet.Component />}
               />
+              {/* Adding funds, one step from the balance it adds to. Mounted
+                  beside the wallet page rather than inside the authed gate:
+                  the flow explains itself signed out, and refuses the send it
+                  cannot credit instead of hiding. */}
+              <Route
+                path={routes.fiddyAddFunds.path}
+                element={<routes.fiddyAddFunds.Component />}
+              />
               <Route
                 path={routes.trendingTopic.path}
                 element={<routes.trendingTopic.Component />}
+              />
+              {/* The two pivot surfaces. Deliberately not gated behind sign-in:
+                  they work signed out too, and inside the Fiddy shell once
+                  you are in. */}
+              <Route
+                path={routes.fiddyBrains.path}
+                element={<routes.fiddyBrains.Component />}
+              />
+              <Route
+                path={routes.fiddyApps.path}
+                element={<routes.fiddyApps.Component />}
+              />
+              {/* Sealed casts: making the key and sealing something need no
+                  account, so this sits with the other ungated pivot surfaces.
+                  Posting the sealed cast does need one, and the surface says so
+                  rather than hiding the button at random. */}
+              <Route
+                path={routes.sealed.path}
+                element={<routes.sealed.Component />}
+              />
+              {/* Connecting an account that already exists. Signed out on
+                  purpose: the approval happens in Farcaster, not here. */}
+              <Route
+                path={routes.fiddyConnect.path}
+                element={<routes.fiddyConnect.Component />}
               />
               {/* Unauthed Routes */}
               <Route
@@ -549,48 +620,62 @@ const Router: React.FC = () => {
               We must also adhere to this ordering in `routes` to accommodate vanity routes, unfortunately.
 
             */}
-              <Route
-                path={routes.conversationWithUsername.path}
-                element={<routes.conversationWithUsername.Component />}
-              />
-              <Route
-                path={routes.conversationReactionsWithUsername.path}
-                element={<routes.conversationReactionsWithUsername.Component />}
-              />
-              <Route
-                path={routes.conversationRecastsWithUsername.path}
-                element={<routes.conversationRecastsWithUsername.Component />}
-              />
-              <Route
-                path={routes.conversationQuotesWithUsername.path}
-                element={<routes.conversationQuotesWithUsername.Component />}
-              />
-              <Route
-                path={routes.followingWithUsername.path}
-                element={<routes.followingWithUsername.Component />}
-              />
-              <Route
-                path={routes.followersWithUsername.path}
-                element={<routes.followersWithUsername.Component />}
-              />
-              <Route
-                path={routes.profileSnapCastsWithUsername.path}
-                element={<routes.profileSnapCastsWithUsername.Component />}
-              />
-              <Route
-                path={routes.profileAssetsWithUsername.path}
-                element={<routes.profileAssetsWithUsername.Component />}
-              />
-              <Route
-                path={routes.profileCastsWithUsername.path}
-                element={<routes.profileCastsWithUsername.Component />}
-              />
-              <Route
-                path={routes.profileCastsAndRepliesWithUsername.path}
-                element={
-                  <routes.profileCastsAndRepliesWithUsername.Component />
-                }
-              />
+              <Route element={<ReservedHandleGuard />}>
+                <Route
+                  path={routes.conversationWithUsername.path}
+                  element={<routes.conversationWithUsername.Component />}
+                />
+                <Route
+                  path={routes.conversationReactionsWithUsername.path}
+                  element={
+                    <routes.conversationReactionsWithUsername.Component />
+                  }
+                />
+                <Route
+                  path={routes.conversationRecastsWithUsername.path}
+                  element={<routes.conversationRecastsWithUsername.Component />}
+                />
+                <Route
+                  path={routes.conversationQuotesWithUsername.path}
+                  element={<routes.conversationQuotesWithUsername.Component />}
+                />
+                <Route
+                  path={routes.followingWithUsername.path}
+                  element={<routes.followingWithUsername.Component />}
+                />
+                <Route
+                  path={routes.followersWithUsername.path}
+                  element={<routes.followersWithUsername.Component />}
+                />
+                <Route
+                  path={routes.profileSnapCastsWithUsername.path}
+                  element={<routes.profileSnapCastsWithUsername.Component />}
+                />
+                <Route
+                  path={routes.profileAssetsWithUsername.path}
+                  element={<routes.profileAssetsWithUsername.Component />}
+                />
+                <Route
+                  path={routes.profileCastsWithUsername.path}
+                  element={<routes.profileCastsWithUsername.Component />}
+                />
+                <Route
+                  path={routes.profileCastsAndRepliesWithUsername.path}
+                  element={
+                    <routes.profileCastsAndRepliesWithUsername.Component />
+                  }
+                />
+              </Route>
+              {/* `/u/<handle>`: one explicit address for an account whose name
+                  the app owns (`/feed`, `/explore`, …). Derived from the vanity
+                  routes above, so the two address families cannot drift. */}
+              {reservedHandleRoutes.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<route.Component />}
+                />
+              ))}
             </Route>
             {/* Authed routes without scaffolding */}
             <Route element={<AuthedRoutes />}>
@@ -615,11 +700,68 @@ const Router: React.FC = () => {
                   isSignedIn ? (
                     <routes.homeFeed.Component />
                   ) : (
-                    <HomeLandingPage />
+                    /* The front door is the setup flow's first screen, not a
+                       sign-in wall. Signing in is the last step of it. */
+                    <FiddyOnboardingPage step="hi" />
                   )
                 }
               />
             </Route>
+            {/* The setup flow. Each screen is its own route so a step can be
+                linked and reloaded; none of them needs a signed-in session,
+                which is the whole point of the pivot. */}
+            <Route
+              path={routes.fiddyWelcome.path}
+              element={<FiddyOnboardingPage step="hi" />}
+            />
+            {/* Step 1 of 3. Two addresses, one screen: `/welcome/name` starts at
+                the name, `/welcome/brain` is where the pick-a-brain links of
+                older builds (and the docs) point — both land on the one screen
+                that does both, never on a screen that no longer exists. */}
+            <Route
+              path={routes.fiddyWelcomeName.path}
+              element={<FiddyOnboardingPage step="setup" />}
+            />
+            <Route
+              path={routes.fiddyWelcomeBrain.path}
+              element={<FiddyOnboardingPage step="setup" />}
+            />
+            {/* Step 2 of 3: add funds, after the brain and before the last
+                screen — skippable with one press, and never a gate on making
+                an account. */}
+            <Route
+              path={routes.fiddyWelcomeFunds.path}
+              element={<FiddyOnboardingPage step="funds" />}
+            />
+            {/* Kept as a route so an old link is not a 404; the page itself
+                redirects it to the last step (see FiddyOnboardingPage). */}
+            <Route
+              path={routes.fiddyWelcomeApps.path}
+              element={<FiddyOnboardingPage step="apps" />}
+            />
+            <Route
+              path={routes.fiddyWelcomeReady.path}
+              element={<FiddyOnboardingPage step="ready" />}
+            />
+            {/* Where a Google or X sign-up lands. Outside the scaffolding on
+                purpose: the account it describes exists before there is a
+                session to hold it, which is exactly the state it explains. */}
+            <Route
+              path={routes.fiddyAccount.path}
+              element={<routes.fiddyAccount.Component />}
+            />
+            {/* Together. Both routes sit outside the scaffolding because both
+                work signed out: `together` is where a session starts, and
+                `togetherJoin` is the other end of an invite link, opened by
+                someone who has never seen this app. */}
+            <Route
+              path={routes.together.path}
+              element={<routes.together.Component />}
+            />
+            <Route
+              path={routes.togetherJoin.path}
+              element={<routes.togetherJoin.Component />}
+            />
             <Route
               path={routes.download.path}
               element={<routes.download.Component />}
