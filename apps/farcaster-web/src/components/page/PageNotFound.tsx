@@ -9,9 +9,15 @@ import { PageTitle } from '~/components/page/PageTitle';
 
 interface PageNotFoundProps {
   title: string;
+  /**
+   * What this particular page says when it does not exist. A missing handle,
+   * for instance, is "No one goes by that name." rather than the generic
+   * sentence — the node answered, and it said nobody holds that name.
+   */
+  message?: string;
 }
 
-const PageNotFound: FC<PageNotFoundProps> = ({ title }) => {
+const PageNotFound: FC<PageNotFoundProps> = ({ title, message }) => {
   return (
     <Page meta={{ title }}>
       <BorderedMainContent>
@@ -30,7 +36,7 @@ const PageNotFound: FC<PageNotFoundProps> = ({ title }) => {
               />
             </div>
             <span className="text-normal font-normal leading-5 text-muted">
-              This page does not exist.
+              {message ?? 'This page does not exist.'}
             </span>
           </div>
         </div>
