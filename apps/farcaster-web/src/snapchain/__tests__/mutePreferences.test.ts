@@ -284,8 +284,11 @@ describe('the store the read seam reads', () => {
 
   it('lifts a mute, and says when a timed one ends', async () => {
     // A date this list is still holding: a past one is dropped as expired, which
-    // the test above already measures.
-    const until = Date.UTC(2026, 10, 3, 14, 20, 0);
+    // the test above already measures. Built from the clock, never hardcoded —
+    // a fixed date is a time bomb that expires the fixture for every tree at
+    // once (measured 2026-11-04: the fixed 2026-11-03 date made this fail on
+    // pristine origin/main).
+    const until = Date.now() + 60_000;
     await loadActiveMutes(FID);
     await setMute({ fid: FID, kind: 'users', value: OTHER, until });
 
