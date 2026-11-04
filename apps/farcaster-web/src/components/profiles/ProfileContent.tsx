@@ -20,6 +20,7 @@ import {
 import { FC, memo, ReactNode, useEffect, useMemo } from 'react';
 
 import { BorderedMainContent } from '~/components/BorderedMainContent';
+import { ShellSectionErrorBoundary } from '~/components/errors/ShellSectionErrorBoundary';
 import { SnapIcon } from '~/components/icons/SnapIcon';
 import { LinkToProfileAssets } from '~/components/links/LinkToProfileAssets';
 import { LinkToProfileCasts } from '~/components/links/LinkToProfileCasts';
@@ -41,6 +42,19 @@ import { ProfileHeader } from './ProfileHeader';
 import { ProfileMetadata } from './ProfileMetadata';
 
 const profileTabIconClassName = 'size-5';
+
+/**
+ * The tab a page is showing, in the reader's words, for the boundary that
+ * lets one tab's contents fail without taking the profile with it.
+ */
+const profileTabLabel: Record<ProfileTab, string> = {
+  casts: 'casts',
+  castsAndReplies: 'casts and replies',
+  assets: 'assets',
+  snaps: 'snaps',
+  likes: 'likes',
+  starterPacks: 'starter packs',
+};
 
 type ProfileContentProps = {
   title: string;
@@ -269,7 +283,18 @@ const ProfileContent: FC<ProfileContentProps> = memo(
                 )}
               </Tabs>
               <UserLinkHelpersProvider screenUserFid={user.fid}>
-                {children}
+                {/* One tab's contents can fail without taking the profile
+                    with it: the header, the tabs and the identity all stay,
+                    and only this region says what it cannot reach and offers
+                    the retry. This is what keeps a node outage honest on a
+                    profile that rendered from locally-known data — without
+                    it, a failing casts read would replace the whole column,
+                    including the profile itself. */}
+                <ShellSectionErrorBoundary
+                  label={`${user.displayName}'s ${profileTabLabel[focusedTab]}`}
+                >
+                  {children}
+                </ShellSectionErrorBoundary>
               </UserLinkHelpersProvider>
             </>
           )}
