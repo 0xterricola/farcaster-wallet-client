@@ -254,15 +254,23 @@ class NoSuchFeed extends Error {}
 export const createLinkReader = ({
   fetchImpl,
   nodeBaseUrl,
+  /**
+   * Neynar's API key, for the cast-hash → author index. Optional in fact (an
+   * absent key means no author lookup), but typed here so the checker does
+   * not guess `undefined` from the one early return that reads it.
+   * @type {string | undefined}
+   */
   neynarApiKey,
   neynarBaseUrl = 'https://api.neynar.com',
   /**
    * This host's public origin, used only to NAME the read server that
    * answered a feed: a node reached through this app's own proxy is the
    * relay, any other node is named by its origin — the same shape the parity
-   * probe reports (`node:<origin>` / `relay` / `farcaster-public`).
+   * probe reports (`node:<origin>` / `relay` / `farcaster-public`). The empty
+   * default means "no origin given": a reader built without it names every
+   * node by the node's own origin.
    */
-  appOrigin,
+  appOrigin = '',
   farcasterPublicBaseUrl = FARCASTER_PUBLIC_BASE_URL,
   timeoutMs = 8000,
   now = () => Date.now(),

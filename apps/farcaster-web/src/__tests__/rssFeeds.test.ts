@@ -39,6 +39,16 @@ const ORIGIN = 'https://fiddy.fun';
 const NODE = 'https://node.example';
 const PUBLIC = 'https://api.farcaster.xyz';
 
+// The shapes the fixtures below move, spelled once so every helper (and the
+// type checker) agrees on them.
+type NodeEmbed = { url?: string; castId?: { fid: number; hash: string } };
+type ChainState = {
+  calls: string[];
+  nodeDown: boolean;
+  t?: number;
+  now?: () => number;
+};
+
 /** A farcaster-protocol message, the shape `/v1/castsByFid` answers. */
 const nodeMessage = ({
   hash,
@@ -47,6 +57,13 @@ const nodeMessage = ({
   timestamp,
   parent = false,
   embeds = [],
+}: {
+  hash: string;
+  fid: number;
+  text: string;
+  timestamp: number;
+  parent?: boolean;
+  embeds?: NodeEmbed[];
 }) => ({
   hash,
   data: {
@@ -122,7 +139,7 @@ const fixtures = {
 };
 
 /** A fetch that answers the chain from fixtures, counting every call. */
-const chainFetch = (state) => async (url) => {
+const chainFetch = (state: ChainState) => async (url: string | URL) => {
   state.calls.push(String(url));
   const target = String(url);
   if (target.startsWith(`${NODE}/v1/userDataByFid`)) {
@@ -195,12 +212,16 @@ const chainFetch = (state) => async (url) => {
   return new Response('not found', { status: 404 });
 };
 
-const buildHandler = (state, overrides = {}) => {
+const buildHandler = (
+  state: ChainState,
+  overrides: { feedRemoved?: { casts: string[]; fids: number[] } } = {},
+) => {
   const reader = createLinkReader({
     fetchImpl: chainFetch(state),
     nodeBaseUrl: NODE,
+    neynarApiKey: 'test-only',
     appOrigin: ORIGIN,
-    now: () => state.t,
+    now: () => state.t ?? 0,
   });
   return createUnfurlHandler({
     origin: ORIGIN,
@@ -213,14 +234,26 @@ const buildHandler = (state, overrides = {}) => {
   } as never);
 };
 
-const request = async (handler, url, ip = '203.0.113.7') =>
-  (await handler.handle({ method: 'GET', path: url, ip })) as {
+const request = async (handler: unknown, url: string, ip = '203.0.113.7') =>
+  (await (
+    handler as {
+      handle: (request: {
+        method: string;
+        path: string;
+        ip?: string;
+      }) => Promise<{
+        status: number;
+        headers: Record<string, string>;
+        body: string | Buffer;
+      }>;
+    }
+  ).handle({ method: 'GET', path: url, ip })) as {
     status: number;
     headers: Record<string, string>;
     body: string | Buffer;
   };
 
-const body = (answer) => String(answer.body);
+const body = (answer: { body: string | Buffer }) => String(answer.body);
 
 describe('the XML escaper', () => {
   it('drops what XML 1.0 cannot hold even when escaped', () => {
@@ -236,7 +269,7 @@ describe('the XML escaper', () => {
 
 describe('a profile feed', () => {
   it('answers RSS 2.0 with the casts, the pictures and the quoted cast', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3/rss');
     expect(answer.status).toBe(200);
     expect(answer.headers['content-type']).toBe(
@@ -269,20 +302,20 @@ describe('a profile feed', () => {
   });
 
   it('escapes the description as XML character data', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3/rss');
     expect(body(answer)).toContain('&quot;today&quot;');
   });
 
   it('names the server that answered the read', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3/rss');
     expect(answer.headers['x-unfurl']).toBe('feed:profile');
     expect(answer.headers['x-fiddy-feed-read']).toBe(`node:${NODE}`);
   });
 
   it('advertises itself on the profile page the crawler reads', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3');
     const html = body(answer);
     expect(html).toContain('<link rel="alternate" type="application/rss+xml"');
@@ -292,7 +325,7 @@ describe('a profile feed', () => {
   });
 
   it('hides replies unless asked, and adds them when asked', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const handler = buildHandler(state);
     const plain = await request(handler, '/~/profiles/3/rss');
     expect(body(plain).match(/<item>/g)).toHaveLength(1);
@@ -302,7 +335,7 @@ describe('a profile feed', () => {
   });
 
   it('keeps one read per feed per window, so a poller cannot stampede', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const handler = buildHandler(state);
     await request(handler, '/~/profiles/3/rss');
     const readsAfterFirst = state.calls.length;
@@ -316,7 +349,7 @@ describe('a profile feed', () => {
   });
 
   it('refuses a nameless FID as no such feed, and remembers the miss', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const handler = buildHandler(state);
     const answer = await request(handler, '/~/profiles/30/rss');
     expect(answer.status).toBe(404);
@@ -329,7 +362,7 @@ describe('a profile feed', () => {
   });
 
   it('drops a taken-down cast and refuses a taken-down account', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const handler = buildHandler(state, {
       feedRemoved: {
         casts: [`0x${'a'.repeat(40)}`],
@@ -350,7 +383,7 @@ describe('a profile feed', () => {
   });
 
   it('falls through to Farcaster public when the node does not answer', async () => {
-    const state = { calls: [], nodeDown: true, now: () => 1_000 };
+    const state: ChainState = { calls: [], nodeDown: true, now: () => 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3/rss');
     expect(answer.status).toBe(200);
     expect(answer.headers['x-fiddy-feed-read']).toBe('farcaster-public');
@@ -374,6 +407,7 @@ describe('a profile feed', () => {
       reader: createLinkReader({
         fetchImpl: async () => new Response('down', { status: 502 }),
         nodeBaseUrl: NODE,
+        neynarApiKey: 'test-only',
         appOrigin: ORIGIN,
       }),
       now: () => 1_000,
@@ -384,13 +418,13 @@ describe('a profile feed', () => {
   });
 
   it('refuses an id that is not an fid', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/dwr/rss');
     expect(answer.status).toBe(404);
   });
 
   it('slows a caller down past the feed limit', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const handler = buildHandler(state);
     let answer;
     for (let i = 0; i < 60; i += 1) {
@@ -405,7 +439,7 @@ describe('a profile feed', () => {
 
 describe('a channel feed', () => {
   it('answers under the parent URL the network carries', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/channel/memes/rss');
     expect(answer.status).toBe(200);
     expect(answer.headers['x-unfurl']).toBe('feed:channel');
@@ -423,7 +457,7 @@ describe('a channel feed', () => {
 
   it('asks the farcaster.xyz spelling only when the first came back empty', async () => {
     // Both spellings empty: no such feed.
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/channel/quiet/rss');
     expect(answer.status).toBe(404);
     expect(body(answer)).toBe('No such feed.\n');
@@ -433,7 +467,7 @@ describe('a channel feed', () => {
   });
 
   it('takes the channel key as its real parent URL when it spells one', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const parent = 'https://farcaster.xyz/~/channel/snaps';
     const answer = await request(
       buildHandler(state),
@@ -448,13 +482,13 @@ describe('a channel feed', () => {
   });
 
   it('answers try-again when the node is down (no other server holds channels)', async () => {
-    const state = { calls: [], nodeDown: true, now: () => 1_000 };
+    const state: ChainState = { calls: [], nodeDown: true, now: () => 1_000 };
     const answer = await request(buildHandler(state), '/~/channel/memes/rss');
     expect(answer.status).toBe(503);
   });
 
   it('refuses a key that is neither a channel key nor a URL', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(
       buildHandler(state),
       `/~/channel/${encodeURIComponent('not a channel!')}/rss`,
@@ -477,7 +511,7 @@ describe('parseFid', () => {
 // the machine has it, so the "well-formed" claim is never only ours.
 describe('the document is well-formed XML', () => {
   it('parses under xmllint when present', async () => {
-    const state = { calls: [], nodeDown: false, t: 1_000 };
+    const state: ChainState = { calls: [], nodeDown: false, t: 1_000 };
     const answer = await request(buildHandler(state), '/~/profiles/3/rss');
     const file = path.join(
       mkdtempSync(path.join(os.tmpdir(), 'fiddy-rss-')),
@@ -493,7 +527,9 @@ describe('the document is well-formed XML', () => {
       linted = undefined;
       // eslint-disable-next-line no-console
       console.warn(
-        `xmllint not usable here (${error?.message ?? error}); structural checks above stand`,
+        `xmllint not usable here (${
+          error instanceof Error ? error.message : String(error)
+        }); structural checks above stand`,
       );
     }
     if (linted !== undefined) {
