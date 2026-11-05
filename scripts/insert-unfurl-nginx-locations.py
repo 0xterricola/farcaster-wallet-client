@@ -61,10 +61,13 @@ if text.count(marker) != 1:
     )
 
 missing = []
+installed = []  # (character offset of the line start, header) of what is there
 for candidate in blocks_of(lines):
     header = candidate.split("\n")[0].strip()
-    if header in text:
+    where = text.find(header + "\n")
+    if where != -1:
         print(f"  vhost already routes {header}: left alone")
+        installed.append((where, header))
         continue
     missing.append(candidate)
 
@@ -72,6 +75,18 @@ if not missing:
     print("  vhost: every location this snippet carries is already in place")
     sys.exit(0)
 
+# WHERE the missing locations go is not a style choice. nginx picks the FIRST
+# regex location that matches, so a more specific regex (the RSS feed route)
+# must be written ABOVE the broader one it carves out of
+# (`location ~ ^/~/(conversations|profiles)/`). New locations are therefore
+# inserted ahead of the earliest location this snippet has already installed,
+# where the broad regexes live; only on a vhost with none of them yet do they
+# land ahead of the SPA fallback, which is where they first landed too.
+at = min(
+    (text.rfind("\n", 0, where) + 1 for where, _ in installed), default=None
+)
+if at is None:
+    at = text.find(marker)
 print(f"  vhost: inserting {len(missing)} location(s)")
-open(vhost, "w").write(text.replace(marker, "\n".join(missing) + "\n" + marker, 1))
-print("  vhost: inserted the missing locations ahead of the app's own fallback")
+open(vhost, "w").write(text[:at] + "\n".join(missing) + "\n" + text[at:])
+print("  vhost: inserted the missing locations above the unfurl family (or the app's fallback, on a first install)")

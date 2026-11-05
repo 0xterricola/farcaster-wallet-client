@@ -54,6 +54,15 @@ export const profilePage = ({ origin, fid, author, casts }) => {
     url: `${origin}/~/profiles/${fid}`,
     title: `${name} (${handle})`,
     description: bio || `${handle} on Farcaster.`,
+    // Every profile has a feed (`server/unfurl/feed.mjs`), and the page says
+    // so where the head and the card already speak: `self` is an address —
+    // the one a reader subscribes with — so it is never cached longer than an
+    // hour anywhere (the one-hour rule, docs/CLIENT-RSS-FEEDS.md).
+    feed: {
+      title: `Casts by ${name} (${handle})`,
+      path: `/~/profiles/${fid}/rss`,
+      self: `${origin}/~/profiles/${fid}/rss`,
+    },
     imageAlt: `The Fiddy mascot on a dark card, for ${name} (${handle}).`,
     type: 'profile',
     ...profileCrawler({ origin, fid, author, casts }),

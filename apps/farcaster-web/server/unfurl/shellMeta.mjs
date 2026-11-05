@@ -93,10 +93,22 @@ export const pageTags = ({
   type,
   origin,
   siteName = 'fiddy',
+  /**
+   * The page's feed, when it has one (`{title, path, self}`): a reader that
+   * is handed this page's URL can find the feed without being told the
+   * pattern, because the head advertises it where the `og:` tags already
+   * speak. Cast and look pages carry none.
+   */
+  feed,
 }) =>
   [
     `<title>${escapeHtml(title)}</title>`,
     `<link rel="canonical" href="${escapeHtml(url)}" />`,
+    ...(feed
+      ? [
+          `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(feed.title)}" href="${escapeHtml(feed.self ?? `${origin}${feed.path}`)}" />`,
+        ]
+      : []),
     metaTag('name', 'description', description),
     metaTag('property', 'og:type', type),
     metaTag('property', 'og:site_name', siteName),

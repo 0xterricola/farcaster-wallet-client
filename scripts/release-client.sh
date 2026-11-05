@@ -398,7 +398,16 @@ ssh_ "set -e
   grep -q 'snapchain-api' /etc/nginx/sites-available/fiddy.fun
   grep -q 'location ^~ /preview/' /etc/nginx/sites-available/fiddy.fun
   grep -q 'proxy_pass http://127.0.0.1:8787;' /etc/nginx/sites-available/fiddy.fun
-  echo '  disk gate ok: bundle (adapter, media, node, together), preview, server, unfurl + translate services (renderer, locations), vhost locations, listing manifest'"
+  # The RSS feeds (docs/CLIENT-RSS-FEEDS.md): their location must exist AND sit
+  # above the page regex, or nginx serves the SPA shell for /rss — a release
+  # whose feeds were routed below the pages would pass every other gate while
+  # no reader could read a single feed.
+  grep -qF 'location ~ ^/~/(profiles|channel)/[^/]+/rss$' /etc/nginx/sites-available/fiddy.fun
+  FEED_LINE=$(grep -nF 'location ~ ^/~/(profiles|channel)/[^/]+/rss$' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
+  PAGE_LINE=$(grep -nF 'location ~ ^/~/(conversations|profiles)/' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
+  [ -n "$FEED_LINE" ] && [ -n "$PAGE_LINE" ] && [ "$FEED_LINE" -lt "$PAGE_LINE" ] \
+    || { echo 'the /rss location is not above the page locations in /etc/nginx/sites-available/fiddy.fun (nginx picks the first regex that matches)'; exit 1; }
+  echo '  disk gate ok: bundle (adapter, media, node, together), preview, server, unfurl + translate services (renderer, locations), vhost locations (feeds above pages), listing manifest'"
 
 if [ "$NO_CUTOVER" = "--no-cutover" ]; then
   say "staged at $RELEASES/$SHA (not cut over)"
@@ -566,6 +575,27 @@ node -e 'const b=require("fs").readFileSync(process.argv[1]);process.exit(b.leng
 grep -qi '^x-unfurl:[[:space:]]*card:profile' "$STAGE/origin-profile-card.png.headers" \
   || gate_fail "the origin's profile card is not that page's own card (the service answered '$(grep -i '^x-unfurl:' "$STAGE/origin-profile-card.png.headers" | tr -d '\r' | tail -1)'): the page's own card is what a share has to preview"
 echo "  origin GET /~/profiles/3 → that page's own og:url, card 1200x630, drawn for the page"
+
+# 1c. The RSS feed half (docs/CLIENT-RSS-FEEDS.md): a profile's casts as RSS
+#     2.0, on the origin, through nginx — the same answer a feed reader gets.
+#     A taken-down or missing feed is a 404 the release also accepts; what it
+#     does not accept is the SPA shell (the routed-below-pages failure) or an
+#     answer that is not XML.
+origin_get "/~/profiles/3/rss" "$STAGE/origin-profile-feed.xml" \
+  || gate_fail "the origin did not answer GET /~/profiles/3/rss"
+[ "$ORIGIN_CODE" = "200" ] || [ "$ORIGIN_CODE" = "404" ] \
+  || gate_fail "the origin answered HTTP $ORIGIN_CODE for /~/profiles/3/rss (503 means neither the node nor the public server answered; anything else means the route is wrong)"
+if [ "$ORIGIN_CODE" = "200" ]; then
+  grep -q '^<rss version="2.0"' "$STAGE/origin-profile-feed.xml" \
+    || gate_fail "the origin's /~/profiles/3/rss is not an RSS 2.0 document (got HTTP $ORIGIN_CODE — the page locations may be answering it, see docs/CLIENT-RSS-FEEDS.md)"
+  grep -qi '^content-type:[[:space:]]*application/rss+xml' "$STAGE/origin-profile-feed.xml.headers" \
+    || gate_fail "the origin's profile feed is not served as application/rss+xml"
+  grep -qF '<item>' "$STAGE/origin-profile-feed.xml" \
+    || echo "  NOTE: /~/profiles/3/rss answered RSS 2.0 with no <item> (fid 3 casts nothing on this network, or all casts were filtered)"
+  echo "  origin GET /~/profiles/3/rss → RSS 2.0, application/rss+xml"
+else
+  echo "  NOTE: /~/profiles/3/rss answered 404 No such feed (the account has no name on this network, or is taken down) — the route and the refusal rule are live, the document is not"
+fi
 
 # 2. The entry chunk at the path THIS BUILD produced, from the origin, compared
 #    byte-for-byte. This is the heart of the check.

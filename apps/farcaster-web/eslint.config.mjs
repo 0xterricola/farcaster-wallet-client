@@ -232,6 +232,7 @@ export default [
         process: 'readonly',
         setTimeout: 'readonly',
         URL: 'readonly',
+        URLSearchParams: 'readonly',
       },
     },
     rules: {
@@ -260,6 +261,8 @@ export default [
       'src/__tests__/castTranslationService.test.ts',
       // The server-drawn feed lives beside that same host service.
       'src/__tests__/serverPublicFeed.test.ts',
+      // …and the RSS feeds the same service builds (card t_f50c14a1).
+      'src/__tests__/rssFeeds.test.ts',
     ],
     rules: {
       'no-restricted-imports': 'off',
