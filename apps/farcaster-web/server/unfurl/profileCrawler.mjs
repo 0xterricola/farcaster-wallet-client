@@ -52,6 +52,7 @@ export const profileCrawler = ({ origin, fid, author, casts }) => {
     <h1 id="fiddy-crawler-name">${escapeHtml(name)}</h1>
     <p class="fiddy-crawler-handle">${escapeHtml(handle)}</p>
     ${bio ? `<p class="fiddy-crawler-bio">${escapeHtml(bio)}</p>` : ''}
+    <p class="fiddy-crawler-feed">Every profile here has a feed. Copy <a href="${escapeHtml(`${url}/rss`)}">this link</a> into any feed reader and you get the new casts without opening Fiddy, without signing in.</p>
     <h2>Latest posts</h2>
     ${latest}
   </main>
@@ -68,7 +69,8 @@ html{background:#161715}
 .fiddy-crawler-bio{margin:20px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .fiddy-crawler-post{margin:0 0 12px;padding:18px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:#1d1e1c}
 .fiddy-crawler-post p{margin:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.fiddy-crawler-post a{color:#d4ff3f;text-underline-offset:3px}
+.fiddy-crawler-post a,.fiddy-crawler-feed a{color:#d4ff3f;text-underline-offset:3px}
+.fiddy-crawler-feed{margin:20px 0 0}
 @media(min-width:640px){.fiddy-crawler-profile main{padding:48px 28px 72px}.fiddy-crawler-profile h1{font-size:34px}}
 </style>`;
   return { jsonLd, crawlerHtml, crawlerStyle };

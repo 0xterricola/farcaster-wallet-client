@@ -30,6 +30,11 @@
  *                         means this host stores none: a look it already holds
  *                         still renders, and a share request refuses in one
  *                         sentence rather than failing silently.
+ *   FIDDY_FEED_REMOVED_JSON
+ *                         a quilcast-shaped takedown list
+ *                         (`{"casts":["0x…"],"fids":[3]}`) filtered out of
+ *                         every RSS feed. Absent means this host keeps no
+ *                         list, and every cast it can read is shown.
  *   FIDDY_TRANSLATIONS_DIR
  *                         where cast translations are kept (server/translate/),
  *                         and the switch that makes this host able to translate
@@ -116,9 +121,12 @@ const loadSiteCard = () => {
 // answer anything: refuse to start rather than serve a document from nowhere.
 loadShell();
 
+const origin = process.env.FIDDY_ORIGIN ?? 'https://fiddy.fun';
+
 const reader = createLinkReader({
   fetchImpl: (...args) => fetch(...args),
   nodeBaseUrl: process.env.SNAPCHAIN_HTTP_URL ?? 'https://haatz.quilibrium.com',
+  appOrigin: origin,
   neynarApiKey: process.env.NEYNAR_API_KEY,
   timeoutMs,
 });
@@ -181,8 +189,38 @@ const translator = translationsDir
     })
   : undefined;
 
+/**
+ * The feeds' takedown list, or nothing. Read once at boot: it is a file a
+ * person edits, not a read that can fail a request, and a malformed one is
+ * IGNORED (with a line in the log) rather than served as a list nobody
+ * checked — an unread list must not become "nothing is taken down" silently.
+ */
+const feedRemoved = (() => {
+  const pathFromEnv = process.env.FIDDY_FEED_REMOVED_JSON;
+  if (!pathFromEnv) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(pathFromEnv, 'utf8'));
+    if (
+      Array.isArray(parsed?.casts) &&
+      Array.isArray(parsed?.fids) &&
+      parsed.casts.every((hash) => typeof hash === 'string') &&
+      parsed.fids.every((fid) => typeof fid === 'number')
+    ) {
+      return parsed;
+    }
+    process.stderr.write(
+      `feeds: ${pathFromEnv} is not a removed list (needs casts[] and fids[])\n`,
+    );
+  } catch (error) {
+    process.stderr.write(`feeds: could not read ${pathFromEnv}: ${error?.message ?? error}\n`);
+  }
+  return undefined;
+})();
+
 const handler = createUnfurlHandler({
-  origin: process.env.FIDDY_ORIGIN ?? 'https://fiddy.fun',
+  origin,
   shellSource: loadShell,
   siteCard: loadSiteCard,
   renderCard,
@@ -190,6 +228,7 @@ const handler = createUnfurlHandler({
   feed,
   looks,
   translator,
+  feedRemoved,
 });
 
 /**
@@ -252,8 +291,11 @@ const server = createServer(async (request, response) => {
   // A card on the fallback path says WHY in the same line the service logs, so
   // the host's log answers the question a refused release used to leave open.
   const cause = answer.headers['x-unfurl-note'];
+  // A feed names the server that answered its read, in the log line too: the
+  // chain is only honest if a person can see which link held it.
+  const readFrom = answer.headers['x-fiddy-feed-read'];
   process.stdout.write(
-    `${request.method} ${path} ${answer.status} ${note}${cause ? ` (${cause})` : ''}\n`,
+    `${request.method} ${path} ${answer.status} ${note}${cause ? ` (${cause})` : ''}${readFrom ? ` [${readFrom}]` : ''}\n`,
   );
 });
 
@@ -262,7 +304,8 @@ server.listen(port, host, () => {
     `fiddy-unfurl on ${host}:${port} | shell ${shellPath} (${loadShell().length} bytes) | ` +
       `site card ${loadSiteCard() ? 'yes' : 'NO'} | node ${process.env.SNAPCHAIN_HTTP_URL ?? 'https://haatz.quilibrium.com'} | ` +
       `cast-hash index ${process.env.NEYNAR_API_KEY ? 'keyed' : 'unconfigured'} | ` +
-      `translations ${translator ? (translator.available() ? 'on' : 'no key') : 'off'}\n`,
+      `translations ${translator ? (translator.available() ? 'on' : 'no key') : 'off'} | ` +
+      `feeds /~/profiles/<fid>/rss + /~/channel/<id>/rss (removed list ${feedRemoved ? 'on' : 'none'})\n`,
   );
 });
 

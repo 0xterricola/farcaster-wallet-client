@@ -85,7 +85,55 @@ const LOOK = {
   borderWidth: 1,
   font: 'rounded',
 };
+// The feeds' fixtures: a cast hostile to XML (the escaper's case), a reply
+// hidden unless asked for, and a channel with one cast under the warpcast
+// spelling the network really carries (see `reader.mjs`).
+const FEED_TIMESTAMP = 1_000; // protocol seconds from the 2021 epoch
 const fixtures = {
+  feed: {
+    author: {
+      fid: 3,
+      username: 'dwr',
+      displayName: 'Dan Romero',
+      bio: 'Building <things> & "sharing" on Farcaster.',
+    },
+    casts: [
+      {
+        hash: `0x${'a'.repeat(40)}`,
+        fid: 3,
+        who: 'Dan Romero (@dwr)',
+        text: 'Fish & <chips> \u2700\uFE0F and a control:\u0001',
+        timestampMs: (FEED_TIMESTAMP + 100) * 1000 + 1609459200000,
+        parent: false,
+        embeds: [{ url: 'https://pictures.example/a.png' }],
+      },
+      {
+        hash: `0x${'d'.repeat(40)}`,
+        fid: 3,
+        who: 'Dan Romero (@dwr)',
+        text: 'A reply',
+        timestampMs: (FEED_TIMESTAMP + 200) * 1000 + 1609459200000,
+        parent: true,
+        embeds: [],
+      },
+    ],
+    source: 'node:https://node.example',
+  },
+  channel: {
+    casts: [
+      {
+        hash: `0x${'e'.repeat(40)}`,
+        fid: 3,
+        who: 'Dan Romero (@dwr)',
+        text: 'A cast in the channel',
+        timestampMs: (FEED_TIMESTAMP + 300) * 1000 + 1609459200000,
+        parent: false,
+        embeds: [],
+      },
+    ],
+    parentUrl: 'https://warpcast.com/~/channel/memes',
+    source: 'node:https://node.example',
+  },
   cast: {
     cast: {
       hash: CAST_HASH,
@@ -136,7 +184,14 @@ const handler = createUnfurlHandler({
       hash.toLowerCase() === CAST_HASH ? fixtures.cast : undefined,
     profile: async (fid) =>
       String(fid) === '3' ? fixtures.profile : undefined,
+    // The feeds: an account that has one, a channel that has one, and the
+    // refusal rule — anything else is no such feed.
+    feed: async (fid) =>
+      String(fid) === '3' ? fixtures.feed : undefined,
+    channelFeed: async (key) =>
+      key === 'memes' ? fixtures.channel : undefined,
     size: () => 0,
+    feedSize: () => 0,
   },
   looks: {
     get: async (id) => (id === LOOK_ID ? LOOK : undefined),
@@ -186,6 +241,29 @@ const pages = {
   'look.html': await handler.handle({
     method: 'GET',
     path: `/look/${LOOK_ID}`,
+  }),
+};
+
+// The RSS feeds, held apart from the pages: their answers are XML and
+// refusals, and the checks they must pass are their own (the escaper, the
+// refusal rules, the provider-chain label) — not the head-tag contract a
+// page holds.
+const feedAnswers = {
+  'profile-feed.xml': await handler.handle({
+    method: 'GET',
+    path: '/~/profiles/3/rss',
+  }),
+  'profile-feed-replies.xml': await handler.handle({
+    method: 'GET',
+    path: '/~/profiles/3/rss?replies=1',
+  }),
+  'channel-feed.xml': await handler.handle({
+    method: 'GET',
+    path: '/~/channel/memes/rss',
+  }),
+  'profile-feed-miss.xml': await handler.handle({
+    method: 'GET',
+    path: '/~/profiles/4/rss',
   }),
 };
 
@@ -378,6 +456,80 @@ for (const [file, answer] of Object.entries(pages)) {
       ),
     );
   }
+}
+
+// THE FEEDS. Each feed answer is judged as XML and as a refusal: the escaper's
+// hostile cast must survive as text, the read that answered must be named, a
+// miss must be "No such feed." — and the profile page must advertise the feed
+// in its head, because that is how a reader finds it.
+{
+  for (const [file, answer] of Object.entries(feedAnswers)) {
+    writeFileSync(path.join(outDir, file), String(answer.body));
+  }
+  const profileFeed = feedAnswers['profile-feed.xml'];
+  check(
+    'profile-feed.xml answers 200 as RSS',
+    profileFeed.status === 200 &&
+      profileFeed.headers['content-type'] ===
+        'application/rss+xml; charset=utf-8' &&
+      profileFeed.headers['cache-control'] === 'public, max-age=600',
+    `${profileFeed.headers['content-type']} / ${profileFeed.headers['cache-control']}`,
+  );
+  const feedXml = String(profileFeed.body);
+  check(
+    'profile-feed.xml is RSS 2.0 with the newest cast as an item',
+    feedXml.includes('<?xml version="1.0" encoding="UTF-8"?>') &&
+      feedXml.includes('<rss version="2.0"') &&
+      feedXml.includes('<ttl>15</ttl>') &&
+      (feedXml.match(/<item>/g) ?? []).length === 1 &&
+      feedXml.includes('<pubDate>') &&
+      feedXml.includes(
+        `<link>${origin}/~/conversations/0x${'a'.repeat(40)}</link>`,
+      ),
+  );
+  check(
+    'profile-feed.xml escapes what XML cannot hold',
+    feedXml.includes('Fish &amp; &lt;chips&gt;') &&
+      !feedXml.includes('\u0001') &&
+      !feedXml.includes('\ufffe') &&
+      !feedXml.includes('\ud800'),
+  );
+  check(
+    'profile-feed.xml names the server that answered the read',
+    profileFeed.headers['x-fiddy-feed-read'] === fixtures.feed.source,
+    profileFeed.headers['x-fiddy-feed-read'],
+  );
+  check(
+    'profile-feed.xml self-links its own URL',
+    feedXml.includes(
+      `<atom:link href="${origin}/~/profiles/3/rss" rel="self" type="application/rss+xml" />`,
+    ),
+  );
+  const withReplies = String(
+    feedAnswers['profile-feed-replies.xml'].body,
+  );
+  check(
+    'profile-feed-replies.xml adds the reply only when asked',
+    (withReplies.match(/<item>/g) ?? []).length === 2,
+  );
+  const channelFeed = feedAnswers['channel-feed.xml'];
+  check(
+    'channel-feed.xml answers 200 with the channel cast',
+    channelFeed.status === 200 &&
+      String(channelFeed.body).includes('A cast in the channel'),
+  );
+  const miss = feedAnswers['profile-feed-miss.xml'];
+  check(
+    'profile-feed-miss.xml is a plain no-such-feed refusal',
+    miss.status === 404 && String(miss.body) === 'No such feed.\n',
+  );
+  check(
+    'profile.html advertises its feed in the head',
+    String(pages['profile.html'].body).includes(
+      `<link rel="alternate" type="application/rss+xml"`,
+    ) &&
+      String(pages['profile.html'].body).includes(`${origin}/~/profiles/3/rss`),
+  );
 }
 
 // THE PICTURES. Each page's `og:image` names a card drawn for THAT page, so the

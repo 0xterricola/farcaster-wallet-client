@@ -123,6 +123,10 @@ importing anything.
 - **External wallets, non-custodial** — WalletConnect (EVM + Solana),
   EIP-6963 discovery, optional unified MetaMask Connect. No seed phrase is
   created, requested, or stored by the client beyond the Advanced import above.
+- **A feed for every profile and every channel** — paste
+  `https://fiddy.fun/~/profiles/<fid>/rss` (or `/~/channel/<name>/rss`) into any
+  feed reader and the new casts arrive there: no account, no app, and no server
+  of ours in the middle ([docs/CLIENT-RSS-FEEDS.md](docs/CLIENT-RSS-FEEDS.md)).
 - **The Fiddy Agent (optional)** — one click hatches your own Hermes agent on
   Agent37 cloud that lives in the client and can connect to every channel
   you approve.

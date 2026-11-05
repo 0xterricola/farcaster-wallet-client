@@ -22,6 +22,8 @@
 
 import { cardUrl, pageTags, renderPageHtml } from './shellMeta.mjs';
 import { castPage, lookPage, profilePage } from './pages.mjs';
+import { rss as rssDocument, shown as shownCasts } from './feed.mjs';
+import { parseFid } from './reader.mjs';
 import { publicFeedPage } from '../public-feed/page.mjs';
 import { lookFacts, shareableLook } from './looks.mjs';
 import { CARD_HEIGHT, CARD_WIDTH } from './cards.mjs';
@@ -124,6 +126,20 @@ export const createUnfurlHandler = ({
     ask: { max: 30, windowMs: 10 * 60 * 1000 },
     lookup: { max: 300, windowMs: 10 * 60 * 1000 },
   },
+  /**
+   * How many feed requests one caller may make: a reader polling politely
+   * stays far under this, and the in-process read cache means a stampede of
+   * requests still costs at most ONE node read per feed per ten minutes —
+   * this is the second door, not the only one.
+   */
+  feedLimits = { max: 60, windowMs: 10 * 60 * 1000 },
+  /**
+   * Casts and accounts taken down on this host, filtered out of every feed
+   * (quilcast's `removed.json` shape: `{casts: [...hashes], fids: [...fids]}`).
+   * Empty by default: this host keeps no takedown list yet, and the day it
+   * has one the feeds honour it without another change.
+   */
+  feedRemoved = { casts: [], fids: [] },
   now = () => Date.now(),
   htmlTtlMs = HTML_TTL_MS,
   missTtlMs = MISS_TTL_MS,
@@ -324,6 +340,133 @@ export const createUnfurlHandler = ({
     ...translationLimits.lookup,
     now,
   });
+  const spentOnFeeds = createRateLimiter({ ...feedLimits, now });
+
+  /** The last server that answered a feed read, for the health route. */
+  let lastFeedSource = null;
+
+  /**
+   * One RSS route's answer, both kinds (`/~/profiles/<fid>/rss`,
+   * `/~/channel/<id>/rss`, `?replies=1` on a profile).
+   *
+   * The refusal rules are the point, and they are three: an account without a
+   * name, a channel nothing answers, and a taken-down account each get
+   * "No such feed." (404); a read that failed gets "Try again in a minute."
+   * (503) so a poller retries rather than unsubscribes; a caller over the
+   * feed limit gets 429 with a retry-after. Nothing is ever invented: a node
+   * that does not answer is a retry-later, not an empty feed.
+   */
+  const feedAnswer = async (kind, rawId, fullPath, ip) => {
+    if (overFeedLimit(ip)) {
+      return text(429, 'Slow down a little.\n', {
+        'retry-after': '60',
+        'cache-control': 'no-store',
+      });
+    }
+    const replies =
+      new URLSearchParams(fullPath.split('?')[1] ?? '').get('replies') === '1';
+
+    // The refusals carry no-store: the in-process cache remembers a miss for
+    // the window, so a shared cache in front must not add its own opinion —
+    // and a 429 or a 503 must never be cached anywhere.
+    const missing = () =>
+      text(404, 'No such feed.\n', {
+        'x-unfurl': `feed:${kind}:miss`,
+        'cache-control': 'no-store',
+      });
+    const failed = (error) =>
+      text(503, 'Try again in a minute.\n', {
+        'x-unfurl': `feed:${kind}:down`,
+        'cache-control': 'no-store',
+        'x-unfurl-note': headerNote(
+          error?.message ?? String(error ?? 'the feed read failed'),
+        ),
+      });
+
+    if (kind === 'profile') {
+      const fid = parseFid(decodeURIComponent(rawId));
+      if (fid === undefined || typeof reader.feed !== 'function') {
+        return missing();
+      }
+      let facts;
+      try {
+        facts = await reader.feed(fid, { replies });
+      } catch (error) {
+        return failed(error);
+      }
+      if (!facts || feedRemoved.fids.includes(facts.author.fid)) {
+        return missing();
+      }
+      lastFeedSource = facts.source;
+      const handle = facts.author.username
+        ? `@${facts.author.username}`
+        : `fid ${facts.author.fid}`;
+      const name = facts.author.displayName?.trim() || handle;
+      const self = `${origin}/~/profiles/${fid}/rss`;
+      return {
+        status: 200,
+        headers: {
+          'content-type': 'application/rss+xml; charset=utf-8',
+          'cache-control': 'public, max-age=600',
+          'x-unfurl': 'feed:profile',
+          'x-fiddy-feed-read': facts.source,
+        },
+        body: rssDocument({
+          title: `Casts by ${name} (${handle})`,
+          link: `${origin}/~/profiles/${fid}`,
+          self,
+          desc:
+            typeof facts.author.bio === 'string' && facts.author.bio.trim()
+              ? facts.author.bio.trim()
+              : `New casts by ${name}, as they are cast. Paste this link into any feed reader: no account, no app, nothing in the middle.`,
+          image: cardUrl(origin, 'profile', String(fid)),
+          casts: shownCasts(facts.casts, { replies, gone: feedRemoved }),
+          origin,
+          ttl: 15,
+        }),
+      };
+    }
+
+    // A channel: the segment is the channel key — a bare key, or the
+    // channel's real parent URL (https://…/~/channel/x, chain://…).
+    const key = decodeURIComponent(rawId);
+    const bareKey = /^[a-z0-9-]{1,64}$/i.test(key);
+    const urlKey = /^(https?:\/\/|chain:\/\/).+/.test(key);
+    if ((!bareKey && !urlKey) || typeof reader.channelFeed !== 'function') {
+      return missing();
+    }
+    let facts;
+    try {
+      facts = await reader.channelFeed(key);
+    } catch (error) {
+      return failed(error);
+    }
+    if (!facts) {
+      return missing();
+    }
+    lastFeedSource = facts.source;
+    const channelPath = encodeURIComponent(key);
+    return {
+      status: 200,
+      headers: {
+        'content-type': 'application/rss+xml; charset=utf-8',
+        'cache-control': 'public, max-age=600',
+        'x-unfurl': 'feed:channel',
+        'x-fiddy-feed-read': facts.source,
+      },
+      body: rssDocument({
+        title: `A Farcaster channel${bareKey ? ` (${key})` : ''}`,
+        link: `${origin}/~/channel/${channelPath}`,
+        self: `${origin}/~/channel/${channelPath}/rss`,
+        desc: `New casts in this channel, as they are cast. Paste this link into any feed reader: no account, no app, nothing in the middle.`,
+        casts: shownCasts(facts.casts, { gone: feedRemoved }),
+        origin,
+        ttl: 15,
+      }),
+    };
+  };
+
+  const overFeedLimit = (ip) => spentOnFeeds(ip);
 
   /** A refused ask, in the app's own voice, whatever went wrong inside. */
   const translationAnswer = (error) => {
@@ -544,6 +687,13 @@ export const createUnfurlHandler = ({
             // The server-drawn feed's one bounded cache, or nothing on a host
             // that ships the SPA only. A read's age, not a fake freshness.
             feed: feed ? (feed.stats?.() ?? null) : 'off',
+            // The RSS feeds' read cache, and which server answered the last
+            // one (`node:<origin>` / `relay` / `farcaster-public`): the same
+            // vocabulary the parity probe reports.
+            feeds: {
+              reads: reader.feedSize?.() ?? 0,
+              lastSource: lastFeedSource,
+            },
           })}\n`,
         };
       }
@@ -656,6 +806,30 @@ export const createUnfurlHandler = ({
             ? { ...castPage({ origin, hash, ...facts }) }
             : undefined;
         });
+      }
+
+      // RSS FEEDS (docs/CLIENT-RSS-FEEDS.md). An account's or a channel's
+      // casts as RSS 2.0, built by `feed.mjs` from whichever read server
+      // answered (`reader.mjs` keeps the chain). The rules are quilcast's,
+      // adopted: a "no such feed" is remembered as long as a feed is; a
+      // failed read is remembered not at all and answers "try again"; the
+      // document is XML with no script in it, so the bundle and the CSP are
+      // untouched.
+      if (
+        segments[0] === '~' &&
+        segments[1] === 'profiles' &&
+        segments[3] === 'rss' &&
+        segments.length === 4
+      ) {
+        return feedAnswer('profile', segments[2], path, ip);
+      }
+      if (
+        segments[0] === '~' &&
+        segments[1] === 'channel' &&
+        segments[3] === 'rss' &&
+        segments.length === 4
+      ) {
+        return feedAnswer('channel', segments[2], path, ip);
       }
 
       if (
