@@ -88,6 +88,22 @@ describe('the body the routes can actually receive', () => {
   });
 });
 
+describe('the health line', () => {
+  it('counts subscribers when alerts run, and says off when they do not', async () => {
+    const off = await bareHandler(undefined).handle({
+      method: 'GET',
+      path: '/unfurl/health',
+      ip: '203.0.113.9',
+    });
+    expect(JSON.parse(String(off.body)).alerts).toBe('off');
+    const on = await bareHandler({
+      capability: async () => ({ on: true }),
+      store: { list: async () => [{ fid: 1 }, { fid: 2 }] },
+    }).handle({ method: 'GET', path: '/unfurl/health', ip: '203.0.113.9' });
+    expect(JSON.parse(String(on.body)).alerts).toEqual({ subscribers: 2 });
+  });
+});
+
 describe('POST /api/alerts/off, turning it off', () => {
   it('refuses a claim minted for a phone address', async () => {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
