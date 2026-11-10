@@ -247,6 +247,10 @@ export default [
     files: [
       'src/__tests__/unfurlService.test.ts',
       'src/__tests__/callerAddress.test.ts',
+      // …and the same for the picture proxy beside that service
+      // (card t_784af890): the fetcher, the sniff, the cache and the route
+      // are held to each other in one file.
+      'src/__tests__/imageProxy.test.ts',
       // …and the same for the shared looks it now stores (card t_d85d8520).
       'src/__tests__/lookService.test.ts',
       // …and the same for the connect service a copy of Fiddy answers for

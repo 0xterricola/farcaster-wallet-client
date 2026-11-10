@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { secureExternalMediaUrl } from '~/utils/externalMediaUrl';
+import {
+  proxiedExternalMediaUrl,
+  secureExternalMediaUrl,
+} from '~/utils/externalMediaUrl';
 
 const securePage = { protocol: 'https:', hostname: 'fiddy.fun' } as const;
 
@@ -60,5 +63,79 @@ describe('external media on a secure page', () => {
       const url = `http://${hostname}/photo.png`;
       expect(secureExternalMediaUrl(url, securePage)).toBe(url);
     }
+  });
+});
+
+describe('the same-origin picture proxy', () => {
+  it("asks the host for another site's picture, address encoded whole", () => {
+    expect(
+      proxiedExternalMediaUrl(
+        'https://media.example/photo?id=1&size=large',
+        securePage,
+        true,
+      ),
+    ).toBe(
+      '/api/img?u=' +
+        encodeURIComponent('https://media.example/photo?id=1&size=large'),
+    );
+  });
+
+  it('upgrades an HTTP picture and then asks for it, once', () => {
+    expect(
+      proxiedExternalMediaUrl(
+        'http://media.example/photo.png',
+        securePage,
+        true,
+      ),
+    ).toBe(
+      '/api/img?u=' + encodeURIComponent('https://media.example/photo.png'),
+    );
+  });
+
+  it("never asks for the host's own pictures, or its uploads", () => {
+    for (const url of [
+      'https://fiddy.fun/photo.png',
+      'https://fiddy.fun/api/fiddy/media/xyz.png',
+      '/api/fiddy/media/xyz.png',
+      '/photo.png',
+    ]) {
+      expect(proxiedExternalMediaUrl(url, securePage, true)).toBe(url);
+    }
+  });
+
+  it("never asks for data:, blob:, or a local host's pictures", () => {
+    for (const url of [
+      'data:image/png;base64,AAAA',
+      'blob:https://fiddy.fun/photo',
+      'http://localhost/photo.png',
+      'http://127.0.0.1/photo.png',
+    ]) {
+      expect(proxiedExternalMediaUrl(url, securePage, true)).toBe(
+        secureExternalMediaUrl(url, securePage),
+      );
+    }
+  });
+
+  it('does nothing when the build never asked for the proxy, or the page is not secure', () => {
+    expect(
+      proxiedExternalMediaUrl(
+        'https://media.example/photo.png',
+        securePage,
+        false,
+      ),
+    ).toBe('https://media.example/photo.png');
+    expect(
+      proxiedExternalMediaUrl(
+        'https://media.example/photo.png',
+        { protocol: 'http:', hostname: 'fiddy.fun' },
+        true,
+      ),
+    ).toBe('https://media.example/photo.png');
+  });
+
+  it('does not ask twice for a picture already behind the route', () => {
+    const behind =
+      '/api/img?u=' + encodeURIComponent('https://media.example/photo.png');
+    expect(proxiedExternalMediaUrl(behind, securePage, true)).toBe(behind);
   });
 });

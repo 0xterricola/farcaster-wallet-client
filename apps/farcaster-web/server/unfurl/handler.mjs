@@ -134,6 +134,15 @@ export const createUnfurlHandler = ({
    */
   feedLimits = { max: 60, windowMs: 10 * 60 * 1000 },
   /**
+   * `../img/proxy.mjs`, or nothing.
+   *
+   * Nothing is a host that does not run the proxy: `GET /api/img` then answers
+   * 404 in one sentence, and the browser was never told to ask (the capability
+   * flag that switches the client's helper is a build-time decision, not a
+   * guess made per render).
+   */
+  imageProxy,
+  /**
    * Casts and accounts taken down on this host, filtered out of every feed
    * (quilcast's `removed.json` shape: `{casts: [...hashes], fids: [...fids]}`).
    * Empty by default: this host keeps no takedown list yet, and the day it
@@ -578,6 +587,21 @@ export const createUnfurlHandler = ({
         }
       }
 
+      // Pictures from other sites (`../img/proxy.mjs`). The browser hands this
+      // route an address it would otherwise have fetched itself, so the host
+      // that holds the picture never learns who is reading. A host that does
+      // not run the proxy says so rather than 404ing like a broken build.
+      if (segments[0] === 'api' && segments.length === 2 && segments[1] === 'img') {
+        if (method !== 'GET' && method !== 'HEAD') {
+          return text(405, 'GET\n');
+        }
+        if (!imageProxy) {
+          return text(404, 'Pictures are loaded directly on this host.\n');
+        }
+        const asked = new URLSearchParams(path.split('?')[1] ?? '').get('u');
+        return imageProxy.answer({ u: asked ?? '', ip });
+      }
+
       if (method !== 'GET' && method !== 'HEAD') {
         return text(405, 'only GET\n');
       }
@@ -687,6 +711,10 @@ export const createUnfurlHandler = ({
             // The server-drawn feed's one bounded cache, or nothing on a host
             // that ships the SPA only. A read's age, not a fake freshness.
             feed: feed ? (feed.stats?.() ?? null) : 'off',
+            // The picture proxy, and what it has measured: entries, bytes
+            // held, hit rate and bytes served. A host that does not run it
+            // says `off` rather than reporting zeroes as if it were idle.
+            images: imageProxy ? imageProxy.stats() : 'off',
             // The RSS feeds' read cache, and which server answered the last
             // one (`node:<origin>` / `relay` / `farcaster-public`): the same
             // vocabulary the parity probe reports.
