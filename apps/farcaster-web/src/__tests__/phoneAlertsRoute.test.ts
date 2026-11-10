@@ -20,6 +20,7 @@ import {
 } from '../../server/alerts/subscribe.mjs';
 import { createVapidStore } from '../../server/alerts/vapid.mjs';
 import { createUnfurlHandler } from '../../server/unfurl/handler.mjs';
+import { carriesApiBody } from '../../server/unfurl/lookBody.mjs';
 
 const bareHandler = (alerts: any) =>
   createUnfurlHandler({
@@ -71,6 +72,19 @@ describe('GET /api/alerts, the capability', () => {
     expect(parsed.on).toBe(true);
     expect(parsed.publicKey).toHaveLength(87);
     expect(parsed.kinds).toEqual(['mentions', 'replies', 'likes', 'follows']);
+  });
+});
+
+describe('the body the routes can actually receive', () => {
+  it('the wiring reads a body for both alert routes (a handler-only test cannot see this)', () => {
+    // MEASURED live on release 700f2803: the handler accepted the route, but
+    // server.mjs never read the request body for it, so every real subscribe
+    // parsed an empty string and answered 400 "Bad request." — a handler test
+    // that hands the body over directly can never catch it. This pins the
+    // wiring, which is where the bug was.
+    expect(carriesApiBody('POST', '/api/alerts')).toBe(true);
+    expect(carriesApiBody('POST', '/api/alerts/off')).toBe(true);
+    expect(carriesApiBody('GET', '/api/alerts')).toBe(false);
   });
 });
 
