@@ -113,6 +113,12 @@ case "$NETWORK" in
   *) echo "FIDDY_BUILD_NETWORK must be snapchain or hypersnap (got: $NETWORK)" >&2; exit 1 ;;
 esac
 MEDIA_URL=${FIDDY_BUILD_MEDIA_URL:-https://fiddy.fun}
+# Whether the client in this release asks its own host for other sites'
+# pictures (the browser half of server/img). ON by default here because this
+# script is the fiddy.fun cut and the VPS runs the server half; a self-hosted
+# build that never runs this script stays off and keeps loading pictures
+# directly, which is the honest state for it.
+IMAGE_PROXY=${FIDDY_BUILD_IMAGE_PROXY:-on}
 # The collaboration service's origin for the Together surface. Empty string is
 # the production shape: the client and the service share fiddy.fun's origin, and
 # the vhost rewrites /spaces onto the hosted service. Never leave it out — see
@@ -205,6 +211,7 @@ say "2/8 vite build (node $NODE_URL, network '${NETWORK:-not recorded}', media $
 ( cd "$STAGE/base/apps/farcaster-web" && rm -rf dist && \
   VITE_SNAPCHAIN_HTTP_URL="$NODE_URL" VITE_FIDDY_NETWORK="$NETWORK" \
   VITE_FIDDY_MEDIA_URL="$MEDIA_URL" \
+  VITE_IMAGE_PROXY="$IMAGE_PROXY" \
   VITE_TOGETHER_API_URL="$TOGETHER_URL" \
   NODE_OPTIONS=--max-old-space-size=8192 npx vite build > "$STAGE/build.log" 2>&1 ) \
   || { tail -30 "$STAGE/build.log"; exit 1; }
@@ -342,7 +349,7 @@ cp -a "$STAGE/server/." "$STAGE/release/server/"
 # must not be (a carried-forward copy is a copy of whatever the PREVIOUS release
 # happened to ship, which for a service is a release that changes nothing).
 # Sources only: no __pycache__, no editor files.
-for SERVICE in unfurl translate public-feed; do
+for SERVICE in unfurl img translate public-feed; do
   SERVICE_SRC="$STAGE/base/apps/farcaster-web/server/$SERVICE"
   [ -d "$SERVICE_SRC" ] || { echo "REFUSING to ship: $SERVICE_SRC is not in the frozen tree" >&2; exit 1; }
   rm -rf "$STAGE/release/server/$SERVICE"
@@ -377,6 +384,15 @@ ssh_ "set -e
   test -f $RELEASES/$SHA/server/unfurl/server.mjs
   test -f $RELEASES/$SHA/server/unfurl/render-card.py
   test -f $RELEASES/$SHA/server/translate/translate.mjs
+  # The picture proxy beside them, and the two halves being halves of ONE
+  # release: the client bundle asks for /api/img only when the vhost carries
+  # the location and the service is turned on. A release that ships one half
+  # without the other does not cut over (the same rule the translate routes
+  # have: no button that 404s).
+  test -f $RELEASES/$SHA/server/img/proxy.mjs
+  test -f $RELEASES/$SHA/server/img/fetch.mjs
+  grep -q 'location = /api/img' /etc/nginx/sites-available/fiddy.fun
+  grep -q '^FIDDY_IMG_PROXY=on' /etc/fiddy-unfurl/unfurl.env
   # The server-drawn public feed's reader, built from this release's own source.
   test -f $RELEASES/$SHA/server/public-feed/generated/reader.mjs
   # The client's own /feed route is proxied to the unfurl service, so the

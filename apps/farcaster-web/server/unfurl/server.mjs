@@ -48,6 +48,16 @@
  *                         OpenRouter's own (a self-hoster's own model).
  *   OPENROUTER_MODELS     comma-separated model ids; `:free` only, and every
  *                         request caps the price at zero.
+ *   FIDDY_IMG_PROXY       "on" makes this host fetch other sites' pictures
+ *                         itself and serve them from its own origin
+ *                         (`GET /api/img?u=…`, `../img/`). Absent means the
+ *                         browser keeps loading them directly, and the route
+ *                         answers one sentence saying so.
+ *   FIDDY_IMG_CACHE_BYTES / _COUNT / _BIG_BYTES / _TTL_MS / _MISS_MS
+ *                         the picture cache's budget: 64 MB, 20000 entries,
+ *                         nothing over 2 MB kept, a day, a miss ten minutes.
+ *   FIDDY_IMG_MAX_BYTES   the biggest picture fetched at all (5 MB).
+ *   FIDDY_IMG_TIMEOUT_MS  the deadline for one fetch, redirects included (8 s).
  */
 
 import { statSync, readFileSync } from 'node:fs';
@@ -61,8 +71,12 @@ import { carriesApiBody, LOOK_SHARE_PATH, readLookBody } from './lookBody.mjs';
 import { createLookStore, LOOK_LIMITS } from './looks.mjs';
 import { createUnfurlHandler } from './handler.mjs';
 import { createLinkReader } from './reader.mjs';
+import { createImageCache, CACHE_DEFAULTS } from '../img/cache.mjs';
+import { createSafeGet } from '../img/fetch.mjs';
+import { createImageProxy } from '../img/proxy.mjs';
 import { createPublicFeedService } from '../public-feed/service.mjs';
 import {
+  createRateLimiter,
   createTranslationStore,
   createTranslator,
   TRANSLATION_BODY_BYTES,
@@ -219,6 +233,43 @@ const feedRemoved = (() => {
   return undefined;
 })();
 
+/**
+ * The picture proxy (`../img/`), or nothing.
+ *
+ * ON means this host fetches other sites' pictures itself, caches them and
+ * serves them from its own origin (`FIDDY_IMG_PROXY=on`). ABSENT is the default
+ * and a real state, not a broken one: a self-hosted copy that has not opted in
+ * keeps loading pictures from where they live, and `GET /api/img` answers one
+ * sentence saying so. The browser's half of this is a build-time flag
+ * (`VITE_IMAGE_PROXY`), set by the release that ships both halves together.
+ *
+ * Every number below is env overridable on purpose: the cache's size is what
+ * the box can afford, and the fetcher's caps are what its operator will defend.
+ */
+const imageProxy =
+  process.env.FIDDY_IMG_PROXY === 'on'
+    ? createImageProxy({
+        safeGet: createSafeGet({
+          timeoutMs: Number(process.env.FIDDY_IMG_TIMEOUT_MS ?? 8_000),
+          maxBytes: Number(process.env.FIDDY_IMG_MAX_BYTES ?? 5_000_000),
+          maxRedirects: Number(process.env.FIDDY_IMG_MAX_REDIRECTS ?? 3),
+          log: (message) => process.stderr.write(`${message}\n`),
+        }),
+        cache: createImageCache({
+          bytes: Number(process.env.FIDDY_IMG_CACHE_BYTES ?? CACHE_DEFAULTS.bytes),
+          count: Number(process.env.FIDDY_IMG_CACHE_COUNT ?? CACHE_DEFAULTS.count),
+          big: Number(process.env.FIDDY_IMG_BIG_BYTES ?? CACHE_DEFAULTS.big),
+          ttl: Number(process.env.FIDDY_IMG_TTL_MS ?? CACHE_DEFAULTS.ttl),
+          miss: Number(process.env.FIDDY_IMG_MISS_MS ?? CACHE_DEFAULTS.miss),
+        }),
+        // Fetches, not hits, count: the proxy asks this only inside a load.
+        // 120 fetches a minute is a lease of one full cold feed per visitor.
+        limiter: createRateLimiter({ max: 120, windowMs: 60 * 1000 }),
+        ownOrigins: [origin],
+        log: (message) => process.stderr.write(`${message}\n`),
+      })
+    : undefined;
+
 const handler = createUnfurlHandler({
   origin,
   shellSource: loadShell,
@@ -228,6 +279,7 @@ const handler = createUnfurlHandler({
   feed,
   looks,
   translator,
+  imageProxy,
   feedRemoved,
 });
 
@@ -305,6 +357,7 @@ server.listen(port, host, () => {
       `site card ${loadSiteCard() ? 'yes' : 'NO'} | node ${process.env.SNAPCHAIN_HTTP_URL ?? 'https://haatz.quilibrium.com'} | ` +
       `cast-hash index ${process.env.NEYNAR_API_KEY ? 'keyed' : 'unconfigured'} | ` +
       `translations ${translator ? (translator.available() ? 'on' : 'no key') : 'off'} | ` +
+      `pictures ${imageProxy ? 'proxied + cached' : 'direct (FIDDY_IMG_PROXY is not on)'} | ` +
       `feeds /~/profiles/<fid>/rss + /~/channel/<id>/rss (removed list ${feedRemoved ? 'on' : 'none'})\n`,
   );
 });
