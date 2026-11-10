@@ -29,6 +29,7 @@ export default [
       globals: {
         document: 'readonly',
         localStorage: 'readonly',
+        self: 'readonly',
         window: 'readonly',
       },
     },
@@ -226,10 +227,12 @@ export default [
         AbortController: 'readonly',
         AbortSignal: 'readonly',
         Buffer: 'readonly',
+        clearInterval: 'readonly',
         clearTimeout: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
         process: 'readonly',
+        setInterval: 'readonly',
         setTimeout: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
@@ -251,6 +254,13 @@ export default [
       // (card t_784af890): the fetcher, the sniff, the cache and the route
       // are held to each other in one file.
       'src/__tests__/imageProxy.test.ts',
+      // …and the same for the phone alerts the same card adds: the claim the
+      // browser signs, the gate that checks it, the loop that sends, and the
+      // routes — four files, all of them holding two halves to each other.
+      'src/__tests__/phoneAlerts.test.ts',
+      'src/__tests__/phoneAlertsService.test.ts',
+      'src/__tests__/phoneAlertsRoute.test.ts',
+      'src/__tests__/phoneAlertsClient.test.ts',
       // …and the same for the shared looks it now stores (card t_d85d8520).
       'src/__tests__/lookService.test.ts',
       // …and the same for the connect service a copy of Fiddy answers for
@@ -270,6 +280,10 @@ export default [
     ],
     rules: {
       'no-restricted-imports': 'off',
+      // These files exist to hold the server's own shapes against the client's,
+      // and a fixture that stands in for "whatever the node answered" is an
+      // honest `any` — narrowing it would copy the shape under test.
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];

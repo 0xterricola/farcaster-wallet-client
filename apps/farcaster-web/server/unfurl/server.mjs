@@ -58,6 +58,19 @@
  *                         nothing over 2 MB kept, a day, a miss ten minutes.
  *   FIDDY_IMG_MAX_BYTES   the biggest picture fetched at all (5 MB).
  *   FIDDY_IMG_TIMEOUT_MS  the deadline for one fetch, redirects included (8 s).
+ *   FIDDY_ALERTS_DIR      the state directory for phone alerts
+ *                         (`server/alerts/`): subscriptions, one file per
+ *                         reader, plus this host's own `vapid.json` push
+ *                         identity. ABSENT is the default and means this host
+ *                         does not run alerts: the capability route answers
+ *                         `not-configured` and the browser draws no toggle.
+ *                         The identity is generated ON THIS HOST (a setup
+ *                         command, never a request), and a host that has the
+ *                         directory without `vapid.json` answers `no-keys`
+ *                         rather than borrowing fiddy.fun's.
+ *   FIDDY_ALERTS_INTERVAL_MS
+ *                         the floor between two consultations of one reader
+ *                         (default 60000; 1 is a test, not a deployment).
  */
 
 import { statSync, readFileSync } from 'node:fs';
@@ -74,6 +87,11 @@ import { createLinkReader } from './reader.mjs';
 import { createImageCache, CACHE_DEFAULTS } from '../img/cache.mjs';
 import { createSafeGet } from '../img/fetch.mjs';
 import { createImageProxy } from '../img/proxy.mjs';
+import { createActivityReader, createNameReader, createNodeGet } from '../alerts/derive.mjs';
+import { createAlertStore } from '../alerts/store.mjs';
+import { createSubscribeGuard } from '../alerts/subscribe.mjs';
+import { createAlertService } from '../alerts/service.mjs';
+import { createVapidStore } from '../alerts/vapid.mjs';
 import { createPublicFeedService } from '../public-feed/service.mjs';
 import {
   createRateLimiter,
@@ -270,6 +288,149 @@ const imageProxy =
       })
     : undefined;
 
+/**
+ * Phone alerts (`../alerts/`), or nothing.
+ *
+ * Three states, each honest, and the browser is told which one it is standing
+ * in before it draws anything:
+ *
+ *   * `FIDDY_ALERTS_DIR` ABSENT — this host does not run alerts at all. The
+ *     capability route answers `not-configured`, and the settings copy explains
+ *     the preference a self-hoster makes by NOT setting it: one more file of
+ *     state, and a key that must be their own.
+ *   * the directory without `vapid.json` — the host opted in but never made a
+ *     push identity. `no-keys` is the answer, and a setup command generates it;
+ *     a host's readers are never pointed at fiddy.fun's identity instead.
+ *   * both — alerts are on, the loop starts, and the number of subscribers is
+ *     in the health line, because a feature nobody can see working is a feature
+ *     nobody can see broken.
+ */
+const alertsDir = process.env.FIDDY_ALERTS_DIR;
+const alerts = alertsDir
+  ? (() => {
+      const nodeGet = createNodeGet({
+        nodeBaseUrl:
+          process.env.SNAPCHAIN_HTTP_URL ?? 'https://haatz.quilibrium.com',
+        // None of the derivation's reads is on a request path, so the queueing
+        // delay of a burst of subscribers is elastic. The named exceptions
+        // (`AbortError`) still surface in `derive.mjs`'s own catches.
+        timeoutMs: timeoutMs,
+      });
+      const store = createAlertStore({ dir: alertsDir });
+      const vapid = createVapidStore({ dir: alertsDir });
+      const guard = createSubscribeGuard({ nodeGet });
+      const activityReader = createActivityReader({
+        nodeGet,
+        nameOf: createNameReader({ nodeGet }),
+      });
+      const service = createAlertService({
+        store,
+        vapid,
+        activityReader,
+        intervalMs: Number(process.env.FIDDY_ALERTS_INTERVAL_MS ?? 60_000),
+        now: () => Date.now(),
+      });
+      service.start();
+      return {
+        service,
+        store,
+        vapid,
+        guard,
+        async capability() {
+          const keys = await vapid.read();
+          return keys
+            ? {
+                on: true,
+                publicKey: keys.publicKey,
+                kinds: ['mentions', 'replies', 'likes', 'follows'],
+              }
+            : { on: false, reason: 'no-keys' };
+        },
+        /**
+         * The subscribe request a browser signs. The claim binds the reader to
+         * THE PHONE'S OWN PUSH ADDRESS (`subscribe.mjs`), so a witnessed request
+         * cannot re-point anybody's notifications.
+         */
+        async subscribe(body) {
+          const subscription = body?.subscription ?? body;
+          const checked = await guard.check({
+            fid: body?.fid,
+            signer: body?.signer,
+            signature: body?.signature,
+            endpoint: subscription?.endpoint,
+            issuedAt: body?.issuedAt,
+          });
+          if (!checked.ok) {
+            return {
+              status: 403,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+              body: JSON.stringify({
+                error: 'That did not prove this key belongs to you.',
+                reason: checked.reason,
+              }),
+            };
+          }
+          try {
+            const stored = await store.write(Number(body.fid), {
+              endpoint: subscription.endpoint,
+              keys: subscription.keys,
+              kinds: body.kinds,
+              language: body.language,
+              // Muted FIDs only — number for number. Words never leave the
+              // browser, and the settings copy says so in plain text.
+              mutedFids: body.mutedFids,
+            });
+            return {
+              status: 200,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+              body: JSON.stringify({
+                ok: true,
+                createdAt: stored.createdAt,
+                kinds: stored.kinds,
+              }),
+            };
+          } catch {
+            return {
+              status: 400,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+              body: JSON.stringify({ error: 'This host could not store that.' }),
+            };
+          }
+        },
+        /**
+         * Turning alerts OFF is the same proof with the claim bound to the word
+         * `off` — the reader is removing a subscription, not pointing one, so
+         * there is no phone address to bind to and nothing weaker is accepted.
+         */
+        async off(body) {
+          const checked = await guard.check({
+            fid: body?.fid,
+            signer: body?.signer,
+            signature: body?.signature,
+            endpoint: 'off',
+            issuedAt: body?.issuedAt,
+          });
+          if (!checked.ok) {
+            return {
+              status: 403,
+              headers: { 'content-type': 'application/json; charset=utf-8' },
+              body: JSON.stringify({
+                error: 'That did not prove this key belongs to you.',
+                reason: checked.reason,
+              }),
+            };
+          }
+          await store.remove(Number(body.fid));
+          return {
+            status: 200,
+            headers: { 'content-type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({ ok: true }),
+          };
+        },
+      };
+    })()
+  : undefined;
+
 const handler = createUnfurlHandler({
   origin,
   shellSource: loadShell,
@@ -280,6 +441,7 @@ const handler = createUnfurlHandler({
   looks,
   translator,
   imageProxy,
+  alerts,
   feedRemoved,
 });
 
@@ -358,6 +520,7 @@ server.listen(port, host, () => {
       `cast-hash index ${process.env.NEYNAR_API_KEY ? 'keyed' : 'unconfigured'} | ` +
       `translations ${translator ? (translator.available() ? 'on' : 'no key') : 'off'} | ` +
       `pictures ${imageProxy ? 'proxied + cached' : 'direct (FIDDY_IMG_PROXY is not on)'} | ` +
+      `alerts ${alerts ? 'loop running (FIDDY_ALERTS_DIR)' : 'off'} | ` +
       `feeds /~/profiles/<fid>/rss + /~/channel/<id>/rss (removed list ${feedRemoved ? 'on' : 'none'})\n`,
   );
 });

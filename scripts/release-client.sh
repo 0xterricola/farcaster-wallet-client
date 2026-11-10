@@ -349,7 +349,7 @@ cp -a "$STAGE/server/." "$STAGE/release/server/"
 # must not be (a carried-forward copy is a copy of whatever the PREVIOUS release
 # happened to ship, which for a service is a release that changes nothing).
 # Sources only: no __pycache__, no editor files.
-for SERVICE in unfurl img translate public-feed; do
+for SERVICE in unfurl img alerts translate public-feed; do
   SERVICE_SRC="$STAGE/base/apps/farcaster-web/server/$SERVICE"
   [ -d "$SERVICE_SRC" ] || { echo "REFUSING to ship: $SERVICE_SRC is not in the frozen tree" >&2; exit 1; }
   rm -rf "$STAGE/release/server/$SERVICE"
@@ -393,6 +393,16 @@ ssh_ "set -e
   test -f $RELEASES/$SHA/server/img/fetch.mjs
   grep -q 'location = /api/img' /etc/nginx/sites-available/fiddy.fun
   grep -q '^FIDDY_IMG_PROXY=on' /etc/fiddy-unfurl/unfurl.env
+  # Phone alerts, the same one-release rule: the settings toggle the client
+  # draws only works against /api/alerts, and the unfurl service only runs the
+  # loop when the host gave it a state directory. nginx needs both locations
+  # because /api/alerts and /api/alerts/off are exact-match segments.
+  test -f $RELEASES/$SHA/server/alerts/service.mjs
+  test -f $RELEASES/$SHA/server/alerts/webpush.mjs
+  test -f $RELEASES/$SHA/server/alerts/derive.mjs
+  grep -q 'location = /api/alerts$' /etc/nginx/sites-available/fiddy.fun
+  grep -q 'location = /api/alerts/off' /etc/nginx/sites-available/fiddy.fun
+  grep -q '^FIDDY_ALERTS_DIR' /etc/fiddy-unfurl/unfurl.env
   # The server-drawn public feed's reader, built from this release's own source.
   test -f $RELEASES/$SHA/server/public-feed/generated/reader.mjs
   # The client's own /feed route is proxied to the unfurl service, so the

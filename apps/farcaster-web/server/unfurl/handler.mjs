@@ -134,6 +134,12 @@ export const createUnfurlHandler = ({
    */
   feedLimits = { max: 60, windowMs: 10 * 60 * 1000 },
   /**
+   * How many subscribe/off requests one caller may make: an ask runs a node
+   * read and a signature check; a reader who needs more than this in ten
+   * minutes is a script, and scripts get a sentence, not a subscription.
+   */
+  alertsLimits = { subscribe: { max: 20, windowMs: 10 * 60 * 1000 } },
+  /**
    * `../img/proxy.mjs`, or nothing.
    *
    * Nothing is a host that does not run the proxy: `GET /api/img` then answers
@@ -142,6 +148,16 @@ export const createUnfurlHandler = ({
    * guess made per render).
    */
   imageProxy,
+  /**
+   * Phone alerts (`../alerts/`), or nothing.
+   *
+   * Nothing is a host that has no alerts directory and no push identity: the
+   * capability route says so, and the browser draws no toggle at all rather than
+   * a switch that cannot work. A host that has the directory but never
+   * generated keys answers `no-keys`, which the settings copy turns into the
+   * one sentence a self-hoster needs.
+   */
+  alerts,
   /**
    * Casts and accounts taken down on this host, filtered out of every feed
    * (quilcast's `removed.json` shape: `{casts: [...hashes], fids: [...fids]}`).
@@ -350,6 +366,7 @@ export const createUnfurlHandler = ({
     now,
   });
   const spentOnFeeds = createRateLimiter({ ...feedLimits, now });
+  const spentOnSubscribing = createRateLimiter({ ...alertsLimits.subscribe, now });
 
   /** The last server that answered a feed read, for the health route. */
   let lastFeedSource = null;
@@ -600,6 +617,55 @@ export const createUnfurlHandler = ({
         }
         const asked = new URLSearchParams(path.split('?')[1] ?? '').get('u');
         return imageProxy.answer({ u: asked ?? '', ip });
+      }
+
+      // Phone alerts (`../alerts/`). The browser asks what this host can do
+      // before it draws the toggle, and proves who it subscribes for with an
+      // app-key signature the host checks against the node.
+      if (segments[0] === 'api' && segments.length === 2 && segments[1] === 'alerts') {
+        if (method === 'GET' || method === 'HEAD') {
+          if (!alerts) {
+            return json(200, {
+              on: false,
+              reason: 'not-configured',
+            });
+          }
+          return json(200, await alerts.capability());
+        }
+        if (method === 'POST') {
+          if (!alerts) {
+            return json(200, { on: false, reason: 'not-configured' });
+          }
+          if (spentOnSubscribing(ip)) {
+            return json(429, { error: 'Slow down a little.' });
+          }
+          let parsed;
+          try {
+            parsed = JSON.parse(String(body ?? ''));
+          } catch {
+            return json(400, { error: 'Bad request.' });
+          }
+          return alerts.subscribe(parsed);
+        }
+        return text(405, 'GET or POST\n');
+      }
+      if (segments[0] === 'api' && segments.length === 3 && segments[2] === 'off') {
+        if (method !== 'POST') {
+          return text(405, 'POST\n');
+        }
+        if (!alerts) {
+          return json(200, { on: false, reason: 'not-configured' });
+        }
+        if (spentOnSubscribing(ip)) {
+          return json(429, { error: 'Slow down a little.' });
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(String(body ?? ''));
+        } catch {
+          return json(400, { error: 'Bad request.' });
+        }
+        return alerts.off(parsed);
       }
 
       if (method !== 'GET' && method !== 'HEAD') {
