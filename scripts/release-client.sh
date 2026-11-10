@@ -419,9 +419,9 @@ ssh_ "set -e
   # whose feeds were routed below the pages would pass every other gate while
   # no reader could read a single feed.
   grep -qF 'location ~ ^/~/(profiles|channel)/[^/]+/rss$' /etc/nginx/sites-available/fiddy.fun
-  FEED_LINE=$(grep -nF 'location ~ ^/~/(profiles|channel)/[^/]+/rss$' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
-  PAGE_LINE=$(grep -nF 'location ~ ^/~/(conversations|profiles)/' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
-  [ -n "$FEED_LINE" ] && [ -n "$PAGE_LINE" ] && [ "$FEED_LINE" -lt "$PAGE_LINE" ] \
+  FEED_LINE=\$(grep -nF 'location ~ ^/~/(profiles|channel)/[^/]+/rss$' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
+  PAGE_LINE=\$(grep -nF 'location ~ ^/~/(conversations|profiles)/' /etc/nginx/sites-available/fiddy.fun | head -1 | cut -d: -f1)
+  [ -n "\$FEED_LINE" ] && [ -n "\$PAGE_LINE" ] && [ "\$FEED_LINE" -lt "\$PAGE_LINE" ] \
     || { echo 'the /rss location is not above the page locations in /etc/nginx/sites-available/fiddy.fun (nginx picks the first regex that matches)'; exit 1; }
   echo '  disk gate ok: bundle (adapter, media, node, together), preview, server, unfurl + translate services (renderer, locations), vhost locations (feeds above pages), listing manifest'"
 
