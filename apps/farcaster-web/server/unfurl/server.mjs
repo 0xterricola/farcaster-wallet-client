@@ -80,7 +80,12 @@ import { fileURLToPath } from 'node:url';
 
 import { callerAddress } from './callerAddress.mjs';
 import { createCardRenderer } from './cards.mjs';
-import { carriesApiBody, LOOK_SHARE_PATH, readLookBody } from './lookBody.mjs';
+import {
+  ALERTS_BODY_BYTES,
+  carriesApiBody,
+  LOOK_SHARE_PATH,
+  readLookBody,
+} from './lookBody.mjs';
 import { createLookStore, LOOK_LIMITS } from './looks.mjs';
 import { createUnfurlHandler } from './handler.mjs';
 import { createLinkReader } from './reader.mjs';
@@ -470,13 +475,16 @@ const server = createServer(async (request, response) => {
     const method = request.method ?? 'GET';
     // Only the POSTs that carry a JSON body have one worth reading; everything
     // else is answered without one, exactly as before. The cap is the model's
-    // own: a look share is 8 KB by `LOOK_LIMITS.bytes`, a translation ask 4 KB.
+    // own: a look share is 8 KB by `LOOK_LIMITS.bytes`, a translation ask 4 KB,
+    // a phone-alerts claim 32 KB (the hidden-people list rides with it).
     const body = carriesApiBody(method, path)
       ? await readLookBody(
           request,
           path.split('?')[0] === LOOK_SHARE_PATH
             ? LOOK_LIMITS.bytes
-            : TRANSLATION_BODY_BYTES,
+            : path.split('?')[0] === '/api/alerts' || path.split('?')[0] === '/api/alerts/off'
+              ? ALERTS_BODY_BYTES
+              : TRANSLATION_BODY_BYTES,
         )
       : undefined;
     answer = await handler.handle({

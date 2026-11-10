@@ -37,12 +37,27 @@ export const LOOK_SHARE_PATH = '/look';
 /**
  * The paths whose POST carries a JSON body this service reads.
  *
- * A look share (`POST /look`), and the translation routes
- * (`server/translate/`): an ask names a cast and a language, a lookup names up
- * to fifty hashes. Each is read through the same capped reader below, with the
- * cap its own model sets — never an unbounded read of whatever a caller sent.
+ * A look share (`POST /look`), the translation routes (`server/translate/`):
+ * an ask names a cast and a language, a lookup names up to fifty hashes, and
+ * the phone-alert routes (`server/alerts/`): a subscribe carries the phone's
+ * own push address plus the hidden-people list. Each is read through the same
+ * capped reader below, with the cap its own model sets — never an unbounded
+ * read of whatever a caller sent.
  */
-export const JSON_BODY_PATHS = [LOOK_SHARE_PATH, '/api/translate', '/api/translations'];
+export const JSON_BODY_PATHS = [
+  LOOK_SHARE_PATH,
+  '/api/translate',
+  '/api/translations',
+  '/api/alerts',
+  '/api/alerts/off',
+];
+
+/**
+ * The cap for a phone-alerts body: the claim is small, but the hidden-people
+ * list rides with it. Mirrors the nginx `client_max_body_size 32k` on the two
+ * locations, so the service's own cap is never the looser of the two.
+ */
+export const ALERTS_BODY_BYTES = 32 * 1024;
 
 /** Is this request one of the POSTs that carries a body worth reading? */
 export const carriesApiBody = (method, path) =>

@@ -781,6 +781,12 @@ export const createUnfurlHandler = ({
             // held, hit rate and bytes served. A host that does not run it
             // says `off` rather than reporting zeroes as if it were idle.
             images: imageProxy ? imageProxy.stats() : 'off',
+            // Phone alerts: how many readers asked this host to tell their
+            // phone. `off` on a host that does not run the feature — a feature
+            // nobody can see working is a feature nobody can see broken.
+            alerts: alerts
+              ? { subscribers: (await alerts.store.list()).length }
+              : 'off',
             // The RSS feeds' read cache, and which server answered the last
             // one (`node:<origin>` / `relay` / `farcaster-public`): the same
             // vocabulary the parity probe reports.

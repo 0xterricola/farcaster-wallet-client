@@ -20,6 +20,7 @@ import {
 } from '../../server/alerts/subscribe.mjs';
 import { createVapidStore } from '../../server/alerts/vapid.mjs';
 import { createUnfurlHandler } from '../../server/unfurl/handler.mjs';
+import { carriesApiBody } from '../../server/unfurl/lookBody.mjs';
 
 const bareHandler = (alerts: any) =>
   createUnfurlHandler({
@@ -71,6 +72,35 @@ describe('GET /api/alerts, the capability', () => {
     expect(parsed.on).toBe(true);
     expect(parsed.publicKey).toHaveLength(87);
     expect(parsed.kinds).toEqual(['mentions', 'replies', 'likes', 'follows']);
+  });
+});
+
+describe('the body the routes can actually receive', () => {
+  it('the wiring reads a body for both alert routes (a handler-only test cannot see this)', () => {
+    // MEASURED live on release 700f2803: the handler accepted the route, but
+    // server.mjs never read the request body for it, so every real subscribe
+    // parsed an empty string and answered 400 "Bad request." — a handler test
+    // that hands the body over directly can never catch it. This pins the
+    // wiring, which is where the bug was.
+    expect(carriesApiBody('POST', '/api/alerts')).toBe(true);
+    expect(carriesApiBody('POST', '/api/alerts/off')).toBe(true);
+    expect(carriesApiBody('GET', '/api/alerts')).toBe(false);
+  });
+});
+
+describe('the health line', () => {
+  it('counts subscribers when alerts run, and says off when they do not', async () => {
+    const off = await bareHandler(undefined).handle({
+      method: 'GET',
+      path: '/unfurl/health',
+      ip: '203.0.113.9',
+    });
+    expect(JSON.parse(String(off.body)).alerts).toBe('off');
+    const on = await bareHandler({
+      capability: async () => ({ on: true }),
+      store: { list: async () => [{ fid: 1 }, { fid: 2 }] },
+    }).handle({ method: 'GET', path: '/unfurl/health', ip: '203.0.113.9' });
+    expect(JSON.parse(String(on.body)).alerts).toEqual({ subscribers: 2 });
   });
 });
 
