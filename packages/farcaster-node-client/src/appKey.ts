@@ -78,6 +78,27 @@ export const appKeyFromPrivateKeyHex = (
   privateKeyHex: string,
 ): Promise<AppKey> => appKeyFromPrivateKey(hexToBytes(privateKeyHex));
 
+/**
+ * A raw Ed25519 signature over ARBITRARY bytes with an app key, as hex.
+ *
+ * The one thing a Farcaster app key signs besides protocol messages: the claim
+ * a browser hands a service that must prove the key belongs to a FID without
+ * ever holding the key (phone alerts, `server/alerts/subscribe.mjs`). The
+ * signature is `r || s` Ed25519 — 64 bytes, hex — and the claim bytes are the
+ * caller's; nothing here decides what is signed, which is why this stays a
+ * primitive and not a request builder.
+ */
+export const signBytesWithAppKey = async (
+  privateKeyHex: string,
+  bytes: Uint8Array,
+): Promise<string> => {
+  // `signMessageHash` signs the bytes it is handed (Ed25519 signs raw), and
+  // the claim is hashed nowhere else — a byte change is a different claim.
+  const signer = new NobleEd25519Signer(hexToBytes(privateKeyHex));
+  const signature = unwrap(await signer.signMessageHash(bytes));
+  return bytesToHex(signature);
+};
+
 /** A fresh app key from the platform CSPRNG. One click, no network, no chain. */
 export const generateAppKey = async (
   randomBytes?: (length: number) => Uint8Array,

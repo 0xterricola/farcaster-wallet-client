@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { lazy, memo, Suspense } from 'react';
 
 import { BorderedMainContent } from '~/components/BorderedMainContent';
 import { Divider } from '~/components/Divider';
@@ -18,6 +18,17 @@ import { GranularInAppNotificationsSection } from './GranularInAppNotificationsS
 import { NotificationsModeSetting } from './NotificationsModeSetting';
 import { TradeIdeasSetting } from './TradeIdeasSetting';
 
+/**
+ * The phone-alerts section loads only here, only when Notifications is
+ * opened: it carries the browser's alert machinery, which the entry chunk must
+ * not pay for (the release measures the entry chunk before and after).
+ */
+const PhoneAlertsSetting = lazy(() =>
+  import('./PhoneAlertsSetting').then((res) => ({
+    default: res.PhoneAlertsSetting,
+  })),
+);
+
 const SettingsNotificationsPage = memo(() => {
   const {
     result: {
@@ -35,6 +46,10 @@ const SettingsNotificationsPage = memo(() => {
         <BorderedMainContent className="flex flex-row">
           <SettingsNav />
           <SettingsPageContent>
+            <Suspense fallback={null}>
+              <PhoneAlertsSetting />
+            </Suspense>
+            <Divider />
             <NotificationsModeSetting />
             <Divider />
             <GranularInAppNotificationsSection />
