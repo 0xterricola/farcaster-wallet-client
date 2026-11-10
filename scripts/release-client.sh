@@ -400,8 +400,8 @@ ssh_ "set -e
   test -f $RELEASES/$SHA/server/alerts/service.mjs
   test -f $RELEASES/$SHA/server/alerts/webpush.mjs
   test -f $RELEASES/$SHA/server/alerts/derive.mjs
-  grep -q 'location = /api/alerts$' /etc/nginx/sites-available/fiddy.fun
-  grep -q 'location = /api/alerts/off' /etc/nginx/sites-available/fiddy.fun
+  grep -q 'location = /api/alerts {' /etc/nginx/sites-available/fiddy.fun
+  grep -q 'location = /api/alerts/off {' /etc/nginx/sites-available/fiddy.fun
   grep -q '^FIDDY_ALERTS_DIR' /etc/fiddy-unfurl/unfurl.env
   # The server-drawn public feed's reader, built from this release's own source.
   test -f $RELEASES/$SHA/server/public-feed/generated/reader.mjs
