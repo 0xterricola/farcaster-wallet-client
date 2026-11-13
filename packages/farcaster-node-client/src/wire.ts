@@ -40,6 +40,7 @@ import {
   userDataTypeToJSON,
 } from '@farcaster/core';
 
+import { decodeCastChain } from './castFormat';
 import type {
   NodeCastAddBody,
   NodeCastId,
@@ -267,7 +268,11 @@ const decodeEmbeds = (value: unknown): NodeEmbed[] =>
     return castId ? [{ castId }] : [];
   });
 
-export const decodeCastAddBody = (value: unknown): NodeCastAddBody => {
+export const decodeCastAddBody = (
+  value: unknown,
+  /** The cast's author, needed to check a chain's root rule. */
+  authorFid = 0,
+): NodeCastAddBody => {
   const json = asJson(value);
   return {
     text: asString(json.text),
@@ -282,6 +287,10 @@ export const decodeCastAddBody = (value: unknown): NodeCastAddBody => {
     ),
     parentCastId: decodeCastId(json.parentCastId),
     parentUrl: asOptionalString(json.parentUrl) ?? undefined,
+    // Absent on every cast from before the FIP, and on a node that predates it:
+    // absence means "plain text", the only reading an older node can offer.
+    formatVersion: asOptionalNumber(json.formatVersion) ?? 0,
+    chain: decodeCastChain(json.chain, authorFid),
   };
 };
 
@@ -359,7 +368,11 @@ export const decodeNodeMessage = (value: unknown): NodeMessage => {
     timestampMs: farcasterSecondsToUnixMs(timestamp),
     network: asString(data.network),
     type: asString(data.type),
-    castAdd: data.castAddBody ? decodeCastAddBody(data.castAddBody) : undefined,
+    castAdd: data.castAddBody
+      ? // The author is part of the decode: a chain's root must be the author's
+        // own cast, so the root rule cannot be checked without the FID.
+        decodeCastAddBody(data.castAddBody, asNumber(data.fid))
+      : undefined,
     castRemove: data.castRemoveBody
       ? decodeCastRemoveBody(data.castRemoveBody)
       : undefined,

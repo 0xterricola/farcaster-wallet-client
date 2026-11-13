@@ -164,6 +164,28 @@ export interface NodeCastId {
 
 export type NodeEmbed = { url: string } | { castId: NodeCastId };
 
+/**
+ * A cast's place in a chain (FIP "Cast Format and Chained Casts", `CastAddBody
+ * .chain = 10`, snapchain v0.16.0). Index 0 is the article's first cast and
+ * carries no root; every later cast names that first cast as its root. Clients
+ * that don't know articles see a thread: each later cast replies to the one
+ * before it.
+ *
+ * Decoded only when it passes the FIP's reader rules (`castFormat.ts`), because
+ * nodes enforce those rules only once the feature is active.
+ */
+export interface NodeCastChain {
+  /** The chain's first cast. Absent at index 0. */
+  root?: NodeCastId;
+  /** Position in the chain, 0-based. */
+  index: number;
+  /**
+   * How many casts the chain says it has. `0` means the author's client left it
+   * unset, which reads as "still growing": complete as far as it goes.
+   */
+  count: number;
+}
+
 export interface NodeCastAddBody {
   text: string;
   castType: NodeCastTypeName;
@@ -173,6 +195,14 @@ export interface NodeCastAddBody {
   mentionsPositions: number[];
   parentCastId?: NodeCastId;
   parentUrl?: string;
+  /**
+   * How to read `text` (FIP `CastAddBody.format_version = 9`): `0` (the default,
+   * and what a node from before the feature omits) is plain text, `1` is article
+   * Markdown.
+   */
+  formatVersion: number;
+  /** Set only for a cast that is part of an article; dropped when it breaks a rule. */
+  chain?: NodeCastChain;
 }
 
 export interface NodeCastRemoveBody {

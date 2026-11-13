@@ -7,11 +7,19 @@
 
 import {
   fetchFollowingFeed,
+  isLaterArticlePart,
   SnapchainNodeClient,
   type NodeHealth,
   type NodeMessage,
 } from 'farcaster-node-client';
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   hostOf,
@@ -188,7 +196,16 @@ export const useHomeFeed = (
           },
         });
         if (!cancelled) {
-          setState({ status: 'ready', casts, following: [], error: null });
+          setState({
+            status: 'ready',
+            // A later cast of an article is not its own feed row: the root is
+            // the one row, and it opens the whole piece. Left in, a 5-part
+            // article would take five rows and the reader would be told four
+            // times that a fragment "replies to fid 3".
+            casts: casts.filter((cast) => !isLaterArticlePart(cast)),
+            following: [],
+            error: null,
+          });
         }
       } catch (error) {
         if (!cancelled) {

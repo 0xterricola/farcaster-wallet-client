@@ -1,13 +1,23 @@
-import type { NodeMessage } from 'farcaster-node-client';
+import {
+  articleOpening,
+  articlePartCount,
+  articleTitle,
+  isArticleRoot,
+  unmarkdown,
+  type NodeCastMessage,
+  type NodeMessage,
+} from 'farcaster-node-client';
 import type { ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Profile } from '~/node/profiles';
 import { colors, fonts, spacing } from '~/theme';
+import { articleLabel } from '~/utils/article';
 import { timeAgo } from '~/utils/format';
 
 /** url | @mention | #channel — one pass, so a URL's #fragment is not recoloured. */
-const TOKEN = /(https?:\/\/[^\s]+)|(@[a-zA-Z0-9._-]{1,64})|(#[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})/g;
+const TOKEN =
+  /(https?:\/\/[^\s]+)|(@[a-zA-Z0-9._-]{1,64})|(#[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})/g;
 
 /** Cast text with tappable links; mentions and channels highlighted in place. */
 export const CastText = ({ text }: { text: string }) => {
@@ -18,7 +28,9 @@ export const CastText = ({ text }: { text: string }) => {
 
   while ((match = TOKEN.exec(text)) !== null) {
     if (match.index > cursor) {
-      nodes.push(<Text key={`t${cursor}`}>{text.slice(cursor, match.index)}</Text>);
+      nodes.push(
+        <Text key={`t${cursor}`}>{text.slice(cursor, match.index)}</Text>,
+      );
     }
     const token = match[0];
     if (match[1]) {
@@ -50,9 +62,12 @@ export const CastText = ({ text }: { text: string }) => {
 export const CastCard = ({
   cast,
   profile,
+  onOpenArticle,
 }: {
   cast: NodeMessage;
   profile?: Profile;
+  /** Open an article's first cast as the article it is. */
+  onOpenArticle?: (cast: NodeCastMessage) => void;
 }) => {
   const body = cast.castAdd;
   if (!body) {
@@ -66,20 +81,52 @@ export const CastCard = ({
     : body.parentUrl
       ? `in ${body.parentUrl.replace(/^https?:\/\/[^/]+\//, '')}`
       : null;
+  // A cast that says it is article Markdown is an article, not a cast whose
+  // text happens to start with "##". Show its title and an excerpt, and one
+  // honest affordance — never the literal Markdown, which reads as noise.
+  const article = isArticleRoot(cast);
+  const parts = article ? articlePartCount(cast) : 0;
+  const excerpt = article ? unmarkdown(articleOpening(cast)) : '';
 
   return (
     <View style={styles.card}>
       <View style={styles.head}>
         <Text style={styles.name}>{name ?? handle ?? `fid ${cast.fid}`}</Text>
         {name && handle ? <Text style={styles.handle}>{handle}</Text> : null}
-        {!name && !handle ? <Text style={styles.handle}>fid {cast.fid}</Text> : null}
+        {!name && !handle ? (
+          <Text style={styles.handle}>fid {cast.fid}</Text>
+        ) : null}
         <Text style={styles.time}>{timeAgo(cast.timestampMs)}</Text>
       </View>
-      {repliesTo ? <Text style={styles.context}>{repliesTo}</Text> : null}
-      <CastText text={body.text} />
-      {embedCount > 0 ? (
+      {repliesTo && !article ? (
+        <Text style={styles.context}>{repliesTo}</Text>
+      ) : null}
+      {article ? (
+        <>
+          <Text style={styles.articleTitle}>{articleTitle(cast)}</Text>
+          {excerpt ? (
+            <Text style={styles.articleExcerpt} numberOfLines={3}>
+              {excerpt}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => onOpenArticle?.(cast)}
+            disabled={!onOpenArticle}
+            accessibilityRole="button"
+            accessibilityLabel={`${articleLabel(parts)}. Read the whole article.`}
+            style={styles.articleButton}
+          >
+            <Text style={styles.articleButtonText}>{articleLabel(parts)}</Text>
+            <Text style={styles.articleButtonArrow}>→</Text>
+          </Pressable>
+        </>
+      ) : (
+        <CastText text={body.text} />
+      )}
+      {embedCount > 0 && !article ? (
         <Text style={styles.embedNote}>
-          {embedCount === 1 ? '1 embed' : `${embedCount} embeds`} — not rendered in v1
+          {embedCount === 1 ? '1 embed' : `${embedCount} embeds`} — not rendered
+          in v1
         </Text>
       ) : null}
       <View style={styles.foot}>
@@ -141,6 +188,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: spacing.sm,
     fontStyle: 'italic',
+  },
+  articleTitle: {
+    color: colors.ink,
+    fontSize: 19,
+    lineHeight: 25,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+  articleExcerpt: {
+    color: colors.inkDim,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.xs,
+  },
+  articleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.sm,
+    minHeight: 44,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairlineAccent,
+    backgroundColor: colors.accentSoft,
+  },
+  articleButtonText: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  articleButtonArrow: {
+    color: colors.accent,
+    fontSize: 15,
+    fontWeight: '700',
   },
   foot: {
     flexDirection: 'row',

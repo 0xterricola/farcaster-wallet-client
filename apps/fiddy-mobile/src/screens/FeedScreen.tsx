@@ -10,11 +10,13 @@ import {
   View,
 } from 'react-native';
 
+import type { NodeCastMessage } from 'farcaster-node-client';
 import { CastCard } from '~/components/CastCard';
 import { FidSheet } from '~/components/FidSheet';
 import { GlassCard } from '~/components/GlassCard';
 import { useHomeFeed, useNodeSession } from '~/node/nodeSession';
 import { useProfiles } from '~/node/profiles';
+import { ArticleScreen } from '~/screens/ArticleScreen';
 import { colors, fonts, spacing } from '~/theme';
 
 const AUTHORS_CAP = 24;
@@ -24,6 +26,9 @@ export const FeedScreen = () => {
   const session = useNodeSession();
   const feed = useHomeFeed(session);
   const [fidSheetOpen, setFidSheetOpen] = useState(false);
+  // The article a row opened: read in this screen so the feed keeps its scroll
+  // position and the article gets one scroll container of its own.
+  const [article, setArticle] = useState<NodeCastMessage | null>(null);
 
   const authorFids = useMemo(() => {
     const unique = new Set<number>();
@@ -38,13 +43,29 @@ export const FeedScreen = () => {
 
   const profiles = useProfiles(session.client, authorFids);
 
+  if (article) {
+    return (
+      <View style={styles.screen}>
+        <ArticleScreen
+          root={article}
+          profile={profiles.get(article.fid)}
+          onClose={() => setArticle(null)}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <FlatList
         data={feed.casts}
         keyExtractor={(item) => `${item.fid}:${item.hash}`}
         renderItem={({ item }) => (
-          <CastCard cast={item} profile={profiles.get(item.fid)} />
+          <CastCard
+            cast={item}
+            profile={profiles.get(item.fid)}
+            onOpenArticle={setArticle}
+          />
         )}
         contentContainerStyle={styles.list}
         refreshControl={

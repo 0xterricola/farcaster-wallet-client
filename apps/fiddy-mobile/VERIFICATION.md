@@ -97,7 +97,77 @@ in-app splash is `assets/splash.png` on `#161715`; no Warpcast/Farcaster marks
 anywhere in the app, and the word "Farcaster" appears only where the protocol is
 named (Farcaster time, Farcaster timestamp).
 
-## 5. NOT verified in this session
+## 5. Farcaster Articles read as one article (`t_6e650073`)
+
+Four optional `CastAddBody` fields (per FIP “Cast Format and Chained Casts”,
+snapchain v0.16.0) turn a chain of casts into one piece: `format_version` says
+the text is article Markdown, `chain` says which part this is. The client decodes
+them, enforces the reader rules, assembles the chain in one read, and renders it.
+An older node simply omits them, and the cast stays a plain cast.
+
+**The reader rules are tests, not claims**
+(`packages/farcaster-node-client/src/__tests__/article.test.ts`, 29 tests):
+index 0 carrying a root, index > 0 without one, `index >= count`, `count > 100`,
+a root that is not the author's own cast, a duplicate index resolved by later
+timestamp then greater hash, a partial chain reported incomplete, and a decode of
+a real node's message with neither field producing a plain cast rather than an
+error. The fixture is a **real chain read from a live node**, not a hand-built
+string: fid 1's “Introducing Farcaster Articles!”, captured from
+`haatz.quilibrium.com` (mainnet, snapchain v0.17.7), stored in
+`src/__tests__/fixtures/articleChain.json` with the two requests that produced it
+in its header.
+
+```
+$ pnpm --filter farcaster-node-client test
+Test Files  8 passed | 3 skipped (11)
+     Tests  133 passed | 9 skipped (142)
+$ pnpm --filter farcaster-node-client typecheck   # clean
+$ pnpm --filter fiddy-mobile typecheck            # clean
+```
+
+**The screens.** Five 390 pt screenshots in `evidence/` (see its README for the
+OCR transcripts): the feed row with `Article · 2 parts →`, the article top, the
+article body with the `[$1]` embed in place, the incomplete-chain copy, and the
+failed-chain copy. The last two come from
+`tools/articleStubNode.mjs --incomplete` / `--fail-chain`, which forwards to the
+same live node and only shapes the chain read.
+
+**The rendered subset**, read back from those screens: `##` does not print, so
+`The Basics` is a heading; `**bold**` does not print its asterisks (`Bold,
+italic and strikethrough` are styled); a table stays literal pipe text; a bare
+URL prints as a link. Two cases the live article does not contain — **a code
+fence stays literal** and **an escaped `\*` prints as `*`** — are read back from
+the renderer's tests (`articleMarkdown.test.ts`, “leaves a fenced block literal”,
+“prints an escaped asterisk as an asterisk”), not from a photograph.
+
+**Bundle.** Measured the same way as the previous card, on the same Node, by
+exporting the iOS bundle on the base commit and on this branch:
+
+```
+base d424656b   10,366,498 bytes
+branch          10,436,387 bytes
+delta              +69,889 B  (+0.674%)
+```
+
+**Gates that do not pass, and why they are not this card's**
+
+- `pnpm lint` at the repo root stops on `farcaster-analytics`, and the
+  `farcaster-node-client` package reports 14 `prettier/prettier` errors in
+  `clientFilter.test.ts`, `feedPagination.test.ts`, `http.test.ts`, `feed.ts` and
+  the tail of `http.ts`. **The pristine base commit d424656b reports the same 14
+  errors in the same five files**, measured by running `eslint` in a second
+  worktree checked out at d424656b. Every file this card touches is clean under
+  `eslint` when linted by name.
+- A repo-wide `pnpm typecheck` / `pnpm test` cannot complete in this environment
+  for reasons that predate the branch: several packages have no built `dist`
+  (`farcaster-cryptography`, `-web`, `farcaster-analytics`), `pnpm build:packages`
+  fails in `farcaster-cryptography-react-native`'s `pnpm:sync` postbuild, and
+  `farcaster-client-hooks` has one failing test that asserts on a
+  `snap-builder-api.REPLACE_ME.workers.dev` placeholder URL. None of those
+  packages is in this diff, and `farcaster-client-hooks` does not depend on
+  `farcaster-node-client`, so there is no path from this change to it.
+
+## 6. NOT verified in this session
 
 - **Physical-device install.** `xcodebuild -destination id=00008150-…` refused
   with `iPhone needs to be unlocked to enable development services`. The build,
@@ -109,7 +179,7 @@ named (Farcaster time, Farcaster timestamp).
   reverting. Every interactive control compiled and rendered; none was tapped.
 - **Android, desktop, posting, hatching.** v2 by the card's own scope.
 
-## 6. Reproducing
+## 7. Reproducing
 
 ```
 pnpm install

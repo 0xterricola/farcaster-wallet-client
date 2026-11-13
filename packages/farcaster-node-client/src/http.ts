@@ -74,6 +74,12 @@ export interface PageOptions {
 
 export interface FidPageOptions extends PageOptions {
   fid: number;
+  /**
+   * Only casts at or after this Farcaster timestamp (seconds since 2021-01-01).
+   * Used by an article-chain read, which starts at the first cast and pages
+   * forward, so it does not have to walk the author's whole history.
+   */
+  startTimestamp?: number;
 }
 
 const DEFAULT_TIMEOUT_MS = 20000;
@@ -213,6 +219,7 @@ export class SnapchainNodeClient {
         pageSize: options.pageSize,
         pageToken: options.pageToken,
         reverse: options.reverse,
+        startTimestamp: options.startTimestamp,
       },
       decodeMessagesPage,
     );

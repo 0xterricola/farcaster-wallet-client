@@ -1,0 +1,121 @@
+{
+  "$comment": "A real Farcaster Article, read from a live Snapchain read node, not hand-built. Source: https://haatz.quilibrium.com (the public Hypersnap node, mainnet data, snapchain v0.17.7). GET /v1/castById?fid=1&hash=0xd59f6618f8af7f77242fe48b1f9b87401c23054f and GET /v1/castsByFid?fid=1&startTimestamp=185079816&pageSize=100, captured 2026-11-13. The author is fid 1, the chain has two casts, and part 1 carries the cover URL embed plus a cast and an image embed placed by [$1] and [$2].",
+  "capturedAt": "2026-11-13",
+  "source": "https://haatz.quilibrium.com",
+  "nodeVersion": "0.17.7",
+  "network": "FARCASTER_NETWORK_MAINNET",
+  "rootFid": 1,
+  "rootHash": "0xd59f6618f8af7f77242fe48b1f9b87401c23054f",
+  "rootTimestamp": 185079816,
+  "castById": {
+    "data": {
+      "type": "MESSAGE_TYPE_CAST_ADD",
+      "fid": 1,
+      "timestamp": 185079816,
+      "network": "FARCASTER_NETWORK_MAINNET",
+      "castAddBody": {
+        "embedsDeprecated": [],
+        "mentions": [],
+        "parentCastId": null,
+        "parentUrl": null,
+        "text": "Introducing Farcaster Articles!\n\n## The Basics\n- **Title and cover image.** They show on the feed card and in share previews.",
+        "embeds": [
+          {
+            "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/6ba9fa33-3176-4dd6-2125-35136071dc00/original"
+          }
+        ],
+        "mentionsPositions": [],
+        "type": "CAST",
+        "formatVersion": 1,
+        "chain": {
+          "index": 0,
+          "count": 2
+        }
+      }
+    },
+    "hash": "0xd59f6618f8af7f77242fe48b1f9b87401c23054f",
+    "hashScheme": "HASH_SCHEME_BLAKE3",
+    "signature": "aeETv9c4LOQipo1B5cBuitwTo3UNOxbWtyQmhuxypw3/SOwGsVwCTFUEcACojUWPcq+13bI1MoPqJKWJgTOPDQ==",
+    "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+    "signer": "0xb85cf7feef230f30925b101223fd3e3dc4e1120bacd677f5ad3523288f8f7102"
+  },
+  "castsByFid": [
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 1,
+        "timestamp": 185079816,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [],
+          "parentCastId": null,
+          "parentUrl": null,
+          "text": "Introducing Farcaster Articles!\n\n## The Basics\n- **Title and cover image.** They show on the feed card and in share previews.",
+          "embeds": [
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/6ba9fa33-3176-4dd6-2125-35136071dc00/original"
+            }
+          ],
+          "mentionsPositions": [],
+          "type": "CAST",
+          "formatVersion": 1,
+          "chain": {
+            "index": 0,
+            "count": 2
+          }
+        }
+      },
+      "hash": "0xd59f6618f8af7f77242fe48b1f9b87401c23054f",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "aeETv9c4LOQipo1B5cBuitwTo3UNOxbWtyQmhuxypw3/SOwGsVwCTFUEcACojUWPcq+13bI1MoPqJKWJgTOPDQ==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0xb85cf7feef230f30925b101223fd3e3dc4e1120bacd677f5ad3523288f8f7102"
+    },
+    {
+      "data": {
+        "type": "MESSAGE_TYPE_CAST_ADD",
+        "fid": 1,
+        "timestamp": 185079817,
+        "network": "FARCASTER_NETWORK_MAINNET",
+        "castAddBody": {
+          "embedsDeprecated": [],
+          "mentions": [],
+          "parentCastId": {
+            "fid": 1,
+            "hash": "0xd59f6618f8af7f77242fe48b1f9b87401c23054f"
+          },
+          "parentUrl": null,
+          "text": "- **A public page.** Every article opens on web and mobile without an account, so the link works anywhere you share it.\n- **In the feed and on your profile.** An article shows as a card; tap to read the rest. Replies, recasts and likes work like any cast.\n- **On the protocol.** Behind the scenes, an article is a chain of casts, so other clients without article support show it as a series of threaded casts.\\\n\n---\n## Formatting\n# Headings\n## Subheadings\nBody text\\\n\\\n**Bold**, _italic_ and ~~strikethrough~~\n- Bullet and numbered lists\n> Blockquotes, for pulling out quotes or asides\n**Embedded casts **\n[$1]\n**Inline images and video**\n[$2]\n**Tables and code**\n|If you want to|Use|\n|-|-|\n|Say gm|A cast|\n|Say something in a few paragraphs|A long cast, up to 10,000 characters|\n|Publish something with structure, images and other casts|An article|\n---\nDividers\n---\n## How to write an Article\n1. Open Articles from the left sidebar (on web)\n2. Add a title and a cover image\n3. Write, format, and embed casts and images\n4. Preview it as a reader will see it\n5. Publish to the feed and your profile\nWriting is limited to web for now; reading works everywhere (including outside of Farcaster!) Drafts save as you type.",
+          "embeds": [
+            {
+              "castId": {
+                "fid": 533,
+                "hash": "0xfe13de989460b5b2ec7054c60fb32900e09d1bac"
+              }
+            },
+            {
+              "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/ad2e8a3b-c39b-4866-3ddc-cdb057368500/original"
+            }
+          ],
+          "mentionsPositions": [],
+          "type": "TEN_K_CAST",
+          "formatVersion": 1,
+          "chain": {
+            "root": {
+              "fid": 1,
+              "hash": "0xd59f6618f8af7f77242fe48b1f9b87401c23054f"
+            },
+            "index": 1,
+            "count": 2
+          }
+        }
+      },
+      "hash": "0xdb27b6860df115f37e9c46401d76ecc27755d631",
+      "hashScheme": "HASH_SCHEME_BLAKE3",
+      "signature": "kmIe5iX5SgGtVR51OvSZBvT4EFcgh4Zh8s804rTgX8fFYx1HVgsTjWeTD3KLD7ud7/b+pKd4YQjl9K7qrfFpBA==",
+      "signatureScheme": "SIGNATURE_SCHEME_ED25519",
+      "signer": "0xb85cf7feef230f30925b101223fd3e3dc4e1120bacd677f5ad3523288f8f7102"
+    }
+  ]
+}
