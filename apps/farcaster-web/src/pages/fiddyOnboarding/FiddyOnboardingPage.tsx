@@ -81,6 +81,13 @@ import {
   useHost,
 } from '~/lib/miniAppHost';
 import { clearTrialExchange, loadTrialExchange } from '~/lib/trialChat';
+import {
+  describeLocalAccount,
+  isSettingUp,
+  type LocalAccount,
+} from '~/snapchain/accounts/localAccounts';
+import { useLocalAccounts } from '~/snapchain/accounts/session';
+import { setSetupAside } from '~/snapchain/accounts/setupAside';
 
 /**
  * The screens this flow renders.
@@ -135,6 +142,17 @@ export const FiddyOnboardingPage = ({ step }: FiddyOnboardingPageProps) => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   /** Making a brand-new account, on this device, instead of signing in to one. */
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  /**
+   * An account this device started making and did not finish, reopened where it
+   * stopped. The front door offers it because this page is where a closed sheet
+   * lands: the address somebody paid, and the words they wrote down, are on this
+   * device and must not be a thing they have to remember to look for.
+   */
+  const [resumingAccount, setResumingAccount] = useState<
+    LocalAccount | undefined
+  >();
+  const { current: heldAccount } = useLocalAccounts();
+  const unfinishedAccount = isSettingUp(heldAccount) ? heldAccount : undefined;
   const [draftName, setDraftName] = useState(setup.agentName);
   // A trial reply that is already in storage was already read on this screen:
   // the primary action stays the loud one across a reload, because the visitor
@@ -367,7 +385,12 @@ export const FiddyOnboardingPage = ({ step }: FiddyOnboardingPageProps) => {
               type="button"
               className="fiddy-quiet-btn"
               data-fiddy="create-account-entry"
-              onClick={() => setIsCreatingAccount(true)}
+              onClick={() => {
+                // Adding an account while one is still mid-setup sets that one
+                // aside: it stays here, and its own line below brings it back.
+                setSetupAside(unfinishedAccount ?? null);
+                setIsCreatingAccount(true);
+              }}
             >
               New here? Make your Fiddy account
             </button>
@@ -500,6 +523,33 @@ export const FiddyOnboardingPage = ({ step }: FiddyOnboardingPageProps) => {
       <div data-fiddy="onboarding">
         {renderStep()}
 
+        {/*
+          A setup this device started and did not finish is offered on EVERY step,
+          not just the last one: a closed sheet comes back here, and the address
+          somebody paid plus the words they wrote down must be one press away
+          wherever they land. It sits above the footer so it reads as device
+          state rather than as another step's action.
+        */}
+        {unfinishedAccount ? (
+          <div className="fiddy-resume-setup" data-fiddy="finish-setup-strip">
+            <p className="fiddy-sheet-note">
+              {describeLocalAccount(unfinishedAccount)} is still here: this
+              device stopped setting it up, and nothing was lost.
+            </p>
+            <button
+              type="button"
+              className="fiddy-quiet-btn"
+              data-fiddy="finish-setup-entry"
+              onClick={() => {
+                setSetupAside(null);
+                setResumingAccount(unfinishedAccount);
+              }}
+            >
+              Finish setting up {describeLocalAccount(unfinishedAccount)}
+            </button>
+          </div>
+        ) : null}
+
         <footer className="fiddy-legal">
           <Link
             to="privacyPolicy"
@@ -532,8 +582,14 @@ export const FiddyOnboardingPage = ({ step }: FiddyOnboardingPageProps) => {
         <LoginModal onClose={() => setIsSigningIn(false)} />
       ) : null}
 
-      {isCreatingAccount ? (
-        <CreateAccountSheet onClose={() => setIsCreatingAccount(false)} />
+      {isCreatingAccount || resumingAccount ? (
+        <CreateAccountSheet
+          {...(resumingAccount ? { resume: resumingAccount } : {})}
+          onClose={() => {
+            setIsCreatingAccount(false);
+            setResumingAccount(undefined);
+          }}
+        />
       ) : null}
     </Page>
   );

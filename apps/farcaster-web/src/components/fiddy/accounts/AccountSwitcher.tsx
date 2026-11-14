@@ -24,6 +24,7 @@ import { useAuth } from '~/contexts/AuthProvider';
 import { postSignInLocation } from '~/lib/postSignInLanding';
 import {
   describeLocalAccount,
+  isSettingUp,
   type LocalAccount,
   removeLocalAccount,
   selectLocalAccount,
@@ -32,6 +33,7 @@ import {
   signInAsLocalAccount,
   useLocalAccounts,
 } from '~/snapchain/accounts/session';
+import { setSetupAside, setupSetAside } from '~/snapchain/accounts/setupAside';
 import { loadAppKey } from '~/snapchain/appKeyStorage';
 
 import { CreateAccountSheet } from './CreateAccountSheet';
@@ -45,6 +47,8 @@ export const AccountSwitcherSheet = memo<AccountSwitcherSheetProps>(
     const { accounts, currentId, current, reload } = useLocalAccounts();
     const { signIn } = useAuth();
     const [creating, setCreating] = useState(false);
+    /** An attempt this device already started, reopened where it stopped. */
+    const [resuming, setResuming] = useState<LocalAccount | undefined>();
     const [busyId, setBusyId] = useState<string | undefined>();
     const [error, setError] = useState<string | undefined>();
     const [removing, setRemoving] = useState<string | undefined>();
@@ -117,12 +121,18 @@ export const AccountSwitcherSheet = memo<AccountSwitcherSheetProps>(
       [removing, reload],
     );
 
-    if (creating) {
+    if (creating || resuming) {
       return (
         <CreateAccountSheet
-          onClose={() => setCreating(false)}
+          {...(resuming ? { resume: resuming } : {})}
+          onClose={() => {
+            setCreating(false);
+            setResuming(undefined);
+            void reload();
+          }}
           onCreated={() => {
             setCreating(false);
+            setResuming(undefined);
             void reload();
           }}
         />
@@ -149,7 +159,13 @@ export const AccountSwitcherSheet = memo<AccountSwitcherSheetProps>(
                 }
                 primary={{
                   label: 'Make another account',
-                  onClick: () => setCreating(true),
+                  onClick: () => {
+                    // An account that is still being set up is set aside here
+                    // rather than left to greet every screen that comes next:
+                    // it stays selected and in this list, with its own way back.
+                    setSetupAside(current ?? null);
+                    setCreating(true);
+                  },
                 }}
                 quiet={{ label: 'Close', onClick: onClose }}
                 note="The words that own an account stay on this device. Fiddy keeps no copy of them."
@@ -161,54 +177,82 @@ export const AccountSwitcherSheet = memo<AccountSwitcherSheetProps>(
                   </p>
                 ) : (
                   <ul className="fiddy-accounts" data-fiddy="account-list">
-                    {accounts.map((account) => (
-                      <li
-                        key={account.id}
-                        className={account.id === currentId ? 'current' : ''}
-                        data-fiddy-account={account.id}
-                      >
-                        <span className="fiddy-account-name">
-                          {describeLocalAccount(account)}
-                        </span>
-                        <span className="fiddy-account-note">
-                          {withKeys[account.id] ? (
-                            <>
-                              <KeyRound aria-hidden="true" size={12} /> this
-                              device can post
-                            </>
+                    {accounts.map((account) => {
+                      const unfinished = isSettingUp(account);
+                      const aside = setupSetAside() === account.id;
+
+                      return (
+                        <li
+                          key={account.id}
+                          className={account.id === currentId ? 'current' : ''}
+                          data-fiddy-account={account.id}
+                          data-fiddy-setting-up={unfinished || undefined}
+                        >
+                          <span className="fiddy-account-name">
+                            {describeLocalAccount(account)}
+                          </span>
+                          <span className="fiddy-account-note">
+                            {unfinished ? (
+                              aside ? (
+                                'set aside - still yours, this device just stopped setting it up'
+                              ) : (
+                                'this device is still setting it up'
+                              )
+                            ) : withKeys[account.id] ? (
+                              <>
+                                <KeyRound aria-hidden="true" size={12} /> this
+                                device can post
+                              </>
+                            ) : (
+                              'no posting key on this device yet'
+                            )}
+                          </span>
+                          {unfinished ? (
+                            // An unfinished account has no number yet, so it
+                            // cannot sign in; the honest action is to carry on
+                            // setting it up. Always offered, whether or not it
+                            // was set aside.
+                            <button
+                              type="button"
+                              className="fiddy-quiet-btn"
+                              data-fiddy="account-finish-setup"
+                              onClick={() => {
+                                setSetupAside(null);
+                                setResuming(account);
+                              }}
+                            >
+                              Finish setting up {describeLocalAccount(account)}
+                            </button>
+                          ) : account.id === currentId ? (
+                            <b data-fiddy="account-current">
+                              signing in as this one
+                            </b>
                           ) : (
-                            'no posting key on this device yet'
+                            <button
+                              type="button"
+                              className="fiddy-quiet-btn"
+                              disabled={busyId === account.id}
+                              onClick={() => void switchTo(account)}
+                            >
+                              {busyId === account.id
+                                ? 'Switching…'
+                                : `Sign in as ${describeLocalAccount(account)}`}
+                            </button>
                           )}
-                        </span>
-                        {account.id === currentId ? (
-                          <b data-fiddy="account-current">
-                            signing in as this one
-                          </b>
-                        ) : (
-                          <button
-                            type="button"
-                            className="fiddy-quiet-btn"
-                            disabled={busyId === account.id}
-                            onClick={() => void switchTo(account)}
-                          >
-                            {busyId === account.id
-                              ? 'Switching…'
-                              : `Sign in as ${describeLocalAccount(account)}`}
-                          </button>
-                        )}
-                        {account.id === currentId ? null : (
-                          <button
-                            type="button"
-                            className="fiddy-quiet-btn"
-                            onClick={() => void forget(account)}
-                          >
-                            {removing === account.id
-                              ? 'Really forget it? The words you saved are the only copy'
-                              : 'Forget on this device'}
-                          </button>
-                        )}
-                      </li>
-                    ))}
+                          {account.id === currentId && !unfinished ? null : (
+                            <button
+                              type="button"
+                              className="fiddy-quiet-btn"
+                              onClick={() => void forget(account)}
+                            >
+                              {removing === account.id
+                                ? 'Really forget it? The words you saved are the only copy'
+                                : 'Forget on this device'}
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
 

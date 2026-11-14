@@ -35,6 +35,7 @@
 
 import { saveAppKey, saveAppNonce } from '~/snapchain/appKeyStorage';
 
+import { setupStepFrom } from './createAttempt';
 import {
   buildRegistrationRequest,
   MAX_REGISTRATION_PRICE_WEI,
@@ -81,6 +82,49 @@ export class AccountCreationError extends Error {
     super(message);
     this.name = 'AccountCreationError';
   }
+}
+
+/**
+ * Raised when an attempt was abandoned mid-flight: started over, set aside, or
+ * the screen running it went away.
+ *
+ * Nothing is wrong with the account, and this is not shown to anybody — it is
+ * how a loop stops writing on behalf of somebody who has already left. The
+ * difference matters: "your setup failed" and "you walked away" must not look
+ * the same on screen.
+ */
+export class AccountCreationAborted extends Error {
+  constructor() {
+    super('this setup was abandoned');
+    this.name = 'AccountCreationAborted';
+  }
+}
+
+/** Asked after every await: false means stop now, write nothing more. */
+export type ShouldContinue = () => boolean;
+
+const keepGoing: ShouldContinue = () => true;
+
+/**
+ * The gate every loop in this file passes through after an await.
+ *
+ * A cancelled render is not a cancelled loop: without this, an abandoned
+ * attempt keeps polling the chain and can still send a registration minutes
+ * after somebody pressed start over.
+ */
+const stopIfAbandoned = (shouldContinue: ShouldContinue) => {
+  if (!shouldContinue()) {
+    throw new AccountCreationAborted();
+  }
+};
+
+/** A device key that has just been installed on the node. Handed out so an
+ *  attempt abandoned afterwards can take it back off, rather than leave a live
+ *  signing key that no device holds. */
+export interface InstalledSigner {
+  fid: number;
+  signingKeyHex: string;
+  nextNonce: number;
 }
 
 /**
@@ -161,6 +205,13 @@ export interface AccountNodePort {
     signingKeyHex: string;
     custody: CustodyAccount;
   }) => Promise<{ nextNonce: number }>;
+  /** Take a device key back off the account (a self-revoking KEY_REMOVE, signed
+   *  by the key itself). Used when an attempt is abandoned between the key
+   *  landing and this device keeping it: a live posting key nobody holds is the
+   *  one thing worse than a setup that stopped. Optional so a port that cannot
+   *  revoke still satisfies the interface — the caller then says so instead of
+   *  pretending. */
+  removeSigner?: (installed: InstalledSigner) => Promise<void>;
   /** Has the node seen this FID yet, and what does it know about it? */
   readUser: (
     fid: number,
@@ -208,6 +259,8 @@ export const createAccountOnChain = async ({
   displayName,
   signer,
   keyStore,
+  shouldContinue = keepGoing,
+  onSignerInstalled,
 }: {
   rpcUrl: string;
   custody: CustodyAccount;
@@ -224,6 +277,10 @@ export const createAccountOnChain = async ({
   displayName?: string;
   /** Where the device's copy of the key is kept. Defaults to the real store. */
   keyStore?: AccountKeyStore;
+  /** Asked after every await; false stops the attempt before it signs anything. */
+  shouldContinue?: ShouldContinue;
+  /** Told the moment a device key lands on the node. */
+  onSignerInstalled?: (installed: InstalledSigner) => void;
   /** Who pays and signs the registration. Defaults to the custody account
    *  itself; a different signer (a wallet, a sponsor) keeps the account in
    *  `custody`'s name, which is the payer≠owner split. */
@@ -234,6 +291,8 @@ export const createAccountOnChain = async ({
     address: custody.address,
     fetchImpl,
   });
+
+  stopIfAbandoned(shouldContinue);
 
   if (funding.kind === 'wrong-chain') {
     throw new AccountCreationError(
@@ -263,6 +322,8 @@ export const createAccountOnChain = async ({
     );
   }
 
+  stopIfAbandoned(shouldContinue);
+
   const { txHash } = await registerFid({
     rpcUrl,
     signer: signer ?? (custody as unknown as RegistrationSigner),
@@ -282,10 +343,127 @@ export const createAccountOnChain = async ({
     sleep,
     fetchImpl,
     nameFetchImpl,
+    shouldContinue,
     ...(keyStore ? { keyStore } : {}),
+    ...(onSignerInstalled ? { onSignerInstalled } : {}),
   });
 
   return { txHash, result };
+};
+
+/**
+ * Carry one attempt forward, from wherever the chain says it stopped.
+ *
+ * This is what a resume calls, and the reason it exists: an attempt that was
+ * written down on this device can be reopened days later, and the two halves of
+ * this flow are not interchangeable. A registration that already bought an FID
+ * must never be sent a second time — that spends somebody's money twice — so an
+ * FID on the chain means this runs the setup half only, and no FID means the
+ * price and balance are checked before anything is signed.
+ */
+export const createOrResumeAccountSetup = async ({
+  rpcUrl,
+  custody,
+  node,
+  signingKeyHex,
+  username,
+  displayName,
+  fetchImpl,
+  nameFetchImpl,
+  attempts,
+  retryMs,
+  sleep,
+  keyStore,
+  signer,
+  shouldContinue = keepGoing,
+  onSignerInstalled,
+}: {
+  rpcUrl: string;
+  custody: CustodyAccount;
+  node: AccountNodePort;
+  signingKeyHex: string;
+  username?: string;
+  displayName?: string;
+  fetchImpl?: typeof fetch;
+  nameFetchImpl?: typeof fetch;
+  attempts?: number;
+  retryMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  keyStore?: AccountKeyStore;
+  signer?: RegistrationSigner;
+  shouldContinue?: ShouldContinue;
+  onSignerInstalled?: (installed: InstalledSigner) => void;
+}): Promise<{
+  result: FinishSetupResult;
+  resumed: boolean;
+  txHash?: string;
+}> => {
+  const funding = await readFundingState({
+    rpcUrl,
+    address: custody.address,
+    fetchImpl,
+  });
+
+  stopIfAbandoned(shouldContinue);
+
+  const step = setupStepFrom(funding);
+
+  if (step === 'blocked') {
+    throw new AccountCreationError(
+      funding.kind === 'ready'
+        ? 'the registration fee that endpoint quoted is far higher than it should be - check the endpoint in Advanced'
+        : funding.kind === 'wrong-chain'
+          ? `that Optimism endpoint is on a different network (${funding.chainId}) - check the endpoint in Advanced`
+          : funding.reason,
+    );
+  }
+
+  if (step === 'waiting') {
+    throw new AccountCreationError(
+      'the registration fee has not arrived on the account yet',
+    );
+  }
+
+  if (step === 'registered') {
+    const result = await finishAccountSetup({
+      rpcUrl,
+      custody,
+      node,
+      signingKeyHex,
+      username,
+      displayName,
+      ...(attempts === undefined ? {} : { attempts }),
+      ...(retryMs === undefined ? {} : { retryMs }),
+      ...(sleep === undefined ? {} : { sleep }),
+      ...(fetchImpl === undefined ? {} : { fetchImpl }),
+      ...(nameFetchImpl === undefined ? {} : { nameFetchImpl }),
+      ...(keyStore === undefined ? {} : { keyStore }),
+      shouldContinue,
+      ...(onSignerInstalled ? { onSignerInstalled } : {}),
+    });
+
+    return { result, resumed: true };
+  }
+
+  const { txHash, result } = await createAccountOnChain({
+    rpcUrl,
+    custody,
+    node,
+    signingKeyHex,
+    username,
+    displayName,
+    ...(attempts === undefined ? {} : { attempts }),
+    ...(retryMs === undefined ? {} : { retryMs }),
+    ...(sleep === undefined ? {} : { sleep }),
+    ...(fetchImpl === undefined ? {} : { fetchImpl }),
+    ...(nameFetchImpl === undefined ? {} : { nameFetchImpl }),
+    ...(keyStore === undefined ? {} : { keyStore }),
+    ...(signer === undefined ? {} : { signer }),
+    shouldContinue,
+    ...(onSignerInstalled ? { onSignerInstalled } : {}),
+  });
+
+  return { result, resumed: false, txHash };
 };
 
 /**
@@ -309,6 +487,8 @@ export const finishAccountSetup = async ({
   fetchImpl,
   nameFetchImpl,
   keyStore = deviceKeyStore,
+  shouldContinue = keepGoing,
+  onSignerInstalled,
 }: {
   rpcUrl: string;
   custody: CustodyAccount;
@@ -325,19 +505,31 @@ export const finishAccountSetup = async ({
   /** Where this device keeps the key it signs with. Defaults to the real store;
    *  tests inject one so the assertion is about what was written, not a mock. */
   keyStore?: AccountKeyStore;
+  /** Asked after every await; false stops the attempt where it stands. */
+  shouldContinue?: ShouldContinue;
+  /** Told the moment a device key lands on the node, so an attempt abandoned
+   *  afterwards can put it back. */
+  onSignerInstalled?: (installed: InstalledSigner) => void;
 }): Promise<FinishSetupResult> => {
   let fid = 0;
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < attempts && fid === 0; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < attempts && fid === 0 && shouldContinue();
+    attempt++
+  ) {
     try {
       fid = await readFidOf({ rpcUrl, address: custody.address, fetchImpl });
     } catch (error) {
       lastError = error;
     }
 
+    stopIfAbandoned(shouldContinue);
+
     if (fid === 0) {
       await sleep(retryMs);
+      stopIfAbandoned(shouldContinue);
     }
   }
 
@@ -353,15 +545,22 @@ export const finishAccountSetup = async ({
 
   // The node has to know the account before it will take a key for it.
   let seen = false;
-  for (let attempt = 0; attempt < attempts && !seen; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < attempts && !seen && shouldContinue();
+    attempt++
+  ) {
     try {
       seen = Boolean(await node.readUser(fid));
     } catch (error) {
       lastError = error;
     }
 
+    stopIfAbandoned(shouldContinue);
+
     if (!seen) {
       await sleep(retryMs);
+      stopIfAbandoned(shouldContinue);
     }
   }
 
@@ -371,7 +570,22 @@ export const finishAccountSetup = async ({
     );
   }
 
+  stopIfAbandoned(shouldContinue);
+
   const installed = await node.installSigner({ fid, signingKeyHex, custody });
+
+  // From here the key is ON the node. If the person started over while that was
+  // in flight, take it back off: an account that is not being set up anymore
+  // must not keep a live posting key whose private half only ever existed in
+  // the attempt that was just thrown away.
+  onSignerInstalled?.({ fid, signingKeyHex, nextNonce: installed.nextNonce });
+
+  if (!shouldContinue()) {
+    await node
+      .removeSigner?.({ fid, signingKeyHex, nextNonce: installed.nextNonce })
+      .catch(() => undefined);
+    throw new AccountCreationAborted();
+  }
 
   // The key is only usable after a reload if this device kept its copy. Write it
   // before the step is called done: an account whose key was installed and not
@@ -388,6 +602,8 @@ export const finishAccountSetup = async ({
 
   completed.push('signer');
 
+  stopIfAbandoned(shouldContinue);
+
   // The name is the one part that can honestly stay unfinished: the account
   // works without it, and a taken name is not a reason to fail the account.
   let warning: string | undefined;
@@ -399,6 +615,8 @@ export const finishAccountSetup = async ({
       custody,
       ...(nameFetchImpl ? { fetchImpl: nameFetchImpl } : {}),
     });
+
+    stopIfAbandoned(shouldContinue);
 
     if (claimed.ok) {
       completed.push('name');
