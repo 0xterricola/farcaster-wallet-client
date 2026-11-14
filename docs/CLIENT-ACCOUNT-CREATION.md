@@ -197,6 +197,87 @@ The MP4 test builds a real container by hand (`ftyp`, `moov{mvhd,udta}`, `mdat`)
 and asserts the location box is gone, the file is the **same length**, and the
 stream atoms survive.
 
+### 1.4 A setup that can be left, and picked back up
+
+Until this landed, nothing about an account-in-progress was on this device: the
+phrase was component state, the address it asked somebody to pay lived in the
+same state, and `saveLocalAccount` ran only after `createAccountOnChain` had
+finished. Close the sheet, reload, or lose the network after paying, and the
+client had no record of the address or the attempt — the only surviving trace was
+the twelve words the person had been asked to write down. `createAccount.ts`'s
+own header claimed a reload resumed "exactly where the facts stopped", which was
+true only inside one sheet session, for facts that belonged to an address the
+client had forgotten.
+
+What replaces it (Quilcast #669, borrowed with attribution — see §2):
+
+- **The attempt is an entry, written before any money moves.**
+  `LocalAccount.setup` (`AccountSetupAttempt` in `localAccounts.ts`) carries the
+  attempt's id, when it started, and **the one device signing key this attempt
+  will ever install**. `CreateAccountSheet` writes it on "I saved them —
+  continue" (for a held Google/X account, when the funding screen first appears),
+  before the fee screen exists. If the device refuses to store it, the sheet says
+  so and does not ask for money — an address this browser cannot remember is not
+  an address to send ETH to.
+- **The step acted on is read from the chain, not from a progress flag.**
+  `createAttempt.ts#setupStepFrom` answers `waiting | funded | registered |
+  blocked` from `readFundingState`, and `createAccount.ts#createOrResumeAccountSetup`
+  takes the honest half: **a FID means the fee already bought the account**, so
+  the setup half runs and no registration is signed. That is what makes "close
+  the tab and come back later" a real offer rather than a hopeful sentence.
+- **One key per attempt, not one per retry.** The old `start()` minted a fresh
+  `generateDeviceSigningKey()` on every call, so each "Try the last step again"
+  after a partial install issued another KEY_ADD that stayed live on the node
+  while the device kept only the newest. The key now lives in the attempt entry;
+  a retry reuses it.
+- **A generation token, checked after every await.** Every loop in
+  `finishAccountSetup`/`createAccountOnChain` takes `shouldContinue` and calls it
+  after each await, throwing `AccountCreationAborted` (which the sheet swallows:
+  "you walked away" and "your setup failed" must not look the same). The sheet's
+  own `here()` is the same question one level up. Without this, an abandoned
+  attempt keeps polling the chain and can still fire a registration minutes
+  later.
+- **A key that landed during start over is taken back off the node.** The flow
+  reports every install through `onSignerInstalled`; start over removes the
+  entry, then self-revokes the key (`nodeAccountOps.removeSigner` →
+  `revokeAppKey`, confirmed by reading `/v1/signersByFid` again). Leaving a live
+  posting key whose private half was thrown away is the one outcome worse than a
+  setup that stopped.
+- **Start over at every step** (`data-fiddy="create-start-over"`, distinct from the wizard's own "Start over" on the front door), with the cost said
+  in plain words: *"Start over? This device forgets this account. If it is
+  already registered on the network, only the twelve words bring it back."* The
+  name step has nothing stored and nothing paid, so its way out is just Back.
+- **Set aside.** `setupAside.ts` holds (for the tab's lifetime) the id of an
+  unfinished setup somebody walked away from. "Make another account" sets the
+  current one aside instead of letting it hijack the next screen; it stays
+  selected, stays in the list, and a **"Finish setting up @x"** line — in the
+  switcher and on the front door — clears the aside and reopens the sheet where
+  the chain says it stopped. An unfinished account is never offered "Sign in as":
+  it has no number yet, and that button could only throw.
+
+MEASURED, in `snapchain/accounts/__tests__/setupAttempt.test.ts` (8 tests, no
+network; the existing 102 in that directory still pass, and the full web suite is
+2622 passed / 1 skipped):
+
+| the card asked for | what the test does |
+| --- | --- |
+| closes the sheet mid-fund and reopens with the attempt intact | the entry is written, read back as the selected unfinished account (address, words, device key), and a reopen against a chain that now reports the FID **finishes** it: `state.sent` is empty, so no second registration was signed |
+| start-over leaves no installed key behind | `shouldContinue` flips false inside `installSigner`; the run rejects as aborted, `removeSigner` is called with the installed key, no local key is saved, no profile is written |
+| a registration that lands after start-over changes nothing | a marked attempt is refused before the chain is touched: no transaction sent, no key installed, nothing written back |
+| a set-aside attempt still shows as resumable | set aside → `resumesSetup` false but the entry is still the selected one; cleared → true again; a finished or absent account sets nothing aside |
+
+Not ported, because this repo already had it: their
+`setUserData(..., as)` change. `nodeAccountOps.setProfile` takes
+`{ fid, signingKeyHex }` explicitly, so a profile write is signed as the named
+account rather than as whoever is selected.
+
+One nugget parked rather than adopted: quilcast #670 (`object-fit: contain` on
+its link-card and article-cover selectors). `fiddy-mobile` renders no embeds and
+farcaster-web has no link-card or article-cover rules, so there is no surface to
+apply it to. Worth noting for whenever the frame renderer is next touched: frame
+and mini app images are 3:2 by spec and quilcast shows them whole, while
+`FrameEmbedNext.tsx` uses `objectFit: 'cover'` and crops them.
+
 ---
 
 ## 2. Mined from Quilcast (MIT) — the ledger
@@ -222,6 +303,14 @@ Adopted, with this repo's own plumbing rather than a copy:
 - **the re-encode and the MP4 box scrub**: adopted nearly verbatim in intent,
   restructured around an injected decode/encode so it is testable without a
   browser.
+- **an unfinished account is a real account** (#669, `3ed66b7cff29`): their
+  "start over at every setup step, and add account sets a stuck setup aside" is
+  the fix for a class this repo had worse, because nothing was persisted until
+  everything finished. Adopted, with our own chain seam as the judge of where a
+  resume is (their `keep`/`here` token became `shouldContinue` here, and their
+  `dropEd` became a self-revoking KEY_REMOVE rather than a discarded local key,
+  because our key is installed on a node we can talk to). Mechanics, the four
+  verifications and what was deliberately not ported: §1.4.
 - **"Posting…" until the node indexes** and **per-account tab sync** — noted, not
   built (see §3).
 - Their **CSP discipline** (`frame-src 'none'`, `form-action 'none'`) is worth

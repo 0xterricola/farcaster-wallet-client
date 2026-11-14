@@ -32,6 +32,33 @@ const CURRENT_ACCOUNT_KEY = 'fiddy:current-account';
 /** Fired after any write, so mounted surfaces re-read instead of guessing. */
 export const LOCAL_ACCOUNTS_CHANGED_EVENT = 'fiddy:accounts-changed';
 
+/**
+ * A setup this device started and has not finished.
+ *
+ * The account is written down BEFORE any money moves, so it exists on every
+ * surface from the first moment: the list can show it, the front door can offer
+ * to finish it, and a reload finds it — instead of losing an address somebody
+ * already sent ETH to.
+ */
+export interface AccountSetupAttempt {
+  /**
+   * Which attempt this is. A step that lands after the person started over
+   * carries the old id and is refused, so a late signature or registration
+   * cannot resurrect an account somebody replaced.
+   */
+  attemptId: string;
+  startedAt: number;
+  /**
+   * This device's signing key for this attempt: made once, at the start, and
+   * reused by every retry. Minting a fresh key per retry is what leaves a
+   * growing pile of live posting keys on the node.
+   */
+  signingKeyHex: string;
+  /** The step the person last saw. A hint for the copy; the real step is read
+   *  from the chain, because a fee that already bought an FID means "finish". */
+  lastStep?: 'fund' | 'working';
+}
+
 export interface LocalAccount {
   /** The custody address, lowercased: one account per address, by definition. */
   id: string;
@@ -57,7 +84,14 @@ export interface LocalAccount {
   walletCustody?: 'privy';
   provider?: string;
   email?: string;
+  /** Present only while the account is still being set up (see above). */
+  setup?: AccountSetupAttempt;
 }
+
+/** Is this an account whose setup stopped before it was done? */
+export const isSettingUp = (
+  account: LocalAccount | undefined | null,
+): boolean => Boolean(account?.setup);
 
 /** One account per custody address. */
 export const accountIdFor = (custodyAddress: string): string =>

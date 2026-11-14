@@ -34,6 +34,7 @@ import {
   hexToBytes,
   issueAppKey,
   type IssueAppKeyStep,
+  revokeAppKey,
   type SnapchainNodeClient,
 } from 'farcaster-node-client';
 
@@ -146,6 +147,43 @@ export const createNodeAccountOps = ({
     return {
       nextNonce: Math.max(issued.userId.nonce, confirmed.currentUserNonce) + 1,
     };
+  },
+
+  /**
+   * Take a device key back off the account, signed by the key itself.
+   *
+   * Only the abandoned-attempt path calls this: a setup that was started over
+   * while the KEY_ADD was in flight must not leave a live posting key behind
+   * that no device holds the private half of. A key the node never shows is
+   * already gone and is not an error.
+   */
+  removeSigner: async ({ fid, signingKeyHex }) => {
+    const appKey = await appKeyFromHex(signingKeyHex);
+
+    const before = await fetchSignerState({
+      node,
+      fid,
+      publicKeyHex: appKey.publicKeyHex,
+    }).catch(() => undefined);
+
+    if (before && !before.signer) {
+      return;
+    }
+
+    // A key that has never signed a message has app nonce 0, so 1 is its next.
+    await revokeAppKey({ node, fid, appKey, nonce: 1 });
+
+    const after = await fetchSignerState({
+      node,
+      fid,
+      publicKeyHex: appKey.publicKeyHex,
+    }).catch(() => undefined);
+
+    if (after?.signer) {
+      throw new NodeAccountOpsError(
+        'the server Fiddy reads from accepted the removal but is still listing that key',
+      );
+    }
   },
 
   setProfile: async ({ fid, signingKeyHex, username, displayName }) => {
