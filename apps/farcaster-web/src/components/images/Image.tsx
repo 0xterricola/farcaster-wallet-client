@@ -15,6 +15,12 @@ export type ImageProps = DetailedHTMLProps<
 > & {
   alt: string;
   fallback?: string;
+  /**
+   * Called once with the `src` that failed when there is nothing left to
+   * try — no `fallback`, or the `fallback` itself failed too. Lets callers
+   * swap the dead picture for a link out instead of a broken frame.
+   */
+  onFail?: (failedSrc: string) => void;
   src: string;
   /**
    * When true, sets fetchpriority="high" and loading="eager"
@@ -24,7 +30,15 @@ export type ImageProps = DetailedHTMLProps<
 };
 
 const Image: FC<ImageProps> = memo(
-  ({ fallback, src, loading = 'lazy', priority, onError, ...props }) => {
+  ({
+    fallback,
+    src,
+    loading = 'lazy',
+    priority,
+    onFail,
+    onError,
+    ...props
+  }) => {
     const [didFailToLoadMap, setDidFailToLoadMap] = useState<
       Record<string, boolean | undefined>
     >({});
@@ -36,11 +50,19 @@ const Image: FC<ImageProps> = memo(
       React.ReactEventHandler<HTMLImageElement>
     >(
       (event) => {
+        const hadAlreadyFailed = didFailToLoadMap[src] === true;
         setDidFailToLoadMap((prevMap) => ({ ...prevMap, [src]: true }));
+
+        // Terminal failure: nothing left to try (no fallback, or the
+        // fallback itself just failed too) — report the URL so callers can
+        // offer a link out instead of a broken frame.
+        if (!fallback || hadAlreadyFailed) {
+          onFail?.(src);
+        }
 
         onError?.(event);
       },
-      [onError, src],
+      [didFailToLoadMap, fallback, onFail, onError, src],
     );
 
     const imageLoading = priority ? 'eager' : loading;
