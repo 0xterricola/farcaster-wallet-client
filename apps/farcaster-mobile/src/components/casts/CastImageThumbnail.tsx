@@ -22,6 +22,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { ImageLinkCard } from '~/components/casts/CastAttachments/ImageLinkCard';
 import { Text } from '~/components/Text';
 import { imageRequestHeaders } from '~/constants/Images';
 import { useComposerOptimisticImages } from '~/contexts/ComposerOptimisticImagesProvider';
@@ -156,6 +157,10 @@ const CastImageThumbnail: FC<CastImageThumbnailsProps> = memo(
 
     const [retryAttempt, setRetryAttempt] = useState(0);
     const [hasLoaded, setHasLoaded] = useState(false);
+    // Adapted from quilcast `Media` (MIT, backmeupplz/quilcast): once the
+    // single cache-busted retry and the watchdog have given up, the slot
+    // becomes a tappable link card to the image instead of a blank frame.
+    const [failedToLoad, setFailedToLoad] = useState(false);
     const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const watchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
       null,
@@ -176,6 +181,7 @@ const CastImageThumbnail: FC<CastImageThumbnailsProps> = memo(
     useEffect(() => {
       setRetryAttempt(0);
       setHasLoaded(false);
+      setFailedToLoad(false);
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
@@ -233,6 +239,7 @@ const CastImageThumbnail: FC<CastImageThumbnailsProps> = memo(
         });
 
         if (retryAttempt >= MAX_IMAGE_RETRIES) {
+          setFailedToLoad(true);
           return;
         }
 
@@ -270,6 +277,33 @@ const CastImageThumbnail: FC<CastImageThumbnailsProps> = memo(
 
       return offset < 0 ? offset : 0;
     }, [height, image.aspectRatio, maxWidth]);
+
+    if (failedToLoad) {
+      return (
+        <Animated.View
+          style={[
+            t.bgElevated,
+            { borderRadius: 12 },
+            { borderColor: t.colors.feed.threadLine },
+            t.border,
+            t.overflowHidden,
+            { alignSelf: 'flex-start' },
+            animatedStyle,
+          ]}
+        >
+          <ImageLinkCard
+            url={media.staticRaster}
+            height={56}
+            width={width}
+            maxWidth={
+              image.aspectRatio >= TOO_WIDE_ASPECT_RATIO_TARGET
+                ? maxWidthToApplyForHighAr
+                : maxWidth
+            }
+          />
+        </Animated.View>
+      );
+    }
 
     return (
       <Animated.View

@@ -2,6 +2,7 @@ import cn from 'classnames';
 import { CastClickType, useTrackCastClick } from 'farcaster-client-hooks';
 import React from 'react';
 
+import { ImageLinkCard } from '~/components/attachments/ImageLinkCard';
 import { Image } from '~/components/images/Image';
 
 type ImageAttachmentProps = {
@@ -23,6 +24,22 @@ const ImageAttachment: React.FC<ImageAttachmentProps> = React.memo(
     onClick,
   }) => {
     const trackCastClick = useTrackCastClick();
+
+    // Adapted from quilcast `Media` (MIT, backmeupplz/quilcast): a picture
+    // that won't load becomes a link card to it instead of a broken frame.
+    const [failedImageUrl, setFailedImageUrl] = React.useState<string | null>(
+      null,
+    );
+
+    // The component is memoized without a key, so a recycled instance can be
+    // handed a different image: clear the failure when the URL changes.
+    React.useEffect(() => {
+      setFailedImageUrl(null);
+    }, [imageUrl]);
+
+    if (failedImageUrl !== null) {
+      return <ImageLinkCard url={imageUrl} />;
+    }
 
     return (
       <>
@@ -52,6 +69,7 @@ const ImageAttachment: React.FC<ImageAttachmentProps> = React.memo(
             src={imageUrl}
             alt={title}
             loading="lazy"
+            onFail={setFailedImageUrl}
           />
         </div>
       </>

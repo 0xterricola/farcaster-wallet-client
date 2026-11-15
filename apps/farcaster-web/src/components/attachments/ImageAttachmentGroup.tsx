@@ -7,6 +7,7 @@ import {
 } from 'farcaster-client-hooks';
 import React from 'react';
 
+import { ImageLinkCard } from '~/components/attachments/ImageLinkCard';
 import { Image as ImageRenderComponent } from '~/components/images/Image';
 import { useFullScreenImages } from '~/hooks/casts/useCastBody';
 
@@ -57,9 +58,49 @@ const ImageAttachmentGroup: React.FC<ImageAttachmentGroupProps> = React.memo(
     // sibling media should not grow with that expanded row.
     const fillTile = snapContext && noShrink && ignoreAspectRatio;
 
+    // Adapted from quilcast `Media` (MIT, backmeupplz/quilcast): a picture
+    // that won't load is dropped from the strip (no broken frame) and gets a
+    // link card to its source URL instead.
+    const [failedThumbnails, setFailedThumbnails] = React.useState<string[]>(
+      [],
+    );
+
+    React.useEffect(() => {
+      setFailedThumbnails([]);
+    }, [imagesToRender]);
+
+    const handleImageFail = React.useCallback((failedSrc: string) => {
+      setFailedThumbnails((prev) =>
+        prev.includes(failedSrc) ? prev : [...prev, failedSrc],
+      );
+    }, []);
+
+    // `imagesToRender` preserves `medias` order, so index i maps back to the
+    // raw source URL we link out to.
+    const renderedImages = React.useMemo(
+      () =>
+        imagesToRender.filter(
+          (image) => !failedThumbnails.includes(image.thumbnail),
+        ),
+      [failedThumbnails, imagesToRender],
+    );
+
+    const failedImageUrls = React.useMemo(
+      () =>
+        imagesToRender
+          .map((image, index) => ({
+            thumbnail: image.thumbnail,
+            originalUrl: medias[index]?.staticRaster,
+          }))
+          .filter(({ thumbnail }) => failedThumbnails.includes(thumbnail))
+          .map(({ originalUrl }) => originalUrl)
+          .filter((url): url is string => typeof url === 'string'),
+      [failedThumbnails, imagesToRender, medias],
+    );
+
     return (
       <>
-        {imagesToRender.map((image, imageIndex) => {
+        {renderedImages.map((image, imageIndex) => {
           if (!snapContext) {
             return (
               <ImageRenderComponent
@@ -78,6 +119,7 @@ const ImageAttachmentGroup: React.FC<ImageAttachmentGroupProps> = React.memo(
                 draggable={false}
                 alt={'Cast image embed'}
                 loading="lazy"
+                onFail={handleImageFail}
                 onClick={(e) => {
                   trackCastClick({ type: CastClickType.Image });
 
@@ -115,6 +157,7 @@ const ImageAttachmentGroup: React.FC<ImageAttachmentGroupProps> = React.memo(
               draggable={false}
               alt={'Cast image embed'}
               loading="lazy"
+              onFail={handleImageFail}
               onClick={(e) => {
                 trackCastClick({ type: CastClickType.Image });
 
@@ -129,6 +172,9 @@ const ImageAttachmentGroup: React.FC<ImageAttachmentGroupProps> = React.memo(
             />
           );
         })}
+        {failedImageUrls.map((url) => (
+          <ImageLinkCard key={url} url={url} />
+        ))}
       </>
     );
   },
