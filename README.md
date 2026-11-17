@@ -6,11 +6,13 @@ Neynar, no Alchemy. You furnish the compute; the node syncs the network.
 
 > **Read this before you vouch for the node half.** The node side is real and
 > verified end to end (a mainnet read node installs over SSH, joins the gossip
-> mesh and starts the snapshot bootstrap). The client's *reads* do not come from
-> your node yet: the web client's data layer still calls Farcaster's hosted API,
-> and `fiddy client up` says so when it runs. The node-backed data layer
-> (`packages/farcaster-node-client`) exists but is not wired into the app.
-> Details, evidence and the path to close it: [docs/CLIENT-NODE-GAP.md](docs/CLIENT-NODE-GAP.md)
+> mesh and starts the snapshot bootstrap). The client's data layer is
+> **node-backed by default** (`packages/farcaster-node-client`, wired into the
+> web app since 05dbead): reads and writes go through your node, failing over
+> to public providers only when your node cannot answer. `fiddy client up`
+> prints which layer your checkout actually has; `VITE_SNAPCHAIN_BACKED_CLIENT=false`
+> turns the node-backed layer off for comparison runs against the hosted API.
+> Route inventory and how the gap was closed: [docs/CLIENT-NODE-GAP.md](docs/CLIENT-NODE-GAP.md)
 > and [docs/RUN-REPORT-2026-10-18.md](docs/RUN-REPORT-2026-10-18.md).
 
 Full tutorial (mobile + desktop, protocol concepts explained as you go):
@@ -117,9 +119,10 @@ importing anything.
 
 - **Your own read node** — a Snapchain `read_node = true` install on your
   compute, joining gossip and serving the HTTP + gRPC APIs (`fiddy node verify`
-  exercises them). Reads are served by the node's Hubble-compatible `/v1/*` API;
-  wiring the client's UI onto that API is the one piece still outstanding
-  ([docs/CLIENT-NODE-GAP.md](docs/CLIENT-NODE-GAP.md)).
+  exercises them). Reads are served by the node's Hubble-compatible `/v1/*` API,
+  and the client's data layer reads and writes through it (node-backed by
+  default — see the note at the top and
+  [docs/CLIENT-NODE-GAP.md](docs/CLIENT-NODE-GAP.md)).
 - **External wallets, non-custodial** — WalletConnect (EVM + Solana),
   EIP-6963 discovery, optional unified MetaMask Connect. No seed phrase is
   created, requested, or stored by the client beyond the Advanced import above.
