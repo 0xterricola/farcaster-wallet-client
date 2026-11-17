@@ -1,7 +1,19 @@
 # The client ↔ node gap (what `fiddy client up` does and does not wire up)
 
+**Update 2026-11-17: the gap is closed on `main`.** The web app now imports
+`farcaster-node-client` throughout (`apps/farcaster-web/src/snapchain/`), the
+data layer is node-backed by default (`nodeBackedClientFlag.ts`,
+`VITE_SNAPCHAIN_BACKED_CLIENT=false` to compare), and the URL `fiddy client up`
+writes (`VITE_SNAPCHAIN_HTTP_URL`) is consumed by
+`snapchain/nodeEnv.ts` → `nodeChoice.ts` → the provider-backed `fetch` in
+`WebFarcasterApiClientProvider.tsx`, with a measured failover chain
+(`snapchain/providers/`). First landed in 05dbead (2026-10-20); `fiddy client up`
+detects the layer per checkout and prints which one you are on. The rest of this
+document is the 2026-10-18 audit that found the gap, kept as history and as the
+route inventory for the adapter.
+
 Status as of 2026-10-18, verified by running the client (`/bin/bash bin/fiddy
-client up --tunnel`) and reading what the running app actually requests.
+client up --tunnel`) and reading what the running app actually requested.
 
 ## The gap
 

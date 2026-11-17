@@ -28,8 +28,24 @@ require() { command -v "$1" >/dev/null 2>&1 || die "missing dependency: $1 — $
 
 config_load() {
   [ -f "$FIDDY_CONFIG" ] || return 0
+  # The environment beats the file: snapshot every FIDDY_* variable that is
+  # already set in the caller's scope, source the config, then put the
+  # snapshot back. Without this, `FIDDY_TARGET=user@host fiddy node status`
+  # silently runs against the last provisioned box once ~/.fiddy/config
+  # exists, and a scripted run hits the wrong machine (onboarding audit F10).
+  local _k _saved=""
+  for _k in ${!FIDDY_@}; do
+    _saved="${_saved}$_k=$(printf '%q' "${!_k}")"$'\n'
+  done
   # shellcheck disable=SC1090
   . "$FIDDY_CONFIG"
+  [ -n "$_saved" ] || return 0
+  local _line
+  while IFS= read -r _line; do
+    [ -n "$_line" ] || continue
+    eval "$_line"
+  done <<< "$_saved"
+  return 0
 }
 
 config_set() { # key value — upsert into $FIDDY_CONFIG (mode 0600)

@@ -72,3 +72,30 @@ re-check. When a voucher hits one, the entry above gets the voucher's own comman
 - After a fix, the same voucher is asked to retry **only that step** and confirm; the entry's status becomes
   `verified-by-voucher <date>` with the voucher's own one-line confirmation.
 - Entries never get deleted. If an entry turns out to be a misdiagnosis, add a line saying so and who checked.
+
+## 6. Resolution — fix task t_2e6fcb98, 2026-11-17
+
+No voucher ever started: §3 stayed empty through the whole campaign (13 asks sent 2026-10-24 from
+@fiddy-one, zero human replies; the bounty deadline 2026-10-24T14:47:30Z passed). So there are no
+voucher-reported entries to close — the pre-seeded rows are resolved below, verified by re-running the
+affected steps clean-room (isolated `$HOME`, macOS bash 3.2 + bash 5) against `main` + the fix branch:
+
+- **P0 (200 GB claim)** — not regressed: live `https://fiddy.fun/client` says "2 TB free disk / ~468 GB
+  download"; `fiddy provision` and `fiddy node up` preflight both state 1.5 TB minimum. Verified live today.
+- **P1 (~$100/mo claim)** — not regressed: the provision menu quotes ~$285 AWS / ~€120 Hetzner / ~$190
+  OVH / ~$350 GCP; the live page carries the same ladder.
+- **P2 (stale brief claims)** — superseded by better docs: the tutorial now explains read-node writes
+  (gossip to validators, what a success response means) and gasless `KEY_ADD` app keys, with citations.
+- **P3 (pruning off by default)** — still true, now stated in the README's everyday-commands section.
+- **P4 (no write credential)** — unchanged by design; posting stays owner-only.
+
+**Voucher confirmation criterion: deferred, justified.** The acceptance rule "at least one voucher
+confirms a previously blocking step now succeeds" cannot be met: no voucher exists to retry anything
+(recruitment task t_7fff0bb5, outreach outcome: all 13 candidates no-reply, deadline passed). In its
+place, every previously blocking step was re-verified by a clean-room run on this machine, and the
+two blockers found *today* in that run were fixed in this branch: `fiddy doctor` died silently
+mid-report on any machine missing optional deps (`set -e` + `check()`/`node_line()` returning 1), and
+`FIDDY_TARGET`/`FIDDY_*` environment overrides were silently ignored once `~/.fiddy/config` existed
+(audit F10). Clean-room evidence: `fiddy doctor` full report rc=0 on both bashes; `node up --local`
+refuses an undersized box in <1 s; `node status` against the public read node works with env-supplied
+target; env-vs-file config precedence passes 5/5 cases on bash 3.2 and bash 5.

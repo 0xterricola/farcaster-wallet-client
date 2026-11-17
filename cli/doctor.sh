@@ -16,7 +16,9 @@ doctor_main() {
     ram_gb=$(awk "BEGIN{printf \"%.1f\", $(sysctl -n hw.memsize 2>/dev/null || echo 0)/1073741824}")
   fi
   local dtarget="$HOME/snapchain"; [ -d "$dtarget" ] || dtarget="$HOME"
-  disk_gb=$(df -Pk "$dtarget" 2>/dev/null | awk 'NR==2 {printf "%.0f", $4/1048576}')
+  # set -e + pipefail would kill doctor here when df fails (e.g. HOME does not
+  # exist yet in a scripted first run); a missing number must not be fatal.
+  disk_gb="$( { df -Pk "$dtarget" 2>/dev/null || true; } | awk 'NR==2 {printf "%.0f", $4/1048576}')"
   echo "  $os · $cpu CPUs · ${ram_gb} GB RAM · ${disk_gb:-?} GB free disk"
 
   check() { # cmd, note
@@ -26,6 +28,10 @@ doctor_main() {
       echo "  ✗ $1 ($2)"
       [ "${3:-0}" = 1 ] && fail=1
     fi
+    # set -e: a missing *optional* dependency must not kill the report
+    # (the && above returns 1 when the dep is non-fatal, and the caller
+    # would die mid-doctor on every fresh Mac).
+    return 0
   }
   check git "needed to clone" 1
   check curl "needed for downloads" 1
@@ -48,7 +54,10 @@ doctor_main() {
     height="$(printf '%s' "$body" | grep -o '"maxHeight":[0-9]*' | head -1 | cut -d: -f2)"
     msg="$(printf '%s' "$body" | grep -o '"numMessages":[0-9]*' | head -1 | cut -d: -f2)"
     echo "  ✓ $label  $base  v${version:-?} · height ${height:-?} · ${msg:-?} messages · ${latency} ms"
-    [ -n "$height" ] && echo "$height" > "${3:-/dev/null}"
+    # set -e: writing the height file is optional; no height parsed must not
+    # make node_line (and with it, doctor) die.
+    if [ -n "$height" ]; then printf '%s\n' "$height" > "${3:-/dev/null}"; fi
+    return 0
   }
 
   local my_height_file; my_height_file="$(mktemp)"
