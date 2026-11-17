@@ -71,6 +71,14 @@
  *   FIDDY_ALERTS_INTERVAL_MS
  *                         the floor between two consultations of one reader
  *                         (default 60000; 1 is a test, not a deployment).
+ *   FIDDY_MANIFEST_TTL_MS
+ *                         how long one origin's mini app manifest is kept
+ *                         (default 600000, and the module REFUSES anything
+ *                         over the one-hour ceiling — a manifest carries the
+ *                         app's launch address, and quilcast 0.70.1 is the
+ *                         lesson about caching it longer).
+ *   FIDDY_MANIFEST_TIMEOUT_MS / FIDDY_MANIFEST_MAX_BYTES
+ *                         the read's own bounds (8 s, 64 KB).
  */
 
 import { statSync, readFileSync } from 'node:fs';
@@ -98,6 +106,7 @@ import { createSubscribeGuard } from '../alerts/subscribe.mjs';
 import { createAlertService } from '../alerts/service.mjs';
 import { createVapidStore } from '../alerts/vapid.mjs';
 import { createPublicFeedService } from '../public-feed/service.mjs';
+import { createManifestService } from '../miniapp/manifest.mjs';
 import {
   createRateLimiter,
   createTranslationStore,
@@ -227,6 +236,24 @@ const translator = translationsDir
   : undefined;
 
 /**
+ * The per-origin mini app manifest reader (`../miniapp/manifest.mjs`). Not
+ * optional: no state directory, no key — every host that answers a page can
+ * answer `/api/manifest`, and the launch surface reads it here so the
+ * browser's manifest fetch never leaves first party. The TTL sits under the
+ * one-hour ceiling by construction (the module refuses to be built over it).
+ */
+const manifest = createManifestService({
+  safeGet: createSafeGet({
+    timeoutMs: Number(process.env.FIDDY_MANIFEST_TIMEOUT_MS ?? 8_000),
+    maxBytes: Number(process.env.FIDDY_MANIFEST_MAX_BYTES ?? 64 * 1024),
+    maxRedirects: 3,
+    log: (message) => process.stderr.write(`${message}\n`),
+  }),
+  ttlMs: Number(process.env.FIDDY_MANIFEST_TTL_MS ?? 600_000),
+  ownOrigins: [origin],
+});
+
+/**
  * The feeds' takedown list, or nothing. Read once at boot: it is a file a
  * person edits, not a read that can fail a request, and a malformed one is
  * IGNORED (with a line in the log) rather than served as a list nobody
@@ -235,6 +262,7 @@ const translator = translationsDir
 const feedRemoved = (() => {
   const pathFromEnv = process.env.FIDDY_FEED_REMOVED_JSON;
   if (!pathFromEnv) {
+
     return undefined;
   }
   try {
@@ -448,6 +476,7 @@ const handler = createUnfurlHandler({
   imageProxy,
   alerts,
   feedRemoved,
+  manifest,
 });
 
 /**
@@ -529,7 +558,8 @@ server.listen(port, host, () => {
       `translations ${translator ? (translator.available() ? 'on' : 'no key') : 'off'} | ` +
       `pictures ${imageProxy ? 'proxied + cached' : 'direct (FIDDY_IMG_PROXY is not on)'} | ` +
       `alerts ${alerts ? 'loop running (FIDDY_ALERTS_DIR)' : 'off'} | ` +
-      `feeds /~/profiles/<fid>/rss + /~/channel/<id>/rss (removed list ${feedRemoved ? 'on' : 'none'})\n`,
+      `feeds /~/profiles/<fid>/rss + /~/channel/<id>/rss (removed list ${feedRemoved ? 'on' : 'none'}) | `
+    + `miniapp manifests /api/manifest (10 min)\n`,
   );
 });
 

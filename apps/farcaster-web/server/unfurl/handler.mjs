@@ -18,6 +18,11 @@
  * cast translations (`../translate/translate.mjs`). They are the same kind of
  * promise: the cast's words are read from the node HERE, and a host that cannot
  * translate says `{on:false}` instead of answering a page with an invented one.
+ *
+ * As of card t_5dfc9e8b it also answers `GET /api/manifest?origin=…` — a mini
+ * app's own `/.well-known/farcaster.json`, read and cached here so the launch
+ * surface's manifest fetch never leaves first party from the browser's side
+ * (`../miniapp/manifest.mjs`, the quilcast pattern).
  */
 
 import { cardUrl, pageTags, renderPageHtml } from './shellMeta.mjs';
@@ -165,6 +170,21 @@ export const createUnfurlHandler = ({
    * has one the feeds honour it without another change.
    */
   feedRemoved = { casts: [], fids: [] },
+  /**
+   * The per-origin mini app manifest reader (`../miniapp/manifest.mjs`).
+   *
+   * Unlike the translator and the picture proxy this one is not optional: it
+   * needs no state directory and no key, and every host that can answer a
+   * page can answer `/api/manifest`. A host that wants it OFF passes
+   * `manifest: undefined` and the route says so in one sentence.
+   */
+  manifest,
+  /**
+   * How many manifest lookups one caller may make: a feed with a dozen mini
+   * app embeds asks a dozen origins once, then the caches (this service's and
+   * the browser's own) carry it.
+   */
+  manifestLimits = { max: 120, windowMs: 10 * 60 * 1000 },
   now = () => Date.now(),
   htmlTtlMs = HTML_TTL_MS,
   missTtlMs = MISS_TTL_MS,
@@ -367,6 +387,7 @@ export const createUnfurlHandler = ({
   });
   const spentOnFeeds = createRateLimiter({ ...feedLimits, now });
   const spentOnSubscribing = createRateLimiter({ ...alertsLimits.subscribe, now });
+  const spentOnManifests = createRateLimiter({ ...manifestLimits, now });
 
   /** The last server that answered a feed read, for the health route. */
   let lastFeedSource = null;
@@ -617,6 +638,45 @@ export const createUnfurlHandler = ({
         }
         const asked = new URLSearchParams(path.split('?')[1] ?? '').get('u');
         return imageProxy.answer({ u: asked ?? '', ip });
+      }
+
+      // Per-origin mini app manifests (`../miniapp/manifest.mjs`). The launch
+      // surface asks here so the manifest read never leaves first party from
+      // the browser's side: OUR server talks to the app's host, the reader's
+      // address is not handed to it, and the answer is cached for every reader
+      // that asks in the window. The header is capped by the one-hour rule
+      // (quilcast 0.70.1's day-long cache is the lesson; see that module).
+      if (
+        segments[0] === 'api' &&
+        segments.length === 2 &&
+        segments[1] === 'manifest'
+      ) {
+        if (method !== 'GET' && method !== 'HEAD') {
+          return json(405, { error: 'GET' });
+        }
+        if (!manifest) {
+          return json(404, {
+            error: "This host doesn't read mini app manifests.",
+          });
+        }
+        if (spentOnManifests(ip)) {
+          return json(429, {
+            error: 'Too many manifest lookups at once, try again in a few minutes.',
+          });
+        }
+        const asked =
+          new URLSearchParams(path.split('?')[1] ?? '').get('origin') ?? '';
+        const facts = await manifest(asked);
+        if (!facts) {
+          return json(
+            404,
+            { error: 'That site has no mini app manifest this host can read.' },
+            // A miss is short-lived: an app that publishes a manifest is
+            // reachable within the minute, not the hour.
+            { 'cache-control': 'public, max-age=60' },
+          );
+        }
+        return json(200, facts, { 'cache-control': 'public, max-age=600' });
       }
 
       // Phone alerts (`../alerts/`). The browser asks what this host can do

@@ -358,7 +358,7 @@ cp -a "$STAGE/server/." "$STAGE/release/server/"
 # must not be (a carried-forward copy is a copy of whatever the PREVIOUS release
 # happened to ship, which for a service is a release that changes nothing).
 # Sources only: no __pycache__, no editor files.
-for SERVICE in unfurl img alerts translate public-feed; do
+for SERVICE in unfurl img alerts translate public-feed miniapp; do
   SERVICE_SRC="$STAGE/base/apps/farcaster-web/server/$SERVICE"
   [ -d "$SERVICE_SRC" ] || { echo "REFUSING to ship: $SERVICE_SRC is not in the frozen tree" >&2; exit 1; }
   rm -rf "$STAGE/release/server/$SERVICE"

@@ -277,6 +277,9 @@ export default [
       'src/__tests__/serverPublicFeed.test.ts',
       // …and the RSS feeds the same service builds (card t_f50c14a1).
       'src/__tests__/rssFeeds.test.ts',
+      // …and the same for the per-origin mini app manifest proxy the launch
+      // surface reads (card t_5dfc9e8b): the service, its cache, and the route.
+      'src/__tests__/miniappManifestProxy.test.ts',
     ],
     rules: {
       'no-restricted-imports': 'off',

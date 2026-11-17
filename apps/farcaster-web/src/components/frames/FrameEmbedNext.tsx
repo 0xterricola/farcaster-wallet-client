@@ -136,6 +136,14 @@ export const FrameEmbedNext: React.FC<FeedFrameAttachmentProps> = React.memo(
                     sourceUrl: frameUrl,
                   })
                 : frameUrl,
+              // What the cast's own fc:miniapp tag said about the app, kept
+              // for the no-Neynar chain: the hosted API still wins when it
+              // answers, and after it this host's manifest proxy
+              // (`/api/manifest`) — these are the last resort, never the
+              // launch address.
+              name: action.name,
+              splashImageUrl: action.splashImageUrl,
+              splashBackgroundColor: action.splashBackgroundColor,
             },
             debug,
           });

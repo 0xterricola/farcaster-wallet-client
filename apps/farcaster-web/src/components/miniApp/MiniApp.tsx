@@ -152,6 +152,10 @@ import { observeWriteEvidence } from '~/snapchain/nodeApi/writeEvidenceWatch';
 import { CastComposerIntent } from '~/types';
 import { trackError } from '~/utils/errorUtils';
 import { logError } from '~/utils/logUtils';
+import {
+  fetchMiniAppManifest,
+  type MiniAppManifest,
+} from '~/utils/miniAppManifest';
 import { toast } from '~/utils/toast';
 
 type PrimaryButtonState = {
@@ -173,6 +177,15 @@ type StandaloneMiniAppLaunchConfig = {
 type ManifestMiniAppLaunchConfig = {
   type: 'manifest';
   url: string;
+  /**
+   * What the cast's own `fc:miniapp` tag already said about the app — its
+   * name and its splash — carried here as the LAST resort, after the hosted
+   * API's frame details and this host's manifest proxy both say nothing.
+   * The launch URL is never one of these: the tag named it, and it is `url`.
+   */
+  name?: string;
+  splashImageUrl?: string;
+  splashBackgroundColor?: string;
 };
 
 export type MiniAppLaunchConfig =
@@ -218,16 +231,56 @@ function LaunchMiniApp({ launchConfig, ...rest }: MiniAppProps): ReactElement {
   });
   const frame = useGloballyCachedFrame(data);
 
+  // The app's manifest, read through OUR host (`/api/manifest`). A signed-out
+  // reader on the node-only chain has no hosted API to ask, and without this
+  // the app's own name and splash were simply gone — the launch still worked,
+  // but it launched anonymous. The request is first party and cached on both
+  // sides, so it is made whenever a manifest launch has a domain, and the
+  // hosted API's answer still WINS where one exists (it knows more: the
+  // author, the viewer's own state). Zero Neynar is the case this serves, not
+  // the case it replaces.
+  const [proxiedManifest, setProxiedManifest] =
+    useState<MiniAppManifest | null>(null);
+  useEffect(() => {
+    if (!manifestConfig || !domain) {
+      return;
+    }
+    let cancelled = false;
+    fetchMiniAppManifest(`https://${domain}`).then((manifest) => {
+      if (!cancelled) {
+        setProxiedManifest(manifest);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [manifestConfig, domain]);
+
+  const embedSaid =
+    launchConfig?.type === 'manifest'
+      ? {
+          name: launchConfig.name,
+          splashImageUrl: launchConfig.splashImageUrl,
+          splashBackgroundColor: launchConfig.splashBackgroundColor,
+        }
+      : undefined;
+
   const name =
-    launchConfig?.type === 'standalone' ? launchConfig.name : frame?.name;
+    launchConfig?.type === 'standalone'
+      ? launchConfig.name
+      : (frame?.name ?? proxiedManifest?.name ?? embedSaid?.name);
   const splashImageUrl =
     launchConfig?.type === 'standalone'
       ? launchConfig.splashImageUrl
-      : frame?.splashImageUrl;
+      : (frame?.splashImageUrl ??
+        proxiedManifest?.splashImageUrl ??
+        embedSaid?.splashImageUrl);
   const splashBackgroundColor =
     launchConfig?.type === 'standalone'
       ? launchConfig.splashBackgroundColor
-      : frame?.splashBackgroundColor;
+      : (frame?.splashBackgroundColor ??
+        proxiedManifest?.splashBackgroundColor ??
+        embedSaid?.splashBackgroundColor);
   const author =
     launchConfig?.type === 'standalone' ? launchConfig.author : frame?.author;
 
@@ -437,7 +490,9 @@ function InnerMiniAppContent({
   // The name the app chose for itself, kept out of the render and read by the
   // ask card as an aside: the heading is the origin, which is the only name the
   // shell can verify (§4).
-  frameNameRef.current = frame?.name;
+  // The hosted API's name first; node-only, the one carried in (the manifest
+  // proxy's or the cast's own tag's — see LaunchMiniApp).
+  frameNameRef.current = frame?.name ?? name;
 
   const unavailable = invalidUrl || (!debug && (harmful || frame?.harmful));
 
